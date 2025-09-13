@@ -7,9 +7,9 @@
 (source
  (github Kakadu/comp24))
 
-(authors "Kakadu")
+(authors "FIXME Vasya Pupkin")
 
-(maintainers "Kakadu")
+(maintainers "FIXME Vasya Pupkin")
 
 (license LGPL-2.1-or-later WITH OCaml-LGPL-linking-exception)
 
