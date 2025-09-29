@@ -1,22 +1,22 @@
-(library
- (name LL)
- (public_name AML.LL)
- (modules LL)
- (wrapped false)
- (libraries
-  llvm
-  llvm.analysis
-  llvm.executionengine
-  ;
-  ))
+; (library
+;  (name LL)
+;  (public_name AML.LL)
+;  (modules LL)
+;  (wrapped false)
+;  (libraries
+;   llvm
+;   llvm.analysis
+;   llvm.executionengine
+;   ;
+;   ))
 
-(executable
- (public_name AML)
- (name main)
- (modules main)
- (libraries LL)
- (instrumentation
-  (backend bisect_ppx)))
+; (executable
+;  (public_name AML)
+;  (name main)
+;  (modules main)
+;  (libraries LL)
+;  (instrumentation
+;   (backend bisect_ppx)))
 
-(cram
- (deps ./main.exe runtime.c))
+; (cram
+;  (deps ./main.exe runtime.c))

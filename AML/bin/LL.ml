@@ -1,4 +1,4 @@
-[@@@ocaml.text "/*"]
+(* [@@@ocaml.text "/*"]
 
 (** Copyright 2023-2024, Kakadu and contributors *)
 
@@ -91,4 +91,4 @@ let make context builder module_ =
   end
   in
   (module L : S)
-;;
+;; *)
