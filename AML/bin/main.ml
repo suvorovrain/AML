@@ -1,4 +1,4 @@
-[@@@ocaml.text "/*"]
+(* [@@@ocaml.text "/*"]
 
 (** Copyright 2023-2024, Kakadu and contributors *)
 
@@ -58,4 +58,4 @@ let () =
   in
   prepare_main ();
   Llvm.print_module "out.ll" the_module
-;;
+;; *)

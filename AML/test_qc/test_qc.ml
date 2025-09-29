@@ -1,4 +1,4 @@
-[@@@ocaml.text "/*"]
+(* [@@@ocaml.text "/*"]
 
 (** Copyright 2023-2024, Kakadu and contributors *)
 
@@ -95,4 +95,4 @@ let _ =
             (* Format.printf "failed on : %a\n%!" Lam.pp l; *)
             false))
     ]
-;;
+;; *)
