@@ -76,3 +76,42 @@ let ld k a b = k (Ld (a, b))
 let sd k a b = k (Sd (a, b))
 let li k r n = k (Li (r, n))
 let label k s = k (Label s)
+
+(*
+  .globl main
+    .text
+
+main:
+    li   a0, 4
+    jal  ra, fac
+
+    li   a7, 1
+    ecall
+
+    li   a7, 10
+    ecall
+
+fac:
+    addi sp, sp, -16
+    sd   ra, 8(sp)
+    sd   a0, 0(sp)
+
+    li   t0, 1
+    ble  a0, t0, .Lbase
+
+    addi a0, a0, -1
+    jal  ra, fac
+
+    ld   t1, 0(sp)
+    mul  a0, a0, t1
+    j    .Lend
+
+.Lbase:
+    li   a0, 1
+
+.Lend:
+    ld   ra, 8(sp)
+    addi sp, sp, 16
+    ret
+
+*)
