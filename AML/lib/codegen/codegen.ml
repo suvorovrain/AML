@@ -1,12 +1,10 @@
-(** Copyright 2025-2026, Rodion Suvorov, Dmitriy Chirkov*)
-
-(** SPDX-License-Identifier: LGPL-3.0-or-later *)
-
 open Base
 open Machine
 open Ast
 open Ast.Expression
 open Ast.Pattern
+
+(* --- STATE MANAGEMENT --- *)
 
 type location =
   | Loc_reg of reg
@@ -20,9 +18,11 @@ type cg_state =
   ; label_id : int
   }
 
+(* state monad for state mgmt *)
 module Codegen = struct
   type 'a t = Cg of (cg_state -> 'a * cg_state)
 
+  (* execute f with a state *)
   let run (state : cg_state) (Cg f) : 'a * cg_state = f state
   let return x = Cg (fun state -> x, state)
 
@@ -34,10 +34,15 @@ module Codegen = struct
         m' new_state)
   ;;
 
+  (** get/set current state *)
   let get = Cg (fun state -> state, state)
+
+  let set new_state = Cg (fun _ -> (), new_state)
 end
 
 open Codegen
+
+(* --- MONADIC HELPER FUNCTIONS--- *)
 
 let get_state = Cg (fun state -> state, state)
 let set_state new_state = Cg (fun _ -> (), new_state)
@@ -64,6 +69,8 @@ let lookup_var id =
   | Some loc -> return loc
   | None -> failwith ("Unbound variable: " ^ id)
 ;;
+
+(* --- CODEGEN LOGIC --- *)
 
 let gen_bin_op op dst r1 r2 =
   match op with
@@ -136,6 +143,7 @@ let rec gen_expr (dst : reg) (expr : Ast.Expression.t) : unit Codegen.t =
   | _ -> failwith "TODO: expr"
 ;;
 
+(* --- TOPLEVEL GENERATION --- *)
 let rec count_local_vars = function
   | Exp_let (_, _, body) -> 1 + count_local_vars body
   | Exp_if (c, t, Some e) -> count_local_vars c + count_local_vars t + count_local_vars e
@@ -149,34 +157,41 @@ let gen_func name args body =
   emit directive (Printf.sprintf ".globl %s" func_label);
   emit directive (Printf.sprintf ".type %s, @function" func_label);
   emit label func_label;
+  (* PROLOGUE *)
+  (* stack size: ra, old fp, all local variables *)
   let locals_count = count_local_vars body in
   let stack_size = 16 + (locals_count * 8) in
   emit addi sp sp (-stack_size);
   emit sd ra (ROff (stack_size - 8, sp));
   emit sd fp (ROff (stack_size - 16, sp));
   emit addi fp sp stack_size;
-  let f i env = function
-    | Pat_var id when i < 8 -> Map.set env ~key:id ~data:(Loc_reg (A i))
-    | _ -> failwith "not yet"
+  (* BODY *)
+  let initial_env =
+    List.foldi
+      args
+      ~init:(Map.empty (module String))
+      ~f:(fun i env arg_pat ->
+        match arg_pat with
+        | Pat_var id ->
+          if i < 8 then Map.set env ~key:id ~data:(Loc_reg (A i)) else failwith "not yet"
+        | _ -> failwith "not yet")
   in
-  let initial_env = List.foldi args ~init:(Map.empty (module String)) ~f in
   let initial_cg_state = { env = initial_env; frame_offset = 16; label_id = 0 } in
+  (* ignore main code generation computation *)
   let (), _final_state = Codegen.run initial_cg_state (gen_expr a0 body) in
-  let () = emit label (name ^ "_end") in
-  let () = emit ld ra (ROff (stack_size - 8, sp)) in
-  let () = emit ld fp (ROff (stack_size - 16, sp)) in
-  let () = emit addi sp sp stack_size in
-  let () =
-    if is_main
-    then (
-      emit li (A 7) 93;
-      emit ecall)
-    else emit ret
-  in
-  ()
+  (* EPILOGUE *)
+  emit label (name ^ "_end");
+  emit ld ra (ROff (stack_size - 8, sp));
+  emit ld fp (ROff (stack_size - 16, sp));
+  emit addi sp sp stack_size;
+  if is_main
+  then (
+    emit li (A 7) 93;
+    emit ecall)
+  else emit ret
 ;;
 
-let codegen ppf (s : Structure.structure_item list) =
+let codegen_structure ppf (s : Structure.structure_item list) =
   let open Structure in
   emit directive ".text";
   List.iter s ~f:(function
