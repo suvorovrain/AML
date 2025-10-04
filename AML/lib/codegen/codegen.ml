@@ -8,8 +8,6 @@ open Ast
 open Ast.Expression
 open Ast.Pattern
 
-(* --- STATE MANAGEMENT --- *)
-
 type location =
   | Loc_reg of reg
   | Loc_mem of reg
@@ -40,13 +38,9 @@ module Codegen = struct
 
   (** get/set current state *)
   let get = Cg (fun state -> state, state)
-
-  let set new_state = Cg (fun _ -> (), new_state)
 end
 
 open Codegen
-
-(* --- MONADIC HELPER FUNCTIONS--- *)
 
 let get_state = Cg (fun state -> state, state)
 let set_state new_state = Cg (fun _ -> (), new_state)
@@ -73,8 +67,6 @@ let lookup_var id =
   | Some loc -> return loc
   | None -> failwith ("Unbound variable: " ^ id)
 ;;
-
-(* --- CODEGEN LOGIC --- *)
 
 let gen_bin_op op dst r1 r2 =
   match op with
@@ -147,7 +139,6 @@ let rec gen_expr (dst : reg) (expr : Ast.Expression.t) : unit Codegen.t =
   | _ -> failwith "TODO: expr"
 ;;
 
-(* --- TOPLEVEL GENERATION --- *)
 let rec count_local_vars = function
   | Exp_let (_, _, body) -> 1 + count_local_vars body
   | Exp_if (c, t, Some e) -> count_local_vars c + count_local_vars t + count_local_vars e
@@ -167,16 +158,11 @@ let gen_func name args body =
   emit sd ra (ROff (stack_size - 8, sp));
   emit sd fp (ROff (stack_size - 16, sp));
   emit addi fp sp stack_size;
-  let f i env = (function 
-  | Pat_var id ->
-          if i < 8 then Map.set env ~key:id ~data:(Loc_reg (A i)) else failwith "not yet"
-  | _ -> failwith "not yet") in
-  let initial_env =
-    List.foldi
-      args
-      ~init:(Map.empty (module String))
-      ~f:f
+  let f i env = function
+    | Pat_var id when i < 8 -> Map.set env ~key:id ~data:(Loc_reg (A i))
+    | _ -> failwith "not yet"
   in
+  let initial_env = List.foldi args ~init:(Map.empty (module String)) ~f in
   let initial_cg_state = { env = initial_env; frame_offset = 16; label_id = 0 } in
   let (), _final_state = Codegen.run initial_cg_state (gen_expr a0 body) in
   emit label (name ^ "_end");
