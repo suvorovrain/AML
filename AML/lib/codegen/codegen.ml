@@ -195,7 +195,7 @@ let gen_func name args body =
   else emit ret
 ;;
 
-let codegen_structure ppf (s : Structure.structure_item list) =
+let codegen ppf (s : Structure.structure_item list) =
   let open Structure in
   emit directive ".text";
   List.iter s ~f:(function
