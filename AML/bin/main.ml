@@ -15,7 +15,7 @@ let rec fac n =
 let main = fac 4
 |}
 
-let () = print_endline (Ast.show_program (Inferencer.Parser.parse_str s))
+let () = print_endline (Ast.show_program (Parser.parse_str s))
 
-let () = codegen_structure Format.std_formatter (Inferencer.Parser.parse_str s)
+let () = codegen_structure Format.std_formatter (Parser.parse_str s)
 
