@@ -161,29 +161,24 @@ let gen_func name args body =
   emit directive (Printf.sprintf ".globl %s" func_label);
   emit directive (Printf.sprintf ".type %s, @function" func_label);
   emit label func_label;
-  (* PROLOGUE *)
-  (* stack size: ra, old fp, all local variables *)
   let locals_count = count_local_vars body in
   let stack_size = 16 + (locals_count * 8) in
   emit addi sp sp (-stack_size);
   emit sd ra (ROff (stack_size - 8, sp));
   emit sd fp (ROff (stack_size - 16, sp));
   emit addi fp sp stack_size;
-  (* BODY *)
+  let f i env = (function 
+  | Pat_var id ->
+          if i < 8 then Map.set env ~key:id ~data:(Loc_reg (A i)) else failwith "not yet"
+  | _ -> failwith "not yet") in
   let initial_env =
     List.foldi
       args
       ~init:(Map.empty (module String))
-      ~f:(fun i env arg_pat ->
-        match arg_pat with
-        | Pat_var id ->
-          if i < 8 then Map.set env ~key:id ~data:(Loc_reg (A i)) else failwith "not yet"
-        | _ -> failwith "not yet")
+      ~f:f
   in
   let initial_cg_state = { env = initial_env; frame_offset = 16; label_id = 0 } in
-  (* ignore main code generation computation *)
   let (), _final_state = Codegen.run initial_cg_state (gen_expr a0 body) in
-  (* EPILOGUE *)
   emit label (name ^ "_end");
   emit ld ra (ROff (stack_size - 8, sp));
   emit ld fp (ROff (stack_size - 16, sp));
