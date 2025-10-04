@@ -2,6 +2,8 @@
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
 
+[@@@warning "-26-27"]
+
 type reg =
   | X0
   | A of int

@@ -162,15 +162,18 @@ let gen_func name args body =
   let initial_env = List.foldi args ~init:(Map.empty (module String)) ~f in
   let initial_cg_state = { env = initial_env; frame_offset = 16; label_id = 0 } in
   let (), _final_state = Codegen.run initial_cg_state (gen_expr a0 body) in
-  emit label (name ^ "_end");
-  emit ld ra (ROff (stack_size - 8, sp));
-  emit ld fp (ROff (stack_size - 16, sp));
-  emit addi sp sp stack_size;
-  if is_main
-  then (
-    emit li (A 7) 93;
-    emit ecall)
-  else emit ret
+  let () =
+    emit label (name ^ "_end");
+    emit ld ra (ROff (stack_size - 8, sp));
+    emit ld fp (ROff (stack_size - 16, sp));
+    emit addi sp sp stack_size;
+    if is_main
+    then (
+      emit li (A 7) 93;
+      emit ecall)
+    else emit ret
+  in
+  ()
 ;;
 
 let codegen ppf (s : Structure.structure_item list) =

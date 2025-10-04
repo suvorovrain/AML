@@ -80,9 +80,8 @@ module Type = struct
     let rec helper acc = function
       | Type_var binder -> VarSet.add binder acc
       | Type_arrow (l, r) -> helper (helper acc l) r
-      | Type_tuple (t1, t2, t) ->
-        List.fold_left (fun acc h -> helper acc h) acc (t1 :: t2 :: t)
-      | Type_construct (_, ty) -> List.fold_left (fun acc h -> helper acc h) acc ty
+      | Type_tuple (t1, t2, t) -> List.fold_left helper acc (t1 :: t2 :: t)
+      | Type_construct (_, ty) -> List.fold_left helper acc ty
     in
     helper VarSet.empty
   ;;
@@ -227,7 +226,7 @@ module TypeEnv = struct
   let apply s env = Map.map env ~f:(Scheme.apply s)
   let find name xs = Map.find xs name
   let find_exn name xs = Map.find_exn xs name
-  let remove sub k = Base.Map.remove sub k
+  let remove = Base.Map.remove
 
   let pp_env fmt environment =
     Map.iteri environment ~f:(fun ~key ~data ->
@@ -364,8 +363,7 @@ let infer_rec_rest_vb sub_acc env_acc fresh typ name new_sub =
   return (env_acc, comp_sub)
 ;;
 
-let rec get_pat_names acc pat =
-  match pat with
+let rec get_pat_names acc = function
   | Pat_var id -> id :: acc
   | Pat_tuple (pat1, pat2, rest) ->
     Base.List.fold_left ~f:get_pat_names ~init:acc (pat1 :: pat2 :: rest)
