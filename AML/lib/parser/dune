@@ -1,6 +1,6 @@
 (library
- (name Inferencer)
- (public_name AML.Inferencer)
- (libraries Ast Pprinter)
+ (name Parser)
+ (public_name AML.Parser)
+ (libraries base angstrom Ast)
  (instrumentation
   (backend bisect_ppx)))
