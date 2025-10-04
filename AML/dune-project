@@ -15,14 +15,19 @@
 
 (package
  (name AML)
- (synopsis "A MiniML compiler")
+ (synopsis "A ML compiler")
  (depends
-  ocaml
-  dune
-  bisect_ppx
-  (llvm
-   (= "16.0.6+nnp"))
-  (qcheck :with-tests)
-  (ppx_deriving_qcheck :with-tests)))
+  (dune
+   (= "3.19.1"))
+  base
+  (angstrom
+   (= "0.16.0"))
+  qcheck-core
+  (ppx_inline_test :with-test)
+  ppx_deriving
+  (ppx_deriving_qcheck
+   (= "0.6"))
+  ppx_expect
+  bisect_ppx))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
