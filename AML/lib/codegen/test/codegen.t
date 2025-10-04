@@ -67,3 +67,8 @@
     addi sp, sp, 16
     li a7, 93
     ecall
+  $ riscv64-unknown-linux-gnu-as -march=rv64gc fac.s -o fac.o
+  $ riscv64-unknown-linux-gnu-ld fac.o -o fac.elf
+  $ qemu-riscv64 fac.elf
+  [24]
+
