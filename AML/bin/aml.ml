@@ -13,21 +13,24 @@ let read_file filename =
   let s = really_input_string ic len in
   close_in ic;
   s
+;;
 
 let write_file filename content =
   let oc = open_out filename in
   output_string oc content;
   close_out oc
+;;
 
 let parse_args args =
   match args with
   | [] ->
-      prerr_endline usage_msg;
-      exit 1
-  | input :: output :: [] -> (input, output)
+    prerr_endline usage_msg;
+    exit 1
+  | [ input; output ] -> input, output
   | _ ->
-      prerr_endline usage_msg;
-      exit 1
+    prerr_endline usage_msg;
+    exit 1
+;;
 
 let compile input_file output_file =
   let src = read_file input_file in
@@ -38,10 +41,11 @@ let compile input_file output_file =
   pp_print_flush fmt ();
   write_file output_file (Buffer.contents buf);
   Printf.printf "Generated: %s\n" output_file
+;;
 
 let main input_file output_file =
-  let input_file, output_file = parse_args [input_file;output_file] in
+  let input_file, output_file = parse_args [ input_file; output_file ] in
   compile input_file output_file
+;;
 
-let () =
-  main Sys.argv.(1) Sys.argv.(2)
+let () = main Sys.argv.(1) Sys.argv.(2)
