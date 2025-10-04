@@ -7,8 +7,6 @@ open Base
 open Gen
 open Stdlib
 
-[@@@warning "-26-27"]
-
 type ident = string [@@deriving eq, show { with_path = false }]
 
 let gen_charc = map Char.chr (int_range (Char.code 'a') (Char.code 'z'))
