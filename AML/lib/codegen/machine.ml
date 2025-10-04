@@ -33,7 +33,6 @@ let rec pp_reg ppf =
   | ROff (n, r) -> fprintf ppf "%d(%a)" n pp_reg r
 ;;
 
-(** A type representing a subset of RISC-V instructions. *)
 type instr =
   | Addi of reg * reg * int
   | Add of reg * reg * reg
@@ -96,8 +95,6 @@ let li k r n = k (Li (r, n))
 let label k s = k (Label s)
 let directive k s = k (Directive s)
 let mv k rd rs = k @@ Addi (rd, rs, 0)
-
-(* Emission and storage *)
 let code : (instr * string) Queue.t = Queue.create ()
 let emit ?(comm = "") instr = instr (fun i -> Queue.add (i, comm) code)
 
