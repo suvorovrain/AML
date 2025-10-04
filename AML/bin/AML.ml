@@ -5,7 +5,7 @@
 open Codegen
 open Format
 
-let usage_msg = "Usage: aml.exe <input file> <output file>"
+let usage_msg = "Usage: AML.exe <input file> <output file>"
 
 let read_file filename =
   let ic = open_in filename in
@@ -21,11 +21,7 @@ let write_file filename content =
   close_out oc
 ;;
 
-let parse_args args =
-  match args with
-  | [] ->
-    prerr_endline usage_msg;
-    exit 1
+let parse_args = function
   | [ input; output ] -> input, output
   | _ ->
     prerr_endline usage_msg;

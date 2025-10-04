@@ -244,10 +244,10 @@ let instantiate : scheme -> Ast.TypeExpr.t MInfer.t =
   fun (Forall (bs, t)) ->
   VarSet.fold
     (fun name typ ->
-      let* typ = typ in
-      let* f1 = fresh_var in
-      let* s = Substitution.singleton name f1 in
-      return (Substitution.apply s typ))
+       let* typ = typ in
+       let* f1 = fresh_var in
+       let* s = Substitution.singleton name f1 in
+       return (Substitution.apply s typ))
     bs
     (return t)
 ;;
