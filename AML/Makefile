@@ -8,6 +8,16 @@ test:
 TEST_COV_D = /tmp/cov
 COVERAGE_OPTS = --coverage-path $(TEST_COV_D) --expect bin/
 
+fmt:
+	dune build @fmt --auto-promote
+
+lint:
+	dune build @lint --force
+
+release:
+	dune build --profile=release
+	dune runtest --profile=release
+	
 .PHONY: test_coverage coverage
 test_coverage: coverage
 coverage:
