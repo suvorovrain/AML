@@ -20,11 +20,9 @@ type cg_state =
   ; label_id : int
   }
 
-(* state monad for state mgmt *)
 module Codegen = struct
   type 'a t = Cg of (cg_state -> 'a * cg_state)
 
-  (* execute f with a state *)
   let run (state : cg_state) (Cg f) : 'a * cg_state = f state
   let return x = Cg (fun state -> x, state)
 
@@ -36,7 +34,6 @@ module Codegen = struct
         m' new_state)
   ;;
 
-  (** get/set current state *)
   let get = Cg (fun state -> state, state)
 end
 
