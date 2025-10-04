@@ -1021,8 +1021,7 @@ let%expect_test "_" =
 ;;
 
 let%expect_test "_" =
-  test_program
-    {| function
+  test_program {| function
 | "" -> 'a'
 | "" -> "izvkvwcet" ;;|};
   [%expect
@@ -1175,8 +1174,7 @@ let%expect_test "just let (char)" =
 ;;
 
 let%expect_test "string print_endline" =
-  test_program
-    {|let x = "51" in 
+  test_program {|let x = "51" in 
 print_endline x;;|};
   [%expect
     {|
@@ -1256,8 +1254,7 @@ let%expect_test "adt with recursive poly variant" =
 ;;
 
 let%expect_test "adt list" =
-  test_program
-    {|
+  test_program {|
 type 'a my_list = Nil | Cons of 'a * 'a my_list;;
 |};
   [%expect
@@ -1320,8 +1317,7 @@ type 'a nested_list = Nil
 ;;
 
 let%expect_test "poly adt (tree)" =
-  test_program
-    {|
+  test_program {|
 type 'a tree = Leaf
   | Node of 'a * 'a tree * 'a tree
 ;;
@@ -1548,8 +1544,7 @@ let%expect_test "keyword" =
 ;;
 
 let%expect_test "keyword" =
-  test_program
-    {|let main = 
+  test_program {|let main = 
    let () = print_int (fib 4) in
   0;;|};
   [%expect
@@ -1808,8 +1803,7 @@ let%expect_test "function" =
 ;;
 
 let%expect_test "keyword" =
-  test_program
-    {|
+  test_program {|
 let _6 = fun arg -> match arg with Some x -> let y = x in y;;
   |};
   [%expect
@@ -1835,8 +1829,7 @@ let _6 = fun arg -> match arg with Some x -> let y = x in y;;
 ;;
 
 let%expect_test "lists v1" =
-  test_program
-    {|
+  test_program {|
 let x = [];;
   |};
   [%expect
@@ -1981,8 +1974,7 @@ let fodd p n =
 ;;
 
 let%expect_test "keyword" =
-  test_program
-    {|type 'a foo = Foo;;
+  test_program {|type 'a foo = Foo;;
 type bar = Bar of foo;; |};
   [%expect
     {|
@@ -2354,8 +2346,7 @@ let%expect_test "list5" =
 ;;
 
 let%expect_test "list6" =
-  test_program
-    {|(1 :: 2) :: []
+  test_program {|(1 :: 2) :: []
 ;;
 |};
   [%expect
@@ -2560,8 +2551,7 @@ let%expect_test "list9" =
 ;;
 
 let%expect_test "list9" =
-  test_program
-    {|type 'a list = 
+  test_program {|type 'a list = 
     Cons of 'a * 'a list 
     | Nil;;|};
   [%expect
@@ -3719,8 +3709,7 @@ let%expect_test "()" =
 ;;
 
 let%expect_test "()" =
-  test_program
-    {|
+  test_program {|
     let rec iter f xs = match xs with [] -> ()
     |};
   [%expect
@@ -4229,8 +4218,7 @@ let main =
 ;;
 
 let%expect_test "simple adt with pattern matching function (else case) + printing" =
-  test_program
-    {|
+  test_program {|
 type shape = Circle of int
   | Rectangle of (int*int) * int
 ;;
@@ -4251,8 +4239,7 @@ type shape = Circle of int
 ;;
 
 let%expect_test "one arg adt v2" =
-  test_program
-    {|
+  test_program {|
 type ('a) shape = Circle of int
   | Rectangle of (int*int) * int
 ;;
@@ -4273,8 +4260,7 @@ type ('a) shape = Circle of int
 ;;
 
 let%expect_test "multiple args adt v2" =
-  test_program
-    {|
+  test_program {|
    type ('a, 'b) s9CG0K = 
    | R
   | F
@@ -4289,8 +4275,7 @@ let%expect_test "multiple args adt v2" =
 ;;
 
 let%expect_test "multiple args adt v3" =
-  test_program
-    {|
+  test_program {|
    type ('a, 'b, 'c, 'd) s9CG0K = 
    | R
   | F
@@ -4305,8 +4290,7 @@ let%expect_test "multiple args adt v3" =
 ;;
 
 let%expect_test "multiple args adt v4" =
-  test_program
-    {|
+  test_program {|
    type '_3d f =
   | J of _f
   | K
@@ -4341,8 +4325,7 @@ let%expect_test "multiple args adt v4 (capitalized idents in constr_args)" =
 ;;
 
 let%expect_test "adt from default types" =
-  test_program
-    {|
+  test_program {|
 type point = int * int;;
 |};
   [%expect
