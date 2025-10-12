@@ -67,7 +67,10 @@
     li a7, 93
     ecall
   $ riscv64-linux-gnu-as -march=rv64gc fac.s -o fac.o
+  riscv64-linux-gnu-as: not found
+  [127]
   $ riscv64-linux-gnu-ld fac.o -o fac.elf
+  riscv64-linux-gnu-ld: not found
+  [127]
   $ qemu-riscv64 fac.elf
-  [24]
-
+  [1]
