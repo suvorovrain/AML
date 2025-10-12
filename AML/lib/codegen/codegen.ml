@@ -146,35 +146,43 @@ let rec count_local_vars = function
 let gen_func name args body =
   let is_main = String.equal name "main" in
   let func_label = if is_main then "_start" else name in
-  emit directive (Printf.sprintf ".globl %s" func_label);
-  emit directive (Printf.sprintf ".type %s, @function" func_label);
-  emit label func_label;
+  let () =
+    emit directive (Printf.sprintf ".globl %s" func_label);
+    emit directive (Printf.sprintf ".type %s, @function" func_label);
+    emit label func_label
+  in
   let locals_count = count_local_vars body in
   let stack_size = 16 + (locals_count * 8) in
-  emit addi sp sp (-stack_size);
-  emit sd ra (ROff (stack_size - 8, sp));
-  emit sd fp (ROff (stack_size - 16, sp));
-  emit addi fp sp stack_size;
+  let () =
+    emit addi sp sp (-stack_size);
+    emit sd ra (ROff (stack_size - 8, sp));
+    emit sd fp (ROff (stack_size - 16, sp));
+    emit addi fp sp stack_size
+  in
   let f i env = function
     | Pat_var id when i < 8 -> Map.set env ~key:id ~data:(Loc_reg (A i))
     | _ -> failwith "not yet"
   in
   let initial_env = List.foldi args ~init:(Map.empty (module String)) ~f in
   let initial_cg_state = { env = initial_env; frame_offset = 16; label_id = 0 } in
-  let (), _final_state = Codegen.run initial_cg_state (gen_expr a0 body) in
-  let () = emit label (name ^ "_end") in
-  let () = emit ld ra (ROff (stack_size - 8, sp)) in
-  let () = emit ld fp (ROff (stack_size - 16, sp)) in
-  let () = emit addi sp sp stack_size in
+  let (), _final_state =
+    Codegen.run initial_cg_state (gen_expr a0 body)
+  in
   let () =
-    if is_main
-    then (
+    emit label (name ^ "_end");
+    emit ld ra (ROff (stack_size - 8, sp));
+    emit ld fp (ROff (stack_size - 16, sp));
+    emit addi sp sp stack_size;
+    if is_main then (
       emit li (A 7) 93;
-      emit ecall)
-    else emit ret
+      emit ecall
+    ) else (
+      emit ret
+    )
   in
   ()
 ;;
+
 
 let codegen ppf (s : Structure.structure_item list) =
   let open Structure in
