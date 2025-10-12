@@ -51,6 +51,7 @@ let test_anf expr =
   print_endline (show_anf anf)
 ;;
 
+(* let rec fac n = if n <= 1 then 1 else n * fac (n - 1) in fac 4*)
 let%expect_test "anf_fac" =
   let expr =
     Expression.Exp_let
@@ -112,7 +113,7 @@ let%expect_test "anf_fac" =
           (ACE
             (CImm t_5))))) |}]
 
-
+(*let rec fib n = if n < 2 then n else fib (n - 1) + fib (n - 2) in fib 4*)
 let%expect_test "anf_fib" =
   let expr =
      Exp_let (Recursive,
