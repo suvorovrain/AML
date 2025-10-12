@@ -4469,12 +4469,40 @@ let main =
       ] |}]
 ;;
 
+let%expect_test "thefib" =
+  test_program {|fun a b c -> x|};
+  [%expect
+    {|
+    [(Str_eval
+        (Exp_fun (((Pat_var "a"), [(Pat_var "b"); (Pat_var "c")]),
+           (Exp_ident "x"))))
+      ] |}]
+;;
+
+let%expect_test "thefib" =
+  test_program {|let a b c d = x|};
+  [%expect
+    {|
+    [(Str_value (Nonrecursive,
+        ({ pat = (Pat_var "a");
+           expr =
+           (Exp_fun (((Pat_var "b"), [(Pat_var "c"); (Pat_var "d")]),
+              (Exp_ident "x")))
+           },
+         [])
+        ))
+      ] |}]
+;;
+
 let%expect_test "thefac" =
-test_program {|   let rec fac n = if n <= 1 then 1 else n * fac (n - 1)
+  test_program
+    {|   let rec fac n = if n <= 1 then 1 else n * fac (n - 1)
 
 let main =
   let () = print_int (fac 4) in
-  0|}; [%expect{|
+  0|};
+  [%expect
+    {|
     [(Str_value (Recursive,
         ({ pat = (Pat_var "fac");
            expr =
@@ -4520,13 +4548,17 @@ let main =
           [])
          ))
       ] |}]
+;;
 
-      let%expect_test "thefib" =
-test_program {|let rec fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)
+let%expect_test "thefib" =
+  test_program
+    {|let rec fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)
 
 let main =
   let () = print_int (fib 4) in
-  0|}; [%expect{|
+  0|};
+  [%expect
+    {|
     [(Str_value (Recursive,
         ({ pat = (Pat_var "fib");
            expr =
@@ -4579,3 +4611,4 @@ let main =
           [])
          ))
       ] |}]
+;;
