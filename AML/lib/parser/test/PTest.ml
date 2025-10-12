@@ -4468,3 +4468,114 @@ let main =
          ))
       ] |}]
 ;;
+
+let%expect_test "thefac" =
+test_program {|   let rec fac n = if n <= 1 then 1 else n * fac (n - 1)
+
+let main =
+  let () = print_int (fac 4) in
+  0|}; [%expect{|
+    [(Str_value (Recursive,
+        ({ pat = (Pat_var "fac");
+           expr =
+           (Exp_fun (((Pat_var "n"), []),
+              (Exp_if (
+                 (Exp_apply ((Exp_ident "<="),
+                    (Exp_tuple
+                       ((Exp_ident "n"), (Exp_constant (Const_integer 1)), []))
+                    )),
+                 (Exp_constant (Const_integer 1)),
+                 (Some (Exp_apply ((Exp_ident "*"),
+                          (Exp_tuple
+                             ((Exp_ident "n"),
+                              (Exp_apply ((Exp_ident "fac"),
+                                 (Exp_apply ((Exp_ident "-"),
+                                    (Exp_tuple
+                                       ((Exp_ident "n"),
+                                        (Exp_constant (Const_integer 1)),
+                                        []))
+                                    ))
+                                 )),
+                              []))
+                          )))
+                 ))
+              ))
+           },
+         [])
+        ));
+      (Str_value (Nonrecursive,
+         ({ pat = (Pat_var "main");
+            expr =
+            (Exp_let (Nonrecursive,
+               ({ pat = (Pat_construct ("()", None));
+                  expr =
+                  (Exp_apply ((Exp_ident "print_int"),
+                     (Exp_apply ((Exp_ident "fac"),
+                        (Exp_constant (Const_integer 4))))
+                     ))
+                  },
+                []),
+               (Exp_constant (Const_integer 0))))
+            },
+          [])
+         ))
+      ] |}]
+
+      let%expect_test "thefib" =
+test_program {|let rec fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)
+
+let main =
+  let () = print_int (fib 4) in
+  0|}; [%expect{|
+    [(Str_value (Recursive,
+        ({ pat = (Pat_var "fib");
+           expr =
+           (Exp_fun (((Pat_var "n"), []),
+              (Exp_if (
+                 (Exp_apply ((Exp_ident "<"),
+                    (Exp_tuple
+                       ((Exp_ident "n"), (Exp_constant (Const_integer 2)), []))
+                    )),
+                 (Exp_ident "n"),
+                 (Some (Exp_apply ((Exp_ident "+"),
+                          (Exp_tuple
+                             ((Exp_apply ((Exp_ident "fib"),
+                                 (Exp_apply ((Exp_ident "-"),
+                                    (Exp_tuple
+                                       ((Exp_ident "n"),
+                                        (Exp_constant (Const_integer 1)),
+                                        []))
+                                    ))
+                                 )),
+                              (Exp_apply ((Exp_ident "fib"),
+                                 (Exp_apply ((Exp_ident "-"),
+                                    (Exp_tuple
+                                       ((Exp_ident "n"),
+                                        (Exp_constant (Const_integer 2)),
+                                        []))
+                                    ))
+                                 )),
+                              []))
+                          )))
+                 ))
+              ))
+           },
+         [])
+        ));
+      (Str_value (Nonrecursive,
+         ({ pat = (Pat_var "main");
+            expr =
+            (Exp_let (Nonrecursive,
+               ({ pat = (Pat_construct ("()", None));
+                  expr =
+                  (Exp_apply ((Exp_ident "print_int"),
+                     (Exp_apply ((Exp_ident "fib"),
+                        (Exp_constant (Const_integer 4))))
+                     ))
+                  },
+                []),
+               (Exp_constant (Const_integer 0))))
+            },
+          [])
+         ))
+      ] |}]
