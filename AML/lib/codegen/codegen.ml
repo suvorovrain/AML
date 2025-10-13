@@ -7,6 +7,7 @@ open Machine
 open Ast
 open Ast.Expression
 open Ast.Pattern
+open Middle.Anf
 
 type location =
   | Loc_reg of reg
@@ -65,6 +66,7 @@ let lookup_var id =
   | None -> failwith ("Unbound variable: " ^ id)
 ;;
 
+(* TODO: rm *)
 let gen_bin_op op dst r1 r2 =
   match op with
   | "+" -> emit add dst r1 r2
@@ -74,6 +76,17 @@ let gen_bin_op op dst r1 r2 =
     emit slt dst t1 t0;
     emit xori dst dst 1
   | _ -> failwith ("Unsupported binary operator: " ^ op)
+;;
+
+let a_gen_bin_op op dst r1 r2 =
+  match op with
+  | Add -> emit add dst r1 r2
+  | Sub -> emit sub dst r1 r2
+  | Mul -> emit mul dst r1 r2
+  | Le ->
+    emit slt dst t1 t0;
+    emit xori dst dst 1
+  | _ -> failwith "Unsupported binary operator."
 ;;
 
 let rec gen_expr (dst : reg) (expr : Ast.Expression.t) : unit Codegen.t =
@@ -136,6 +149,67 @@ let rec gen_expr (dst : reg) (expr : Ast.Expression.t) : unit Codegen.t =
   | _ -> failwith "TODO: expr"
 ;;
 
+let a_gen_immexpr (dst : reg) (immexpr : immexpr) =
+  match immexpr with
+  | ImmNum i -> return (emit li dst i)
+  | ImmId id ->
+    let* loc = lookup_var id in
+    return
+      (match loc with
+       | Loc_reg r -> emit mv dst r
+       | Loc_mem m -> emit ld dst m)
+;;
+
+let rec a_gen_expr (dst : reg) (aexpr : aexpr) : unit Codegen.t =
+  match aexpr with
+  | ACE cexpr ->
+    (match cexpr with
+     | CImm imm -> a_gen_immexpr dst imm
+     | CBinop (bop, imm1, imm2) ->
+       let* () = a_gen_immexpr t0 imm1 in
+       let* () = a_gen_immexpr t1 imm2 in
+       return (a_gen_bin_op bop dst t0 t1)
+     | CApp (ImmId fname, arg_imm :: _) ->
+       let* state = get in
+       let live_caller_regs =
+         Map.to_alist state.env
+         |> List.filter_map ~f:(fun (_, loc) ->
+           match loc with
+           | Loc_reg ((A _ | T _) as r) -> Some r
+           | _ -> None)
+         |> List.dedup_and_sort ~compare:Poly.compare
+       in
+       let* () =
+         return
+           (List.iter live_caller_regs ~f:(fun r ->
+              emit addi sp sp (-8);
+              emit sd r (ROff (0, sp))))
+       in
+       let* () = a_gen_immexpr a0 arg_imm in
+       let* () = return (emit jal ra fname) in
+       let* () = if not (equal_reg dst a0) then return (emit mv dst a0) else return () in
+       let* () =
+         return
+           (List.iter (List.rev live_caller_regs) ~f:(fun r ->
+              emit ld r (ROff (0, sp));
+              emit addi sp sp 8))
+       in
+       return ()
+     | CIte (cond_imm, then_aexpr, else_aexprt) ->
+       let* else_label = fresh_label "else" in
+       let* end_label = fresh_label "endif" in
+       let* () = a_gen_immexpr t0 cond_imm in
+       let* () = return (emit beq t0 x0 else_label) in
+       let* () = a_gen_expr dst then_aexpr in
+       let* () = return (emit j end_label) in
+       let* () = return (emit label else_label) in
+       let* () = a_gen_expr dst else_aexprt in
+       return (emit label end_label)
+     | _ -> failwith "TODO")
+  | _ -> failwith "TODO"
+;;
+
+(* TODO: rm *)
 let rec count_local_vars = function
   | Exp_let (_, _, body) -> 1 + count_local_vars body
   | Exp_if (c, t, Some e) -> count_local_vars c + count_local_vars t + count_local_vars e
@@ -143,6 +217,16 @@ let rec count_local_vars = function
   | _ -> 0
 ;;
 
+let rec a_count_local_vars = function
+  | ALet (_, _, _, body) -> 1 + a_count_local_vars body
+  | ACE cexpr ->
+    (match cexpr with
+     | CIte (_, then_expr, else_expr) ->
+       Int.max (a_count_local_vars then_expr) (a_count_local_vars else_expr)
+     | _ -> 0)
+;;
+
+(* TODO: rm *)
 let gen_func name args body =
   let is_main = String.equal name "main" in
   let func_label = if is_main then "_start" else name in
@@ -180,6 +264,44 @@ let gen_func name args body =
   ()
 ;;
 
+let a_gen_func name args body =
+  let is_main = String.equal name "main" in
+  let func_label = if is_main then "_start" else name in
+  let () =
+    emit directive (Printf.sprintf ".globl %s" func_label);
+    emit directive (Printf.sprintf ".type %s, @function" func_label);
+    emit label func_label
+  in
+  let locals_count = a_count_local_vars body in
+  let stack_size = 16 + (locals_count * 8) in
+  let () =
+    emit addi sp sp (-stack_size);
+    emit sd ra (ROff (stack_size - 8, sp));
+    emit sd fp (ROff (stack_size - 16, sp));
+    emit addi fp sp stack_size
+  in
+  let f i env = function
+    | Pat_var id when i < 8 -> Map.set env ~key:id ~data:(Loc_reg (A i))
+    | _ -> failwith "not yet"
+  in
+  let initial_env = List.foldi args ~init:(Map.empty (module String)) ~f in
+  let initial_cg_state = { env = initial_env; frame_offset = 16; label_id = 0 } in
+  let (), _final_state = Codegen.run initial_cg_state (a_gen_expr a0 body) in
+  let () =
+    emit label (name ^ "_end");
+    emit ld ra (ROff (stack_size - 8, sp));
+    emit ld fp (ROff (stack_size - 16, sp));
+    emit addi sp sp stack_size;
+    if is_main
+    then (
+      emit li (A 7) 93;
+      emit ecall)
+    else emit ret
+  in
+  ()
+;;
+
+(* TODO: rm *)
 let codegen ppf (s : Structure.structure_item list) =
   let open Structure in
   emit directive ".text";
@@ -191,3 +313,15 @@ let codegen ppf (s : Structure.structure_item list) =
     | _ -> failwith "Unsupported toplevel structure item ");
   flush_queue ppf
 ;;
+
+(* let a_codegen ppf (s : ???) =
+  let open Structure in
+  emit directive ".text";
+  List.iter s ~f:(function
+    | Str_value (Recursive, ({ pat = Pat_var f; expr = Exp_fun ((p, ps), body) }, [])) ->
+      a_gen_func f (p :: ps) body
+    | Str_value (Nonrecursive, ({ pat = Pat_var f; expr = body }, [])) ->
+      a_gen_func f [] body
+    | _ -> failwith "Unsupported toplevel structure item ");
+  flush_queue ppf
+;; *)
