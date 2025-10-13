@@ -3,13 +3,13 @@
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
 
 type reg =
-  | X0
-  | A of int
-  | RA
-  | SP
-  | T of int
-  | S of int
-  | ROff of int * reg
+  | X0 (* hardwired to 0, ignores writes *)
+  | A of int (* a0-a1 return value or function argument. a2-a7 function argument *)
+  | RA (* return address for jumps *)
+  | SP (* stack pointer *)
+  | T of int (* t0-t6 temporary register *)
+  | S of int (* s0 saved register or frame pointer. s1-s11 saved register *)
+  | ROff of int * reg (* memory address with offset, e.g. 8(sp) *)
 [@@deriving eq]
 
 let x0 = X0
@@ -34,24 +34,39 @@ let rec pp_reg ppf =
 ;;
 
 type instr =
-  | Addi of reg * reg * int
+  | Addi of
+      reg
+      * reg
+      * int (* addi rd,rs1,imm. Adds the sign-extended 12-bit immediate to register rs1 *)
   | Add of reg * reg * reg
+    (* add rd,rs1,rs2. adds the registers rs1 and rs2 and stores the result in rd *)
   | Sub of reg * reg * reg
+    (* sub rd,rs1,rs2. subs the register rs2 from rs1 and stores the result in rd *)
   | Mul of reg * reg * reg
+    (* mul rd,rs1,rs2. performs multiplication of signed rs1 by signed rs2 and places the lower bits in the destination register *)
   | Slt of reg * reg * reg
+    (* slt rd,rs1,rs2. place the value 1 in register rd if register rs1 is less than register rs2 when both are treated as signed numbers, else 0 is written to rd *)
   | Xori of reg * reg * int
+    (* xori rd,rs1,imm. performs bitwise XOR on register rs1 and the sign-extended 12-bit immediate and place the result in rd *)
   | Beq of reg * reg * string
+    (* beq rs1,rs2,offset. take the branch if registers rs1 and rs2 are equal *)
   | Bne of reg * reg * string
+    (* bne rs1,rs2,offset. take the branch if registers rs1 and rs2 are not equal *)
   | Blt of reg * reg * string
-  | Jal of reg * string
-  | J of string
-  | Ret
-  | Ld of reg * reg
-  | Sd of reg * reg
+    (* blt rs1,rs2,offset. take the branch if registers rs1 is less than rs2, using signed comparison *)
+  | Jal of
+      reg * string (* jal rd,offset. jump to address and place return address in rd *)
+  | J of string (* j offset. unconditional control transfer *)
+  | Ret (* jumps to the address stored in ra *)
+  | Ld of
+      reg * reg (* ld rd,uimm(rs1). load a 64-bit value from memory into register rd *)
+  | Sd of
+      reg * reg (* sd rs2,offset(rs1). store 64-bit, values from register rs2 to memory *)
   | Li of reg * int
-  | Ecall
-  | Label of string
-  | Directive of string
+    (* li rd,uimm. load the sign-extended 6-bit immediate, imm, into register rd *)
+  | Ecall (* make a request to the supporting execution environment *)
+  | Label of string (* label in the assembly code, marking a location to jump to *)
+  | Directive of string (* assembler directive, e.g. ".globl" *)
 
 let pp_instr ppf =
   let open Format in
