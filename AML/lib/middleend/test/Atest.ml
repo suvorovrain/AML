@@ -257,3 +257,150 @@ let%expect_test "anf_fib" =
             (ACE
               (CImm 0)))))) |}]
 ;;
+
+(*
+let large x = if 0<>x then print_int 0 else print_int 1
+  let main =
+     let x = if (if (if 0
+                     then 0 else (let t42 = print_int 42 in 1))
+                 then 0 else 1)
+             then 0 else 1 in
+     large x
+*)
+let%expect_test "anf_third_test" =
+  let expr =
+    [(Str_value (Nonrecursive,
+        ({ pat = (Pat_var "large");
+           expr =
+           (Exp_fun (((Pat_var "x"), []),
+              (Exp_if (
+                 (Exp_apply ((Exp_ident "<>"),
+                    (Exp_tuple
+                       ((Exp_constant (Const_integer 0)), (Exp_ident "x"), []))
+                    )),
+                 (Exp_apply ((Exp_ident "print_int"),
+                    (Exp_constant (Const_integer 0)))),
+                 (Some (Exp_apply ((Exp_ident "print_int"),
+                          (Exp_constant (Const_integer 1)))))
+                 ))
+              ))
+           },
+         [])
+        ));
+      (Str_value (Nonrecursive,
+         ({ pat = (Pat_var "main");
+            expr =
+            (Exp_let (Nonrecursive,
+               ({ pat = (Pat_var "x");
+                  expr =
+                  (Exp_if (
+                     (Exp_if (
+                        (Exp_if ((Exp_constant (Const_integer 0)),
+                           (Exp_constant (Const_integer 0)),
+                           (Some (Exp_let (Nonrecursive,
+                                    ({ pat = (Pat_var "t42");
+                                       expr =
+                                       (Exp_apply ((Exp_ident "print_int"),
+                                          (Exp_constant (Const_integer 42))))
+                                       },
+                                     []),
+                                    (Exp_constant (Const_integer 1)))))
+                           )),
+                        (Exp_constant (Const_integer 0)),
+                        (Some (Exp_constant (Const_integer 1))))),
+                     (Exp_constant (Const_integer 0)),
+                     (Some (Exp_constant (Const_integer 1)))))
+                  },
+                []),
+               (Exp_apply ((Exp_ident "large"), (Exp_ident "x")))))
+            },
+          [])
+         ))
+      ] 
+  in
+  test_anf expr;
+  [%expect
+    {|
+    (AStr_value let large
+      (ACE
+        (CFun x
+          (ALet let t_0 =
+            (CBinop <> 0 x)
+            (ACE
+              (CIte t_0
+                (ALet let t_1 =
+                  (CApp print_int [0])
+                  (ACE
+                    (CImm t_1)))
+                (ALet let t_2 =
+                  (CApp print_int [1])
+                  (ACE
+                    (CImm t_2)))))))))
+    (AStr_value let main
+      (ACE
+        (CIte 0
+          (ACE
+            (CIte 0
+              (ACE
+                (CIte 0
+                  (ALet let x =
+                    (CImm 0)
+                    (ALet let t_3 =
+                      (CApp large [x])
+                      (ACE
+                        (CImm t_3))))
+                  (ALet let x =
+                    (CImm 1)
+                    (ALet let t_4 =
+                      (CApp large [x])
+                      (ACE
+                        (CImm t_4))))))
+              (ACE
+                (CIte 1
+                  (ALet let x =
+                    (CImm 0)
+                    (ALet let t_5 =
+                      (CApp large [x])
+                      (ACE
+                        (CImm t_5))))
+                  (ALet let x =
+                    (CImm 1)
+                    (ALet let t_6 =
+                      (CApp large [x])
+                      (ACE
+                        (CImm t_6))))))))
+          (ALet let t_7 =
+            (CApp print_int [42])
+            (ALet let t42 =
+              (CImm t_7)
+              (ACE
+                (CIte 1
+                  (ACE
+                    (CIte 0
+                      (ALet let x =
+                        (CImm 0)
+                        (ALet let t_8 =
+                          (CApp large [x])
+                          (ACE
+                            (CImm t_8))))
+                      (ALet let x =
+                        (CImm 1)
+                        (ALet let t_9 =
+                          (CApp large [x])
+                          (ACE
+                            (CImm t_9))))))
+                  (ACE
+                    (CIte 1
+                      (ALet let x =
+                        (CImm 0)
+                        (ALet let t_10 =
+                          (CApp large [x])
+                          (ACE
+                            (CImm t_10))))
+                      (ALet let x =
+                        (CImm 1)
+                        (ALet let t_11 =
+                          (CApp large [x])
+                          (ACE
+                            (CImm t_11))))))))))))) |}]
+;;
