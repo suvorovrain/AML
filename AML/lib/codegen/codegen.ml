@@ -301,6 +301,11 @@ let a_gen_func name args body =
   ()
 ;;
 
+let () =
+  let _ = a_gen_func in
+  ()
+;;
+
 (* TODO: rm *)
 let codegen ppf (s : Structure.structure_item list) =
   let open Structure in
