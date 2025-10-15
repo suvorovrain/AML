@@ -9,7 +9,7 @@
   >      let m = fac n1 in
   >      n*m)
   > 
-  > let main = fac 4
+  > let main = print_int (fac 4)
   > EOF
   $ ../../../bin/AML.exe fac.ml fac.s
   Generated: fac.s
@@ -37,7 +37,7 @@
     addi sp, sp, -8
     sd a0, 0(sp)
     ld a0, -24(s0)
-    jal ra, fac
+    call fac
     addi t0, a0, 0
     ld a0, 0(sp)
     addi sp, sp, 8
@@ -51,26 +51,28 @@
     ld s0, 16(sp)
     addi sp, sp, 32
     ret
-    .globl _start
-    .type _start, @function
-  _start:
+    .globl main
+    .type main, @function
+  main:
     addi sp, sp, -16
     sd ra, 8(sp)
     sd s0, 0(sp)
     addi s0, sp, 16
     li a0, 4
-    jal ra, fac
+    call fac
+    call aml_print_int
+    li a0, 0
   main_end:
     ld ra, 8(sp)
     ld s0, 0(sp)
     addi sp, sp, 16
-    li a7, 93
-    ecall
+    ret
   $ riscv64-linux-gnu-as -march=rv64gc fac.s -o fac.o
-  riscv64-linux-gnu-as: not found
-  [127]
-  $ riscv64-linux-gnu-ld fac.o -o fac.elf
-  riscv64-linux-gnu-ld: not found
-  [127]
-  $ qemu-riscv64 fac.elf
-  [1]
+  $ riscv64-linux-gnu-gcc -static fac.o -L../../../runtime/target/riscv64gc-unknown-linux-gnu/release -l:libruntime.a -o fac.elf --no-warnings
+  /usr/lib/gcc-cross/riscv64-linux-gnu/13/../../../../riscv64-linux-gnu/bin/ld: ../../../runtime/target/riscv64gc-unknown-linux-gnu/release/libruntime.a(std-fc20e55d14b154cf.std.f9e9beb01923febe-cgu.0.rcgu.o): in function `<std::sys::net::connection::socket::LookupHost as core::convert::TryFrom<(&str,u16)>>::try_from::{{closure}}':
+  /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/sys/net/connection/socket.rs:319:(.text._ZN117_$LT$std..sys..net..connection..socket..LookupHost$u20$as$u20$core..convert..TryFrom$LT$$LP$$RF$str$C$u16$RP$$GT$$GT$8try_from28_$u7b$$u7b$closure$u7d$$u7d$17h6b3bead568d72262E+0x44): warning: Using 'getaddrinfo' in statically linked applications requires at runtime the shared libraries from the glibc version used for linking
+  /usr/lib/gcc-cross/riscv64-linux-gnu/13/../../../../riscv64-linux-gnu/bin/ld: ../../../runtime/target/riscv64gc-unknown-linux-gnu/release/libruntime.a(std-fc20e55d14b154cf.std.f9e9beb01923febe-cgu.0.rcgu.o): in function `std::sys::pal::unix::os::home_dir::fallback':
+  /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/sys/pal/unix/os.rs:674:(.text._ZN3std3env8home_dir17hfa1f00305db43d8bE+0xb8): warning: Using 'getpwuid_r' in statically linked applications requires at runtime the shared libraries from the glibc version used for linking
+  $ qemu-riscv64 ./fac.elf
+  24
+
