@@ -2,7 +2,7 @@
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
 open Ast.Expression
-
+open Ast.Structure
 open Ast
 
 type immexpr =
@@ -29,6 +29,12 @@ and aexpr =
   | ACE of cexpr
   | ALet of rec_flag * ident * cexpr * aexpr
 
+type astructure_item =
+  | AStr_value of rec_flag * ident * aexpr
+  | AStr_expr of aexpr
+
+type aprogram = astructure_item list
+
 type anfState = { temps : int }
 
 module ANFState = struct
@@ -46,7 +52,13 @@ module ANFState = struct
   let ( let* ) x f = bind x f
   let get st = st, st
   let put st _ = (), st
-  let run m init_state = m init_state
+  let rec map_m f = function
+  | [] -> return []
+  | x :: xs ->
+      let* y = f x in
+      let* ys = map_m f xs in
+      return (y :: ys)
+  let run m = fst (m {temps = 0 })
 end
 
 open ANFState
@@ -87,12 +99,6 @@ let get_pattern_name =
   | _ -> failwith "not supported"
 ;;
 
-let extract_cexpr aexpr =
-  match aexpr with
-  | ACE cexpr -> cexpr
-  | _ -> failwith "unreachable"
-;;
-
 let rec transform_list
   : Expression.t list -> (immexpr list -> aexpr ANFState.t) -> aexpr ANFState.t
   =
@@ -126,6 +132,10 @@ and transform_expr : Expression.t -> (immexpr -> aexpr ANFState.t) -> aexpr ANFS
     transform_expr expr (fun a ->
       let* res = transform_expr exp k in
       return (ALet (flag, pat, CImm a, res)))
+  | Exp_let (flag, ({ pat = Pattern.Pat_construct ("()",None); expr }, _), exp) ->
+    transform_expr expr (fun a ->
+      let* res = transform_expr exp k in
+      return (ALet (flag, "()", CImm a, res)))
   | Exp_if (cond, then_expr, Some else_expr) ->
     transform_expr cond (fun cond_res ->
       let* then_res = transform_expr then_expr k in
@@ -139,12 +149,30 @@ and transform_expr : Expression.t -> (immexpr -> aexpr ANFState.t) -> aexpr ANFS
         (pat_hd :: pat_tl)
         body_anf
     in
-    let* t = fresh_temp in
-    let* rest = k @@ ImmId t in
-    return @@ ALet (Nonrecursive, t, extract_cexpr params, rest)
+    return params
   | _ -> failwith "other expression in future versions"
 ;;
 
+let transform_str_item : structure_item ->  astructure_item ANFState.t = fun item -> 
+  match item with
+| Str_eval expr -> let* e_anf =
+      transform_expr expr (fun v ->
+        return @@ ACE (CImm v))
+    in
+    return @@ AStr_expr e_anf
+| Str_value (recflag, ({ pat = Pattern.Pat_var pat; expr }, _)) ->
+    let* e_anf =transform_expr expr (fun v ->
+        return @@ ACE (CImm v))
+    in
+    return @@ AStr_value (recflag, pat,e_anf)
+| _ -> failwith "ADT is not unsupported"
+
+
+let transform_str_item_list prog =
+  map_m transform_str_item prog 
+  
+let anf_transform (prog : program)  =
+   run (transform_str_item_list prog) 
 (* let rec fac n = if n <= 1 then 1 else n * fac (n - 1)
 
 let main =
