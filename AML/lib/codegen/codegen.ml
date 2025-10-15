@@ -315,7 +315,8 @@ let codegen ppf (s : Structure.structure_item list) =
       gen_func f (p :: ps) body
     | Str_value (Nonrecursive, ({ pat = Pat_var f; expr = body }, [])) ->
       gen_func f [] body
-    | _ -> failwith "Unsupported toplevel structure item ");
+    | _ -> let _ = a_gen_func in failwith "Unsupported toplevel structure item ");
+    
   flush_queue ppf
 ;;
 
