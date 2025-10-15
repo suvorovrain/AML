@@ -67,6 +67,7 @@ type instr =
   | Ecall (* make a request to the supporting execution environment *)
   | Label of string (* label in the assembly code, marking a location to jump to *)
   | Directive of string (* assembler directive, e.g. ".globl" *)
+  | Call of string
 
 let pp_instr ppf =
   let open Format in
@@ -89,6 +90,7 @@ let pp_instr ppf =
   | Ecall -> fprintf ppf "ecall"
   | Label s -> fprintf ppf "%s:" s
   | Directive s -> fprintf ppf "%s" s
+  | Call l -> fprintf ppf "call %s" l
 ;;
 
 let addi k r1 r2 n = k @@ Addi (r1, r2, n)
@@ -110,6 +112,7 @@ let li k r n = k (Li (r, n))
 let label k s = k (Label s)
 let directive k s = k (Directive s)
 let mv k rd rs = k @@ Addi (rd, rs, 0)
+let call k l = k (Call l)
 let code : (instr * string) Queue.t = Queue.create ()
 let emit ?(comm = "") instr = instr (fun i -> Queue.add (i, comm) code)
 

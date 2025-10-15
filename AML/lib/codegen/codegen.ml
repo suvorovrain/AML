@@ -104,6 +104,10 @@ let rec gen_expr (dst : reg) (expr : Ast.Expression.t) : unit Codegen.t =
        let* () = gen_expr t0 arg1 in
        let* () = gen_expr t1 arg2 in
        return (gen_bin_op op dst t0 t1)
+     | Exp_ident "print_int", arg_exp ->
+       let* () = gen_expr a0 arg_exp in
+       let* () = return (emit call "aml_print_int") in
+       return (emit li dst 0)
      | Exp_ident fname, arg_exp ->
        let* state = get in
        let live_caller_regs =
@@ -121,7 +125,7 @@ let rec gen_expr (dst : reg) (expr : Ast.Expression.t) : unit Codegen.t =
               emit sd r (ROff (0, sp))))
        in
        let* () = gen_expr a0 arg_exp in
-       let* () = return (emit jal ra fname) in
+       let* () = return (emit call fname) in
        let* () = if not (equal_reg dst a0) then return (emit mv dst a0) else return () in
        let* () =
          return
@@ -228,8 +232,8 @@ let rec a_count_local_vars = function
 
 (* TODO: rm *)
 let gen_func name args body =
-  let is_main = String.equal name "main" in
-  let func_label = if is_main then "_start" else name in
+  (* let is_main = String.equal name "main" in *)
+  let func_label = name in 
   let () =
     emit directive (Printf.sprintf ".globl %s" func_label);
     emit directive (Printf.sprintf ".type %s, @function" func_label);
@@ -255,11 +259,14 @@ let gen_func name args body =
     emit ld ra (ROff (stack_size - 8, sp));
     emit ld fp (ROff (stack_size - 16, sp));
     emit addi sp sp stack_size;
-    if is_main
+    (* if is_main
     then (
+      emit li a0 0;
       emit li (A 7) 93;
       emit ecall)
-    else emit ret
+    else emit ret *)
+    (* maybe add emit li a0, 0 *)
+    emit ret
   in
   ()
 ;;
