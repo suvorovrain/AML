@@ -8,6 +8,7 @@ open Ast
 type immexpr =
   | ImmNum of int
   | ImmId of ident
+  [@@deriving eq, show { with_path = false }]
 
 type binop =
   | Add
@@ -17,6 +18,7 @@ type binop =
   | Lt
   | Eq
   | Neq
+  [@@deriving eq, show { with_path = false }]
 
 type cexpr =
   | CImm of immexpr
@@ -24,16 +26,19 @@ type cexpr =
   | CApp of immexpr * immexpr list
   | CIte of immexpr * aexpr * aexpr
   | CFun of ident * aexpr
+  [@@deriving eq, show { with_path = false }]
 
 and aexpr =
   | ACE of cexpr
   | ALet of rec_flag * ident * cexpr * aexpr
+  [@@deriving eq, show { with_path = false }]
 
 type astructure_item =
   | AStr_value of rec_flag * ident * aexpr
   | AStr_expr of aexpr
+  [@@deriving eq, show { with_path = false }]
 
-type aprogram = astructure_item list
+type aprogram = astructure_item list [@@deriving eq, show { with_path = false }]
 
 type anfState = { temps : int }
 
