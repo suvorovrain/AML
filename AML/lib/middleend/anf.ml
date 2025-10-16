@@ -1,6 +1,7 @@
 (** Copyright 2025-2026, Rodion Suvorov, Dmitriy Chirkov*)
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
+
 open Ast.Expression
 open Ast.Structure
 open Ast
@@ -8,7 +9,7 @@ open Ast
 type immexpr =
   | ImmNum of int
   | ImmId of ident
-  [@@deriving eq, show { with_path = false }]
+[@@deriving eq, show { with_path = false }]
 
 type binop =
   | Add
@@ -18,7 +19,7 @@ type binop =
   | Lt
   | Eq
   | Neq
-  [@@deriving eq, show { with_path = false }]
+[@@deriving eq, show { with_path = false }]
 
 type cexpr =
   | CImm of immexpr
@@ -26,24 +27,23 @@ type cexpr =
   | CApp of immexpr * immexpr list
   | CIte of immexpr * aexpr * aexpr
   | CFun of ident * aexpr
-  [@@deriving eq, show { with_path = false }]
+[@@deriving eq, show { with_path = false }]
 
 and aexpr =
   | ACE of cexpr
   | ALet of rec_flag * ident * cexpr * aexpr
-  [@@deriving eq, show { with_path = false }]
+[@@deriving eq, show { with_path = false }]
 
 type astructure_item =
   | AStr_value of rec_flag * ident * aexpr
   | AStr_expr of aexpr
-  [@@deriving eq, show { with_path = false }]
+[@@deriving eq, show { with_path = false }]
 
 type aprogram = astructure_item list [@@deriving eq, show { with_path = false }]
-
-type anfState = { temps : int }
+type anf_state = { temps : int }
 
 module ANFState = struct
-  type 'a t = anfState -> 'a * anfState
+  type 'a t = anf_state -> 'a * anf_state
 
   let return x st = x, st
 
@@ -57,13 +57,16 @@ module ANFState = struct
   let ( let* ) x f = bind x f
   let get st = st, st
   let put st _ = (), st
+
   let rec map_m f = function
-  | [] -> return []
-  | x :: xs ->
+    | [] -> return []
+    | x :: xs ->
       let* y = f x in
       let* ys = map_m f xs in
       return (y :: ys)
-  let run m = fst (m {temps = 0 })
+  ;;
+
+  let run m = fst (m { temps = 0 })
 end
 
 open ANFState
@@ -97,9 +100,7 @@ let define_binop = function
   | s -> failwith ("unsupported binop: " ^ s)
 ;;
 
-let get_pattern_name =
-  fun pat ->
-  match pat with
+let get_pattern_name = function
   | Pattern.Pat_var name -> name
   | _ -> failwith "not supported"
 ;;
@@ -114,8 +115,7 @@ let rec transform_list
       transform_list tl (fun res_tl -> k (res_hd :: res_tl)))
   | [] -> k []
 
-and transform_expr : Expression.t -> (immexpr -> aexpr ANFState.t) -> aexpr ANFState.t =
-  fun expr k ->
+and transform_expr expr k =
   match expr with
   | Exp_constant (Constant.Const_integer exp) -> k @@ ImmNum exp
   | Exp_ident exp -> k @@ ImmId exp
@@ -137,7 +137,7 @@ and transform_expr : Expression.t -> (immexpr -> aexpr ANFState.t) -> aexpr ANFS
     transform_expr expr (fun a ->
       let* res = transform_expr exp k in
       return (ALet (flag, pat, CImm a, res)))
-  | Exp_let (flag, ({ pat = Pattern.Pat_construct ("()",None); expr }, _), exp) ->
+  | Exp_let (flag, ({ pat = Pattern.Pat_construct ("()", None); expr }, _), exp) ->
     transform_expr expr (fun a ->
       let* res = transform_expr exp k in
       return (ALet (flag, "()", CImm a, res)))
@@ -158,26 +158,18 @@ and transform_expr : Expression.t -> (immexpr -> aexpr ANFState.t) -> aexpr ANFS
   | _ -> failwith "other expression in future versions"
 ;;
 
-let transform_str_item : structure_item ->  astructure_item ANFState.t = fun item -> 
-  match item with
-| Str_eval expr -> let* e_anf =
-      transform_expr expr (fun v ->
-        return @@ ACE (CImm v))
-    in
+let transform_str_item : structure_item -> astructure_item ANFState.t = function
+  | Str_eval expr ->
+    let* e_anf = transform_expr expr (fun v -> return @@ ACE (CImm v)) in
     return @@ AStr_expr e_anf
-| Str_value (recflag, ({ pat = Pattern.Pat_var pat; expr }, _)) ->
-    let* e_anf =transform_expr expr (fun v ->
-        return @@ ACE (CImm v))
-    in
-    return @@ AStr_value (recflag, pat,e_anf)
-| _ -> failwith "ADT is not unsupported"
+  | Str_value (recflag, ({ pat = Pattern.Pat_var pat; expr }, _)) ->
+    let* e_anf = transform_expr expr (fun v -> return @@ ACE (CImm v)) in
+    return @@ AStr_value (recflag, pat, e_anf)
+  | _ -> failwith "ADT is not unsupported"
+;;
 
-
-let transform_str_item_list prog =
-  map_m transform_str_item prog 
-  
-let anf_transform (prog : program)  =
-   run (transform_str_item_list prog) 
+let transform_str_item_list prog = map_m transform_str_item prog
+let anf_transform (prog : program) = run (transform_str_item_list prog)
 (* let rec fac n = if n <= 1 then 1 else n * fac (n - 1)
 
 let main =
