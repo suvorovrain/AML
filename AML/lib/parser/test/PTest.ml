@@ -4623,7 +4623,8 @@ let%expect_test "thefib" =
                  then 0 else 1)
              then 0 else 1 in
      large x|};
-  [%expect{|
+  [%expect
+    {|
     [(Str_value (Nonrecursive,
         ({ pat = (Pat_var "large");
            expr =
@@ -4672,3 +4673,4 @@ let%expect_test "thefib" =
           [])
          ))
       ] |}]
+;;
