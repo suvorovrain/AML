@@ -238,6 +238,6 @@ let codegen ppf (s : aprogram) =
       in
       let params, body = extract_fun_params_body expr in
       a_gen_func ctx name params body
-    | AStr_expr expr -> a_gen_func ctx "main" [] expr);
+    | AStr_eval expr -> a_gen_func ctx "main" [] expr);
   flush_queue ppf
 ;;
