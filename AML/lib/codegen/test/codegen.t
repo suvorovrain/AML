@@ -18,14 +18,16 @@
     .globl fac
     .type fac, @function
   fac:
-    addi sp, sp, -32
-    sd ra, 24(sp)
-    sd s0, 16(sp)
-    addi s0, sp, 32
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
     addi t0, a0, 0
     li t1, 1
     slt t0, t1, t0
     xori t0, t0, 1
+    sd t0, -24(s0)
+    ld t0, -24(s0)
     beq t0, x0, .Lelse_0
     li a0, 1
     j .Lendif_1
@@ -33,39 +35,50 @@
     addi t0, a0, 0
     li t1, 1
     sub t0, t0, t1
-    sd t0, -24(s0)
+    sd t0, -32(s0)
+    ld t0, -32(s0)
+    sd t0, -40(s0)
     addi sp, sp, -8
     sd a0, 0(sp)
-    ld a0, -24(s0)
+    ld a0, -40(s0)
     call fac
     addi t0, a0, 0
     ld a0, 0(sp)
     addi sp, sp, 8
-    sd t0, -32(s0)
+    sd t0, -48(s0)
+    ld t0, -48(s0)
+    sd t0, -56(s0)
     addi t0, a0, 0
-    ld t1, -32(s0)
-    mul a0, t0, t1
+    ld t1, -56(s0)
+    mul t0, t0, t1
+    sd t0, -64(s0)
+    ld a0, -64(s0)
   .Lendif_1:
   fac_end:
-    ld ra, 24(sp)
-    ld s0, 16(sp)
-    addi sp, sp, 32
+    ld ra, 56(sp)
+    ld s0, 48(sp)
+    addi sp, sp, 64
     ret
     .globl main
     .type main, @function
   main:
-    addi sp, sp, -16
-    sd ra, 8(sp)
-    sd s0, 0(sp)
-    addi s0, sp, 16
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
     li a0, 4
     call fac
-    call aml_print_int
-    li a0, 0
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    call print_int
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    ld a0, -32(s0)
   main_end:
-    ld ra, 8(sp)
-    ld s0, 0(sp)
-    addi sp, sp, 16
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
     ret
   $ riscv64-linux-gnu-as -march=rv64gc fac.s -o fac.o
   $ riscv64-linux-gnu-gcc -static fac.o -L../../../runtime/target/riscv64gc-unknown-linux-gnu/release -l:libruntime.a -o fac.elf --no-warnings
