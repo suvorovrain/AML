@@ -3,77 +3,9 @@ open Ast.Expression
 open Ast.Structure
 open Middle.Anf
 
-let show_anf_program (items : astructure_item list) =
-  let indent n = String.make (2 * n) ' ' in
-  let rec show_imm = function
-    | ImmNum n -> Printf.sprintf "%d" n
-    | ImmId x -> x
-  and show_binop = function
-    | Add -> "+"
-    | Sub -> "-"
-    | Mul -> "*"
-    | Le -> "<="
-    | Lt -> "<"
-    | Eq -> "="
-    | Neq -> "<>"
-  and show_cexpr ?(lvl = 0) = function
-    | CImm i -> Printf.sprintf "%s(CImm %s)" (indent lvl) (show_imm i)
-    | CBinop (op, a, b) ->
-      Printf.sprintf
-        "%s(CBinop %s %s %s)"
-        (indent lvl)
-        (show_binop op)
-        (show_imm a)
-        (show_imm b)
-    | CApp (f, args) ->
-      let args_str = String.concat "; " (List.map show_imm args) in
-      Printf.sprintf "%s(CApp %s [%s])" (indent lvl) (show_imm f) args_str
-    | CIte (cond, texpr, eexpr) ->
-      Printf.sprintf
-        "%s(CIte %s\n%s\n%s)"
-        (indent lvl)
-        (show_imm cond)
-        (show_aexpr ~lvl:(lvl + 1) texpr)
-        (show_aexpr ~lvl:(lvl + 1) eexpr)
-    | CFun (arg, body) ->
-      Printf.sprintf "%s(CFun %s\n%s)" (indent lvl) arg (show_aexpr ~lvl:(lvl + 1) body)
-  and show_aexpr ?(lvl = 0) = function
-    | ACE c -> Printf.sprintf "%s(ACE\n%s)" (indent lvl) (show_cexpr ~lvl:(lvl + 1) c)
-    | ALet (flag, id, c, a) ->
-      let rf =
-        match flag with
-        | Nonrecursive -> "let"
-        | Recursive -> "let rec"
-      in
-      Printf.sprintf
-        "%s(ALet %s %s =\n%s\n%s)"
-        (indent lvl)
-        rf
-        id
-        (show_cexpr ~lvl:(lvl + 1) c)
-        (show_aexpr ~lvl:(lvl + 1) a)
-  and show_astr_item ?(lvl = 0) = function
-    | AStr_value (flag, id, aexpr) ->
-      let rf =
-        match flag with
-        | Nonrecursive -> "let"
-        | Recursive -> "let rec"
-      in
-      Printf.sprintf
-        "%s(AStr_value %s %s\n%s)"
-        (indent lvl)
-        rf
-        id
-        (show_aexpr ~lvl:(lvl + 1) aexpr)
-    | AStr_expr e ->
-      Printf.sprintf "%s(AStr_expr\n%s)" (indent lvl) (show_aexpr ~lvl:(lvl + 1) e)
-  in
-  items |> List.map (show_astr_item ~lvl:0) |> String.concat "\n"
-;;
-
 let test_anf (prog : program) =
   let anf_prog = anf_transform prog in
-  print_endline (show_anf_program anf_prog)
+  print_endline (show_aprogram anf_prog)
 ;;
 
 (* 
@@ -133,32 +65,35 @@ let%expect_test "anf_fac" =
   in
   test_anf expr;
   [%expect{|
-    (AStr_value let rec fac
-      (ACE
-        (CFun n
-          (ALet let t_0 =
-            (CBinop <= n 1)
-            (ACE
-              (CIte t_0
-                (ACE
-                  (CImm 1))
-                (ALet let t_1 =
-                  (CBinop - n 1)
-                  (ALet let t_2 =
-                    (CApp fac [t_1])
-                    (ALet let t_3 =
-                      (CBinop * n t_2)
-                      (ACE
-                        (CImm t_3)))))))))))
-    (AStr_value let main
-      (ALet let t_4 =
-        (CApp fac [4])
-        (ALet let t_5 =
-          (CApp print_int [t_4])
-          (ALet let () =
-            (CImm t_5)
-            (ACE
-              (CImm 0)))))) |}]
+    [(AStr_value (Recursive, "fac",
+        (ACE
+           (CFun ("n",
+              (ALet (Nonrecursive, "t_0", (CBinop (Le, (ImmId "n"), (ImmNum 1))),
+                 (ACE
+                    (CIte ((ImmId "t_0"), (ACE (CImm (ImmNum 1))),
+                       (ALet (Nonrecursive, "t_1",
+                          (CBinop (Sub, (ImmId "n"), (ImmNum 1))),
+                          (ALet (Nonrecursive, "t_2",
+                             (CApp ((ImmId "fac"), [(ImmId "t_1")])),
+                             (ALet (Nonrecursive, "t_3",
+                                (CBinop (Mul, (ImmId "n"), (ImmId "t_2"))),
+                                (ACE (CImm (ImmId "t_3")))))
+                             ))
+                          ))
+                       )))
+                 ))
+              )))
+        ));
+      (AStr_value (Nonrecursive, "main",
+         (ALet (Nonrecursive, "t_4", (CApp ((ImmId "fac"), [(ImmNum 4)])),
+            (ALet (Nonrecursive, "t_5",
+               (CApp ((ImmId "print_int"), [(ImmId "t_4")])),
+               (ALet (Nonrecursive, "()", (CImm (ImmId "t_5")),
+                  (ACE (CImm (ImmNum 0)))))
+               ))
+            ))
+         ))
+      ] |}]
 ;;
 
 (*
@@ -226,36 +161,42 @@ let%expect_test "anf_fib" =
   test_anf expr;
   [%expect
     {|
-    (AStr_value let rec fib
-      (ACE
-        (CFun n
-          (ALet let t_0 =
-            (CBinop < n 2)
-            (ACE
-              (CIte t_0
-                (ACE
-                  (CImm n))
-                (ALet let t_1 =
-                  (CBinop - n 1)
-                  (ALet let t_2 =
-                    (CApp fib [t_1])
-                    (ALet let t_3 =
-                      (CBinop - n 2)
-                      (ALet let t_4 =
-                        (CApp fib [t_3])
-                        (ALet let t_5 =
-                          (CBinop + t_2 t_4)
-                          (ACE
-                            (CImm t_5)))))))))))))
-    (AStr_value let main
-      (ALet let t_6 =
-        (CApp fib [4])
-        (ALet let t_7 =
-          (CApp print_int [t_6])
-          (ALet let () =
-            (CImm t_7)
-            (ACE
-              (CImm 0)))))) |}]
+    [(AStr_value (Recursive, "fib",
+        (ACE
+           (CFun ("n",
+              (ALet (Nonrecursive, "t_0", (CBinop (Lt, (ImmId "n"), (ImmNum 2))),
+                 (ACE
+                    (CIte ((ImmId "t_0"), (ACE (CImm (ImmId "n"))),
+                       (ALet (Nonrecursive, "t_1",
+                          (CBinop (Sub, (ImmId "n"), (ImmNum 1))),
+                          (ALet (Nonrecursive, "t_2",
+                             (CApp ((ImmId "fib"), [(ImmId "t_1")])),
+                             (ALet (Nonrecursive, "t_3",
+                                (CBinop (Sub, (ImmId "n"), (ImmNum 2))),
+                                (ALet (Nonrecursive, "t_4",
+                                   (CApp ((ImmId "fib"), [(ImmId "t_3")])),
+                                   (ALet (Nonrecursive, "t_5",
+                                      (CBinop (Add, (ImmId "t_2"), (ImmId "t_4")
+                                         )),
+                                      (ACE (CImm (ImmId "t_5")))))
+                                   ))
+                                ))
+                             ))
+                          ))
+                       )))
+                 ))
+              )))
+        ));
+      (AStr_value (Nonrecursive, "main",
+         (ALet (Nonrecursive, "t_6", (CApp ((ImmId "fib"), [(ImmNum 4)])),
+            (ALet (Nonrecursive, "t_7",
+               (CApp ((ImmId "print_int"), [(ImmId "t_6")])),
+               (ALet (Nonrecursive, "()", (CImm (ImmId "t_7")),
+                  (ACE (CImm (ImmNum 0)))))
+               ))
+            ))
+         ))
+      ] |}]
 ;;
 
 (*
@@ -321,86 +262,90 @@ let%expect_test "anf_third_test" =
   test_anf expr;
   [%expect
     {|
-    (AStr_value let large
-      (ACE
-        (CFun x
-          (ALet let t_0 =
-            (CBinop <> 0 x)
-            (ACE
-              (CIte t_0
-                (ALet let t_1 =
-                  (CApp print_int [0])
-                  (ACE
-                    (CImm t_1)))
-                (ALet let t_2 =
-                  (CApp print_int [1])
-                  (ACE
-                    (CImm t_2)))))))))
-    (AStr_value let main
-      (ACE
-        (CIte 0
-          (ACE
-            (CIte 0
-              (ACE
-                (CIte 0
-                  (ALet let x =
-                    (CImm 0)
-                    (ALet let t_3 =
-                      (CApp large [x])
-                      (ACE
-                        (CImm t_3))))
-                  (ALet let x =
-                    (CImm 1)
-                    (ALet let t_4 =
-                      (CApp large [x])
-                      (ACE
-                        (CImm t_4))))))
-              (ACE
-                (CIte 1
-                  (ALet let x =
-                    (CImm 0)
-                    (ALet let t_5 =
-                      (CApp large [x])
-                      (ACE
-                        (CImm t_5))))
-                  (ALet let x =
-                    (CImm 1)
-                    (ALet let t_6 =
-                      (CApp large [x])
-                      (ACE
-                        (CImm t_6))))))))
-          (ALet let t_7 =
-            (CApp print_int [42])
-            (ALet let t42 =
-              (CImm t_7)
-              (ACE
-                (CIte 1
-                  (ACE
-                    (CIte 0
-                      (ALet let x =
-                        (CImm 0)
-                        (ALet let t_8 =
-                          (CApp large [x])
-                          (ACE
-                            (CImm t_8))))
-                      (ALet let x =
-                        (CImm 1)
-                        (ALet let t_9 =
-                          (CApp large [x])
-                          (ACE
-                            (CImm t_9))))))
-                  (ACE
-                    (CIte 1
-                      (ALet let x =
-                        (CImm 0)
-                        (ALet let t_10 =
-                          (CApp large [x])
-                          (ACE
-                            (CImm t_10))))
-                      (ALet let x =
-                        (CImm 1)
-                        (ALet let t_11 =
-                          (CApp large [x])
-                          (ACE
-                            (CImm t_11))))))))))))) |}]
+    [(AStr_value (Nonrecursive, "large",
+        (ACE
+           (CFun ("x",
+              (ALet (Nonrecursive, "t_0",
+                 (CBinop (Neq, (ImmNum 0), (ImmId "x"))),
+                 (ACE
+                    (CIte ((ImmId "t_0"),
+                       (ALet (Nonrecursive, "t_1",
+                          (CApp ((ImmId "print_int"), [(ImmNum 0)])),
+                          (ACE (CImm (ImmId "t_1"))))),
+                       (ALet (Nonrecursive, "t_2",
+                          (CApp ((ImmId "print_int"), [(ImmNum 1)])),
+                          (ACE (CImm (ImmId "t_2")))))
+                       )))
+                 ))
+              )))
+        ));
+      (AStr_value (Nonrecursive, "main",
+         (ACE
+            (CIte ((ImmNum 0),
+               (ACE
+                  (CIte ((ImmNum 0),
+                     (ACE
+                        (CIte ((ImmNum 0),
+                           (ALet (Nonrecursive, "x", (CImm (ImmNum 0)),
+                              (ALet (Nonrecursive, "t_3",
+                                 (CApp ((ImmId "large"), [(ImmId "x")])),
+                                 (ACE (CImm (ImmId "t_3")))))
+                              )),
+                           (ALet (Nonrecursive, "x", (CImm (ImmNum 1)),
+                              (ALet (Nonrecursive, "t_4",
+                                 (CApp ((ImmId "large"), [(ImmId "x")])),
+                                 (ACE (CImm (ImmId "t_4")))))
+                              ))
+                           ))),
+                     (ACE
+                        (CIte ((ImmNum 1),
+                           (ALet (Nonrecursive, "x", (CImm (ImmNum 0)),
+                              (ALet (Nonrecursive, "t_5",
+                                 (CApp ((ImmId "large"), [(ImmId "x")])),
+                                 (ACE (CImm (ImmId "t_5")))))
+                              )),
+                           (ALet (Nonrecursive, "x", (CImm (ImmNum 1)),
+                              (ALet (Nonrecursive, "t_6",
+                                 (CApp ((ImmId "large"), [(ImmId "x")])),
+                                 (ACE (CImm (ImmId "t_6")))))
+                              ))
+                           )))
+                     ))),
+               (ALet (Nonrecursive, "t_7",
+                  (CApp ((ImmId "print_int"), [(ImmNum 42)])),
+                  (ALet (Nonrecursive, "t42", (CImm (ImmId "t_7")),
+                     (ACE
+                        (CIte ((ImmNum 1),
+                           (ACE
+                              (CIte ((ImmNum 0),
+                                 (ALet (Nonrecursive, "x", (CImm (ImmNum 0)),
+                                    (ALet (Nonrecursive, "t_8",
+                                       (CApp ((ImmId "large"), [(ImmId "x")])),
+                                       (ACE (CImm (ImmId "t_8")))))
+                                    )),
+                                 (ALet (Nonrecursive, "x", (CImm (ImmNum 1)),
+                                    (ALet (Nonrecursive, "t_9",
+                                       (CApp ((ImmId "large"), [(ImmId "x")])),
+                                       (ACE (CImm (ImmId "t_9")))))
+                                    ))
+                                 ))),
+                           (ACE
+                              (CIte ((ImmNum 1),
+                                 (ALet (Nonrecursive, "x", (CImm (ImmNum 0)),
+                                    (ALet (Nonrecursive, "t_10",
+                                       (CApp ((ImmId "large"), [(ImmId "x")])),
+                                       (ACE (CImm (ImmId "t_10")))))
+                                    )),
+                                 (ALet (Nonrecursive, "x", (CImm (ImmNum 1)),
+                                    (ALet (Nonrecursive, "t_11",
+                                       (CApp ((ImmId "large"), [(ImmId "x")])),
+                                       (ACE (CImm (ImmId "t_11")))))
+                                    ))
+                                 )))
+                           )))
+                     ))
+                  ))
+               )))
+         ))
+      ] |}]
 ;;
