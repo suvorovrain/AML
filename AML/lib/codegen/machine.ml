@@ -20,6 +20,7 @@ let a0 = A 0
 let t0 = T 0
 let t1 = T 1
 let t2 = T 2
+let t3 = T 3
 
 let rec pp_reg ppf =
   let open Format in

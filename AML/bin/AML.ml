@@ -6,6 +6,7 @@ open Codegen
 open Format
 open Inferencer.Infer
 open Inferencer.InferTypes
+open Middle.Anf
 
 let usage_msg = "Usage: AML.exe <input file> <output file>"
 
@@ -37,9 +38,9 @@ let compile input_file output_file =
   | Ok (_, _) ->
     let buf = Buffer.create 1024 in
     let fmt = formatter_of_buffer buf in
-    (* let aprogram = anf_transform program in *)
-    (* codegen fmt aprogram; *)
-    codegen fmt program;
+    let aprogram = anf_transform program in
+    codegen fmt aprogram;
+    (* codegen fmt program; *)
     pp_print_flush fmt ();
     write_file output_file (Buffer.contents buf);
     Printf.printf "Generated: %s\n" output_file
