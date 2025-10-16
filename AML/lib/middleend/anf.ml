@@ -36,7 +36,7 @@ and aexpr =
 
 type astructure_item =
   | AStr_value of rec_flag * ident * aexpr
-  | AStr_expr of aexpr
+  | AStr_eval of aexpr
 [@@deriving eq, show { with_path = false }]
 
 type aprogram = astructure_item list [@@deriving eq, show { with_path = false }]
@@ -124,15 +124,24 @@ and transform_expr expr k =
       transform_expr exp2 (fun exp2_res ->
         let* t = fresh_temp in
         let* rest = k @@ ImmId t in
-        return
-        @@ ALet (Nonrecursive, t, CBinop (define_binop op, exp1_res, exp2_res), rest)))
+        match rest with
+        (* avoid `let t = e in t` *)
+        | ACE (CImm (ImmId id)) when String.equal t id ->
+          return @@ ACE (CBinop (define_binop op, exp1_res, exp2_res))
+        | _ ->
+          return
+          @@ ALet (Nonrecursive, t, CBinop (define_binop op, exp1_res, exp2_res), rest)))
   | Exp_apply (exp1, exp2) ->
     let args, fn = app_args_to_list @@ Exp_apply (exp1, exp2) in
     transform_expr fn (fun fn_res ->
       transform_list args (fun args_res ->
         let* t = fresh_temp in
-        let* rest = k @@ ImmId t in
-        return @@ ALet (Nonrecursive, t, CApp (fn_res, args_res), rest)))
+        let* rest = k (ImmId t) in
+        match rest with
+        (* avoid `let t = e in t` *)
+        | ACE (CImm (ImmId id)) when String.equal t id ->
+          return @@ ACE (CApp (fn_res, args_res))
+        | _ -> return @@ ALet (Nonrecursive, t, CApp (fn_res, args_res), rest)))
   | Exp_let (flag, ({ pat = Pattern.Pat_var pat; expr }, _), exp) ->
     transform_expr expr (fun a ->
       let* res = transform_expr exp k in
@@ -161,7 +170,7 @@ and transform_expr expr k =
 let transform_str_item : structure_item -> astructure_item ANFState.t = function
   | Str_eval expr ->
     let* e_anf = transform_expr expr (fun v -> return @@ ACE (CImm v)) in
-    return @@ AStr_expr e_anf
+    return @@ AStr_eval e_anf
   | Str_value (recflag, ({ pat = Pattern.Pat_var pat; expr }, _)) ->
     let* e_anf = transform_expr expr (fun v -> return @@ ACE (CImm v)) in
     return @@ AStr_value (recflag, pat, e_anf)
@@ -170,20 +179,3 @@ let transform_str_item : structure_item -> astructure_item ANFState.t = function
 
 let transform_str_item_list prog = map_m transform_str_item prog
 let anf_transform (prog : program) = run (transform_str_item_list prog)
-(* let rec fac n = if n <= 1 then 1 else n * fac (n - 1)
-
-let main =
-  let () = print_int (fac 4) in
-  0
-;;
-
-let x = a f in
-
-
-
-let rec fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)
-
-let main =
-  let () = print_int (fib 4) in
-  0
-;; *)
