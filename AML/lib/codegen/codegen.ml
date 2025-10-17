@@ -13,11 +13,12 @@ type location =
   | Loc_mem of reg
 
 type env = (ident, location, String.comparator_witness) Map.t
-type cg_context = { mutable label_id : int }
+(* type cg_context = { mutable label_id : int } *)
 
 type cg_state =
   { env : env
   ; frame_offset : int
+  ; label_id : int
   }
 
 module Codegen = struct
@@ -50,10 +51,11 @@ open Codegen
 let get_state = get
 let set_state = set
 
-let fresh_label (ctx : cg_context) prefix =
-  let id = ctx.label_id in
-  ctx.label_id <- id + 1;
-  Printf.sprintf ".L%s_%d" prefix id
+let fresh_label prefix =
+  let* state = get_state in
+  let id = state.label_id in
+  let* () = set_state { state with label_id = id + 1 } in
+  return (Printf.sprintf ".L%s_%d" prefix id)
 ;;
 
 let allocate_local_var id =
@@ -61,7 +63,7 @@ let allocate_local_var id =
   let new_offset = state.frame_offset + 8 in
   let location = ROff (-new_offset, fp) in
   let new_env = Map.set state.env ~key:id ~data:(Loc_mem location) in
-  let* () = set_state { frame_offset = new_offset; env = new_env } in
+  let* () = set_state { state with frame_offset = new_offset; env = new_env } in
   return location
 ;;
 
@@ -105,16 +107,16 @@ let a_gen_immexpr (dst : reg) (immexpr : immexpr) =
        | Loc_mem m -> emit ld dst m)
 ;;
 
-let rec a_gen_expr (ctx : cg_context) (dst : reg) (aexpr : aexpr) : unit Codegen.t =
+let rec a_gen_expr (dst : reg) (aexpr : aexpr) : unit Codegen.t =
   match aexpr with
-  | ACE cexpr -> a_gen_cexpr ctx dst cexpr
+  | ACE cexpr -> a_gen_cexpr dst cexpr
   | ALet (_rec_flag, id, cexpr, body) ->
-    let* () = a_gen_cexpr ctx t0 cexpr in
+    let* () = a_gen_cexpr t0 cexpr in
     let* loc = allocate_local_var id in
     let* () = return (emit sd t0 loc) in
-    a_gen_expr ctx dst body
+    a_gen_expr dst body
 
-and a_gen_cexpr (ctx : cg_context) (dst : reg) (cexpr : cexpr) : unit Codegen.t =
+and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
   match cexpr with
   | CImm imm -> a_gen_immexpr dst imm
   | CBinop (bop, imm1, imm2) ->
@@ -156,14 +158,14 @@ and a_gen_cexpr (ctx : cg_context) (dst : reg) (cexpr : cexpr) : unit Codegen.t 
     return ()
   | CApp (ImmNum _, _) -> failwith "unreachable"
   | CIte (cond_imm, then_aexpr, else_aexpr) ->
-    let else_label = fresh_label ctx "else" in
-    let end_label = fresh_label ctx "endif" in
+    let* else_label = fresh_label "else" in
+    let* end_label = fresh_label "endif" in
     let* () = a_gen_immexpr t0 cond_imm in
     let* () = return (emit beq t0 x0 else_label) in
-    let* () = a_gen_expr ctx dst then_aexpr in
+    let* () = a_gen_expr dst then_aexpr in
     let* () = return (emit j end_label) in
     let* () = return (emit label else_label) in
-    let* () = a_gen_expr ctx dst else_aexpr in
+    let* () = a_gen_expr dst else_aexpr in
     return (emit label end_label)
   | CFun (_, _) -> failwith "TODO"
 ;;
@@ -177,7 +179,7 @@ let rec a_count_local_vars = function
      | _ -> 0)
 ;;
 
-let a_gen_func (ctx : cg_context) name args body =
+let a_gen_func (state : cg_state) name args body =
   let is_main = String.equal name "main" in
   let func_label = name in
   emit directive (Printf.sprintf ".globl %s" func_label);
@@ -197,8 +199,10 @@ let a_gen_func (ctx : cg_context) name args body =
   let initial_env =
     List.foldi args ~init:(Map.empty (module String)) ~f:(fun i env p -> f i env p)
   in
-  let initial_cg_state = { env = initial_env; frame_offset = 16 } in
-  let (), _final_state = Codegen.run initial_cg_state (a_gen_expr ctx a0 body) in
+  let initial_cg_state =
+    { env = initial_env; frame_offset = 16; label_id = state.label_id }
+  in
+  let (), final_state = Codegen.run initial_cg_state (a_gen_expr a0 body) in
   emit label (name ^ "_end");
   emit ld ra (ROff (stack_size - 8, sp));
   emit ld fp (ROff (stack_size - 16, sp));
@@ -208,23 +212,29 @@ let a_gen_func (ctx : cg_context) name args body =
     emit li a0 0;
     emit li (A 7) 93;
     emit ecall)
-  else emit ret
+  else emit ret;
+  final_state
 ;;
 
 let codegen ppf (s : aprogram) =
   emit directive ".text";
-  let ctx = { label_id = 0 } in
-  List.iter s ~f:(function
-    | AStr_value (_rec_flag, name, expr) ->
-      let rec extract_fun_params_body (aexp : aexpr) =
-        match aexp with
-        | ACE (CFun (param, body)) ->
-          let params, final_body = extract_fun_params_body body in
-          Ast.Pattern.Pat_var param :: params, final_body
-        | _ -> [], aexp
-      in
-      let params, body = extract_fun_params_body expr in
-      a_gen_func ctx name params body
-    | AStr_eval expr -> a_gen_func ctx "main" [] expr);
+  let initial_state =
+    { env = Map.empty (module String); frame_offset = 0; label_id = 0 }
+  in
+  let _final_state =
+    List.fold s ~init:initial_state ~f:(fun current_state item ->
+      match item with
+      | AStr_value (_rec_flag, name, expr) ->
+        let rec extract_fun_params_body (aexp : aexpr) =
+          match aexp with
+          | ACE (CFun (param, body)) ->
+            let params, final_body = extract_fun_params_body body in
+            Ast.Pattern.Pat_var param :: params, final_body
+          | _ -> [], aexp
+        in
+        let params, body = extract_fun_params_body expr in
+        a_gen_func current_state name params body
+      | AStr_eval expr -> a_gen_func current_state "main" [] expr)
+  in
   flush_queue ppf
 ;;
