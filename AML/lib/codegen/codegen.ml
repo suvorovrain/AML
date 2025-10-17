@@ -13,13 +13,11 @@ type location =
   | Loc_mem of reg
 
 type env = (ident, location, String.comparator_witness) Map.t
-
 type cg_context = { mutable label_id : int }
 
 type cg_state =
   { env : env
-  ; frame_offset : int
-  (* ; label_id : int *)
+  ; frame_offset : int (* ; label_id : int *)
   }
 
 module Codegen = struct
@@ -183,21 +181,18 @@ let rec a_count_local_vars = function
 ;;
 
 let a_gen_func (ctx : cg_context) name args body =
+  let is_main = String.equal name "main" in
   let func_label = name in
-  let () =
-    emit directive (Printf.sprintf ".globl %s" func_label);
-    emit directive (Printf.sprintf ".type %s, @function" func_label);
-    emit label func_label
-  in
+  emit directive (Printf.sprintf ".globl %s" func_label);
+  emit directive (Printf.sprintf ".type %s, @function" func_label);
+  emit label func_label;
   let locals_count = a_count_local_vars body in
   let stack_size = 16 + (locals_count * 8) in
   (* Function Prologue *)
-  let () =
-    emit addi sp sp (-stack_size);
-    emit sd ra (ROff (stack_size - 8, sp));
-    emit sd fp (ROff (stack_size - 16, sp));
-    emit addi fp sp stack_size
-  in
+  emit addi sp sp (-stack_size);
+  emit sd ra (ROff (stack_size - 8, sp));
+  emit sd fp (ROff (stack_size - 16, sp));
+  emit addi fp sp stack_size;
   let f i env (pat : Ast.Pattern.t) =
     match pat with
     | Pat_var id when i < 8 -> Map.set env ~key:id ~data:(Loc_reg (A i))
@@ -209,19 +204,16 @@ let a_gen_func (ctx : cg_context) name args body =
   let initial_cg_state = { env = initial_env; frame_offset = 16 } in
   let (), _final_state = Codegen.run initial_cg_state (a_gen_expr ctx a0 body) in
   (* Function Epilogue *)
-  let () =
-    emit label (name ^ "_end");
-    emit ld ra (ROff (stack_size - 8, sp));
-    emit ld fp (ROff (stack_size - 16, sp));
-    emit addi sp sp stack_size;
-    emit ret
-  in
-  ()
-;;
-
-let () =
-  let _ = a_gen_func in
-  ()
+  emit label (name ^ "_end");
+  emit ld ra (ROff (stack_size - 8, sp));
+  emit ld fp (ROff (stack_size - 16, sp));
+  emit addi sp sp stack_size;
+  if is_main
+  then (
+    emit li a0 0;
+    emit li (A 7) 93;
+    emit ecall)
+  else emit ret
 ;;
 
 let codegen ppf (s : aprogram) =
