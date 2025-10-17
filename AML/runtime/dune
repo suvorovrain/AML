@@ -7,6 +7,4 @@
  (action
   (progn
    (run cargo build --target riscv64gc-unknown-linux-gnu --release)
-   (copy
-    target/riscv64gc-unknown-linux-gnu/release/libruntime.a
-    %{target}))))
+   (copy target/riscv64gc-unknown-linux-gnu/release/libruntime.a %{target}))))
