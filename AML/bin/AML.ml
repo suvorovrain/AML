@@ -40,7 +40,6 @@ let compile input_file output_file =
     let fmt = formatter_of_buffer buf in
     let aprogram = anf_transform program in
     codegen fmt aprogram;
-    (* codegen fmt program; *)
     pp_print_flush fmt ();
     write_file output_file (Buffer.contents buf);
     Printf.printf "Generated: %s\n" output_file
