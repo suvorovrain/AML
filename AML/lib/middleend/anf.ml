@@ -54,7 +54,7 @@ module ANFState = struct
     b, fin_st
   ;;
 
-  let ( let* ) x f = bind x f
+  let ( let* ) = bind
   let get st = st, st
   let put st _ = (), st
 
