@@ -9,6 +9,4 @@
 
 (cram
  (applies_to codegen)
- (deps
-  ../../../bin/AML.exe
-  ../../../runtime/target/riscv64gc-unknown-linux-gnu/release/libruntime.a))
+ (deps ../../../bin/AML.exe ../../../runtime/libruntime.a))
