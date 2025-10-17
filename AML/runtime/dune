@@ -7,4 +7,4 @@
  (action
   (progn
    (system
-    "cargo build --target riscv64gc-unknown-linux-gnu --release && cp target/riscv64gc-unknown-linux-gnu/release/libruntime.a %{target}"))))
+    "rustup run stable cargo build --target riscv64gc-unknown-linux-gnu --release && cp target/riscv64gc-unknown-linux-gnu/release/libruntime.a %{target}"))))
