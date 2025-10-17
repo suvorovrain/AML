@@ -154,7 +154,7 @@ and a_gen_cexpr (ctx : cg_context) (dst : reg) (cexpr : cexpr) : unit Codegen.t 
            emit addi sp sp 8))
     in
     return ()
-  | CApp (ImmNum _, _) -> failwith "TODO"
+  | CApp (ImmNum _, _) -> failwith "unreachable"
   | CIte (cond_imm, then_aexpr, else_aexpr) ->
     let else_label = fresh_label ctx "else" in
     let end_label = fresh_label ctx "endif" in
@@ -185,7 +185,6 @@ let a_gen_func (ctx : cg_context) name args body =
   emit label func_label;
   let locals_count = a_count_local_vars body in
   let stack_size = 16 + (locals_count * 8) in
-  (* Function Prologue *)
   emit addi sp sp (-stack_size);
   emit sd ra (ROff (stack_size - 8, sp));
   emit sd fp (ROff (stack_size - 16, sp));
@@ -200,7 +199,6 @@ let a_gen_func (ctx : cg_context) name args body =
   in
   let initial_cg_state = { env = initial_env; frame_offset = 16 } in
   let (), _final_state = Codegen.run initial_cg_state (a_gen_expr ctx a0 body) in
-  (* Function Epilogue *)
   emit label (name ^ "_end");
   emit ld ra (ROff (stack_size - 8, sp));
   emit ld fp (ROff (stack_size - 16, sp));
