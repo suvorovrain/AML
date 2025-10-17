@@ -196,12 +196,8 @@ let a_gen_func (state : cg_state) name args body =
     | Pat_var id when i < 8 -> Map.set env ~key:id ~data:(Loc_reg (A i))
     | _ -> failwith "Unsupported argument pattern or too many arguments"
   in
-  let initial_env =
-    List.foldi args ~init:(Map.empty (module String)) ~f:(fun i env p -> f i env p)
-  in
-  let initial_cg_state =
-    { env = initial_env; frame_offset = 16; label_id = state.label_id }
-  in
+  let initial_env = List.foldi args ~init:(Map.empty (module String)) ~f in
+  let initial_cg_state = { state with env = initial_env; frame_offset = 16 } in
   let (), final_state = Codegen.run initial_cg_state (a_gen_expr a0 body) in
   emit label (name ^ "_end");
   emit ld ra (ROff (stack_size - 8, sp));
@@ -222,8 +218,7 @@ let codegen ppf (s : aprogram) =
     { env = Map.empty (module String); frame_offset = 0; label_id = 0 }
   in
   let _final_state =
-    List.fold s ~init:initial_state ~f:(fun current_state item ->
-      match item with
+    List.fold s ~init:initial_state ~f:(fun current_state -> function
       | AStr_value (_rec_flag, name, expr) ->
         let rec extract_fun_params_body (aexp : aexpr) =
           match aexp with
