@@ -17,7 +17,7 @@ type cg_context = { mutable label_id : int }
 
 type cg_state =
   { env : env
-  ; frame_offset : int (* ; label_id : int *)
+  ; frame_offset : int
   }
 
 module Codegen = struct
@@ -51,11 +51,8 @@ let get_state = get
 let set_state = set
 
 let fresh_label (ctx : cg_context) prefix =
-  (* let* state = get_state in *)
   let id = ctx.label_id in
   ctx.label_id <- id + 1;
-  (* let* () = set_state { state with label_id = id + 1 } in *)
-  (* return (Printf.sprintf ".L%s_%d" prefix id) *)
   Printf.sprintf ".L%s_%d" prefix id
 ;;
 
