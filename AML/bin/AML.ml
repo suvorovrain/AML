@@ -7,6 +7,7 @@ open Format
 open Inferencer.Infer
 open Inferencer.InferTypes
 open Middle.Anf
+open Middle.Anf_pp
 
 let usage_msg = "Usage: AML.exe <input file> <output file>"
 
@@ -24,13 +25,6 @@ let write_file filename content =
   close_out oc
 ;;
 
-let parse_args = function
-  | [ input; output ] -> input, output
-  | _ ->
-    prerr_endline usage_msg;
-    exit 1
-;;
-
 let compile input_file output_file =
   let src = read_file input_file in
   let program = Parser.parse_str src in
@@ -46,9 +40,22 @@ let compile input_file output_file =
   | Error err -> printf "%a" pp_inf_err err
 ;;
 
-let main input_file output_file =
-  let input_file, output_file = parse_args [ input_file; output_file ] in
-  compile input_file output_file
+let dump_anf input_file =
+  let src = read_file input_file in
+  let program = Parser.parse_str src in
+  match run_infer_program program env_with_things with
+  | Ok (_, _) ->
+    let aprogram = anf_transform program in
+    pp_anf std_formatter aprogram;
+    pp_print_flush std_formatter ()
+  | Error err -> printf "%a" pp_inf_err err
 ;;
 
-let () = main Sys.argv.(1) Sys.argv.(2)
+let () =
+  match Array.to_list Sys.argv with
+  | [ _exe; "--dump-anf"; input_file ] -> dump_anf input_file
+  | [ _exe; input_file; output_file ] -> compile input_file output_file
+  | _ ->
+    prerr_endline usage_msg;
+    exit 1
+;;
