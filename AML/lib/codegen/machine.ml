@@ -114,23 +114,13 @@ let label k s = k (Label s)
 let directive k s = k (Directive s)
 let mv k rd rs = k @@ Addi (rd, rs, 0)
 let call k l = k (Call l)
-let code : (instr * string) Queue.t = Queue.create ()
-let emit ?(comm = "") instr = instr (fun i -> Queue.add (i, comm) code)
 
-let rec flush_queue ppf =
-  if Queue.is_empty code
-  then ()
-  else
-    let open Format in
-    let i, comm = Queue.pop code in
-    (match i with
-     | Label _ ->
-       fprintf ppf "%a" pp_instr i;
-       if comm <> "" then fprintf ppf " # %s" comm;
-       fprintf ppf "\n"
-     | _ ->
-       fprintf ppf "  %a" pp_instr i;
-       if comm <> "" then fprintf ppf " # %s" comm;
-       fprintf ppf "\n");
-    flush_queue ppf
+let pp_instrs ppf (instrs : instr list) =
+  let open Format in
+  List.iter
+    (fun i ->
+       match i with
+       | Label _ -> fprintf ppf "%a\n" pp_instr i
+       | _ -> fprintf ppf "  %a\n" pp_instr i)
+    (List.rev instrs)
 ;;

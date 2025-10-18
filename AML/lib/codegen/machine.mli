@@ -65,6 +65,4 @@ val label : (instr -> 'a) -> string -> 'a
 val directive : (instr -> 'a) -> string -> 'a
 val mv : (instr -> 'a) -> reg -> reg -> 'a
 val call : (instr -> 'a) -> string -> 'a
-val code : (instr * string) Queue.t
-val emit : ?comm:string -> ((instr -> unit) -> 'a) -> 'a
-val flush_queue : Format.formatter -> unit
+val pp_instrs : Format.formatter -> instr list -> unit
