@@ -71,7 +71,7 @@
 Тест про [факториал](/manytests/typed/010faccps_ll.ml) и [вибоначчи](/manytests/typed/010fibcps_ll.ml)
 
 
-#### 3. LL+CC
+#### 4. LL+CC
 
 СС --- избавление от замыканий тем или иным способом.
 
