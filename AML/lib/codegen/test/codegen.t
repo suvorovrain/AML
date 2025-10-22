@@ -365,3 +365,105 @@
   $ riscv64-linux-gnu-gcc -static ite.o -L../../../runtime -l:libruntime.a -o ite.elf -Wl,--no-warnings
   $ qemu-riscv64 ./ite.elf
   420
+
+  $ cat >many_args.ml <<EOF
+  > let f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 = a0+a1+a2+a3+a4+a5+a6+a7+a8+a9+a10
+  > let main = print_int (f 0 1 2 3 4 5 6 7 8 9 10)
+  > EOF
+  $ ../../../bin/AML.exe many_args.ml many_args.s
+  Generated: many_args.s
+  $ cat many_args.s
+    .text
+    .globl f
+    .type f, @function
+  f:
+    addi sp, sp, -88
+    sd ra, 80(sp)
+    sd s0, 72(sp)
+    addi s0, sp, 88
+    addi t0, a0, 0
+    addi t1, a1, 0
+    add t0, t0, t1
+    sd t0, -24(s0)
+    ld t0, -24(s0)
+    addi t1, a2, 0
+    add t0, t0, t1
+    sd t0, -32(s0)
+    ld t0, -32(s0)
+    addi t1, a3, 0
+    add t0, t0, t1
+    sd t0, -40(s0)
+    ld t0, -40(s0)
+    addi t1, a4, 0
+    add t0, t0, t1
+    sd t0, -48(s0)
+    ld t0, -48(s0)
+    addi t1, a5, 0
+    add t0, t0, t1
+    sd t0, -56(s0)
+    ld t0, -56(s0)
+    addi t1, a6, 0
+    add t0, t0, t1
+    sd t0, -64(s0)
+    ld t0, -64(s0)
+    addi t1, a7, 0
+    add t0, t0, t1
+    sd t0, -72(s0)
+    ld t0, -72(s0)
+    ld t1, 0(s0)
+    add t0, t0, t1
+    sd t0, -80(s0)
+    ld t0, -80(s0)
+    ld t1, 8(s0)
+    add t0, t0, t1
+    sd t0, -88(s0)
+    ld t0, -88(s0)
+    ld t1, 16(s0)
+    add a0, t0, t1
+  f_end:
+    ld ra, 80(sp)
+    ld s0, 72(sp)
+    addi sp, sp, 88
+    ret
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -24
+    sd ra, 16(sp)
+    sd s0, 8(sp)
+    addi s0, sp, 24
+    li t0, 10
+    addi sp, sp, -8
+    sd t0, 0(sp)
+    li t0, 9
+    addi sp, sp, -8
+    sd t0, 0(sp)
+    li t0, 8
+    addi sp, sp, -8
+    sd t0, 0(sp)
+    li a0, 0
+    li a1, 1
+    li a2, 2
+    li a3, 3
+    li a4, 4
+    li a5, 5
+    li a6, 6
+    li a7, 7
+    call f
+    addi t0, a0, 0
+    addi sp, sp, 24
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    call print_int
+  main_end:
+    ld ra, 16(sp)
+    ld s0, 8(sp)
+    addi sp, sp, 24
+    li a0, 0
+    li a7, 93
+    ecall
+
+  $ riscv64-linux-gnu-as -march=rv64gc many_args.s -o many_args.o
+  $ riscv64-linux-gnu-gcc -static many_args.o -L../../../runtime -l:libruntime.a -o many_args.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./many_args.elf
+  55

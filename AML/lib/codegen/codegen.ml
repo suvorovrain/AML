@@ -130,6 +130,15 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
     a_gen_immexpr t0 imm1 >> a_gen_immexpr t1 imm2 >> a_gen_bin_op bop dst t0 t1
   | CApp (ImmId fname, args) ->
     let* state = get in
+    let reg_args, stack_args =
+      List.mapi args ~f:(fun i imm -> imm, i)
+      |> List.partition_tf ~f:(fun (_, i) -> i < 8)
+    in
+    map_m
+      (fun (arg_imm, _) ->
+         a_gen_immexpr t0 arg_imm >> emit addi sp sp (-8) >> emit sd t0 (ROff (0, sp)))
+      (List.rev stack_args)
+    >>
     let live_caller_regs =
       Map.to_alist state.env
       |> List.filter_map ~f:(fun (_, loc) ->
@@ -139,14 +148,12 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
       |> List.dedup_and_sort ~compare:Poly.compare
     in
     map_m (fun r -> emit addi sp sp (-8) >> emit sd r (ROff (0, sp))) live_caller_regs
-    >> map_m
-         (fun (arg_imm, i) ->
-            if i < 8
-            then a_gen_immexpr (A i) arg_imm
-            else failwith "Functions with more than 8 arguments are not supported")
-         (List.mapi args ~f:(fun i imm -> imm, i))
+    >> map_m (fun (arg_imm, i) -> a_gen_immexpr (A i) arg_imm) reg_args
     >> emit call fname
     >> (if not (equal_reg dst a0) then emit mv dst a0 else return ())
+    >> (if not (List.is_empty stack_args)
+        then emit addi sp sp (List.length stack_args * 8)
+        else return ())
     >> map_m
          (fun r -> emit ld r (ROff (0, sp)) >> emit addi sp sp 8)
          (List.rev live_caller_regs)
@@ -190,7 +197,10 @@ let a_gen_func name args body =
   let f i env (pat : Ast.Pattern.t) =
     match pat with
     | Pat_var id when i < 8 -> Map.set env ~key:id ~data:(Loc_reg (A i))
-    | _ -> failwith "Unsupported argument pattern or too many arguments"
+    | Pat_var id ->
+      let offset = (i - 8) * 8 in
+      Map.set env ~key:id ~data:(Loc_mem (ROff (offset, fp)))
+    | _ -> failwith "unreachable"
   in
   let initial_env = List.foldi args ~init:(Map.empty (module String)) ~f in
   let initial_cg_state = { global_state with env = initial_env; frame_offset = 16 } in
