@@ -17,6 +17,8 @@ val ra : reg
 val sp : reg
 val fp : reg
 val a0 : reg
+val a1 : reg
+val a2 : reg
 val t0 : reg
 val t1 : reg
 val t2 : reg
