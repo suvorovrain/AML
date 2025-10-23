@@ -58,13 +58,15 @@ type instr =
   | Jal of
       reg * string (* jal rd,offset. jump to address and place return address in rd *)
   | J of string (* j offset. unconditional control transfer *)
+  | Jalr of reg (* jump and link register*)
   | Ret (* jumps to the address stored in ra *)
   | Ld of
       reg * reg (* ld rd,uimm(rs1). load a 64-bit value from memory into register rd *)
   | Sd of
       reg * reg (* sd rs2,offset(rs1). store 64-bit, values from register rs2 to memory *)
   | Li of reg * int
-    (* li rd,uimm. load the sign-extended 6-bit immediate, imm, into register rd *)
+  (* li rd,uimm. load the sign-extended 6-bit immediate, imm, into register rd *)
+  | La of reg * string (* load address *)
   | Ecall (* make a request to the supporting execution environment *)
   | Label of string (* label in the assembly code, marking a location to jump to *)
   | Directive of string (* assembler directive, e.g. ".globl" *)
@@ -84,10 +86,12 @@ let pp_instr ppf =
   | Blt (r1, r2, s) -> fprintf ppf "blt %a, %a, %s" pp_reg r1 pp_reg r2 s
   | Jal (r1, s) -> fprintf ppf "jal %a, %s" pp_reg r1 s
   | J s -> fprintf ppf "j %s" s
-  | Ret -> fprintf ppf "ret"
+  | Jalr r -> fprintf ppf "jalr %a" pp_reg r
+  | Ret -> fprintf ppf "ret\n  "
   | Sd (r1, r2) -> fprintf ppf "sd %a, %a" pp_reg r1 pp_reg r2
   | Ld (r1, r2) -> fprintf ppf "ld %a, %a" pp_reg r1 pp_reg r2
   | Li (r1, n) -> fprintf ppf "li %a, %d" pp_reg r1 n
+  | La (r1, s) -> fprintf ppf "la %a, %s" pp_reg r1 s
   | Ecall -> fprintf ppf "ecall"
   | Label s -> fprintf ppf "%s:" s
   | Directive s -> fprintf ppf "%s" s
@@ -114,6 +118,8 @@ let label k s = k (Label s)
 let directive k s = k (Directive s)
 let mv k rd rs = k @@ Addi (rd, rs, 0)
 let call k l = k (Call l)
+let la k r s = k (La (r, s))
+let jalr k r = k (Jalr r)
 
 let pp_instrs ppf (instrs : instr list) =
   let open Format in
