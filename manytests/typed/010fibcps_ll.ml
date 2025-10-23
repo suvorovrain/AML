@@ -11,5 +11,5 @@ let rec fib n k =
   else fib (n - 1) fresh_1 n k fib
 
 let main =
-  let z = print (fib 6 id)  in
+  let z = print_int (fib 6 id)  in
   0
