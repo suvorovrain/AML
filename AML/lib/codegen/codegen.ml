@@ -80,12 +80,12 @@ let allocate_local_var id =
   return location
 ;;
 
-let lookup_var id =
+(* let lookup_var id =
   let* state = get_state in
   match Map.find state.env id with
   | Some loc -> return loc
   | None -> failwith ("Unbound variable: " ^ id)
-;;
+;; *)
 
 let a_gen_bin_op op dst r1 r2 =
   match op with
@@ -108,10 +108,13 @@ let a_gen_immexpr (dst : reg) (immexpr : immexpr) =
   match immexpr with
   | ImmNum i -> emit li dst i
   | ImmId id ->
-    let* loc = lookup_var id in
-    (match loc with
-     | Loc_reg r -> emit mv dst r
-     | Loc_mem m -> emit ld dst m)
+    let* state = get_state in
+    (match Map.find state.env id with
+     | Some loc ->
+       (match loc with
+        | Loc_reg r -> emit mv dst r
+        | Loc_mem m -> emit ld dst m)
+     | None -> emit la dst id)
 ;;
 
 let rec a_gen_expr (dst : reg) (aexpr : aexpr) : unit Codegen.t =
@@ -149,14 +152,20 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
     in
     map_m (fun r -> emit addi sp sp (-8) >> emit sd r (ROff (0, sp))) live_caller_regs
     >> map_m (fun (arg_imm, i) -> a_gen_immexpr (A i) arg_imm) reg_args
-    >> emit call fname
+    >> (match Map.find state.env fname with
+      | Some loc ->
+        (match loc with
+         | Loc_reg r -> emit jalr r
+         | Loc_mem m -> emit ld t0 m >> emit jalr t0)
+      | None -> emit call fname)
     >> (if not (equal_reg dst a0) then emit mv dst a0 else return ())
-    >> (if not (List.is_empty stack_args)
-        then emit addi sp sp (List.length stack_args * 8)
-        else return ())
     >> map_m
          (fun r -> emit ld r (ROff (0, sp)) >> emit addi sp sp 8)
          (List.rev live_caller_regs)
+    >>
+    if not (List.is_empty stack_args)
+    then emit addi sp sp (List.length stack_args * 8)
+    else return ()
   | CApp (ImmNum _, _) -> failwith "unreachable"
   | CIte (cond_imm, then_aexpr, else_aexpr) ->
     let* else_label = fresh_label "else" in

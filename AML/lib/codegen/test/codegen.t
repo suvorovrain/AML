@@ -57,6 +57,7 @@
     ld s0, 40(sp)
     addi sp, sp, 56
     ret
+    
     .globl main
     .type main, @function
   main:
@@ -139,6 +140,7 @@
     ld s0, 40(sp)
     addi sp, sp, 56
     ret
+    
     .globl main
     .type main, @function
   main:
@@ -218,6 +220,7 @@
     ld s0, 8(sp)
     addi sp, sp, 24
     ret
+    
     .globl main
     .type main, @function
   main:
@@ -425,6 +428,7 @@
     ld s0, 72(sp)
     addi sp, sp, 88
     ret
+    
     .globl main
     .type main, @function
   main:
@@ -467,3 +471,161 @@
   $ riscv64-linux-gnu-gcc -static many_args.o -L../../../runtime -l:libruntime.a -o many_args.elf -Wl,--no-warnings
   $ qemu-riscv64 ./many_args.elf
   55
+
+  $ cat >faccps_ll.ml <<EOF
+  > let id x = x
+  > let fresh_1 n k p = k (p * n)
+  > 
+  > let rec fac_cps n k =
+  >   if n = 1
+  >   then k 1
+  >  else fac_cps (n-1) (fresh_1 n k)
+  > 
+  > let main =
+  >   let () = print_int (fac_cps 4 id) in
+  >   0
+  > EOF
+  $ ../../../bin/AML.exe faccps_ll.ml faccps_ll.s
+  Generated: faccps_ll.s
+  $ cat faccps_ll.s
+    .text
+    .globl id
+    .type id, @function
+  id:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    addi a0, a0, 0
+  id_end:
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl fresh_1
+    .type fresh_1, @function
+  fresh_1:
+    addi sp, sp, -24
+    sd ra, 16(sp)
+    sd s0, 8(sp)
+    addi s0, sp, 24
+    addi t0, a2, 0
+    addi t1, a0, 0
+    mul t0, t0, t1
+    sd t0, -24(s0)
+    addi sp, sp, -8
+    sd a0, 0(sp)
+    addi sp, sp, -8
+    sd a1, 0(sp)
+    addi sp, sp, -8
+    sd a2, 0(sp)
+    ld a0, -24(s0)
+    jalr a1
+    ld a2, 0(sp)
+    addi sp, sp, 8
+    ld a1, 0(sp)
+    addi sp, sp, 8
+    ld a0, 0(sp)
+    addi sp, sp, 8
+  fresh_1_end:
+    ld ra, 16(sp)
+    ld s0, 8(sp)
+    addi sp, sp, 24
+    ret
+    
+    .globl fac_cps
+    .type fac_cps, @function
+  fac_cps:
+    addi sp, sp, -40
+    sd ra, 32(sp)
+    sd s0, 24(sp)
+    addi s0, sp, 40
+    addi t0, a0, 0
+    li t1, 1
+    sub t2, t0, t1
+    slt t0, x0, t2
+    slt t3, t2, x0
+    add t0, t0, t3
+    xori t0, t0, 1
+    sd t0, -24(s0)
+    ld t0, -24(s0)
+    beq t0, x0, .Lelse_0
+    addi sp, sp, -8
+    sd a0, 0(sp)
+    addi sp, sp, -8
+    sd a1, 0(sp)
+    li a0, 1
+    jalr a1
+    ld a1, 0(sp)
+    addi sp, sp, 8
+    ld a0, 0(sp)
+    addi sp, sp, 8
+    j .Lendif_1
+  .Lelse_0:
+    addi t0, a0, 0
+    li t1, 1
+    sub t0, t0, t1
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd a0, 0(sp)
+    addi sp, sp, -8
+    sd a1, 0(sp)
+    addi a0, a0, 0
+    addi a1, a1, 0
+    call fresh_1
+    addi t0, a0, 0
+    ld a1, 0(sp)
+    addi sp, sp, 8
+    ld a0, 0(sp)
+    addi sp, sp, 8
+    sd t0, -40(s0)
+    addi sp, sp, -8
+    sd a0, 0(sp)
+    addi sp, sp, -8
+    sd a1, 0(sp)
+    ld a0, -32(s0)
+    ld a1, -40(s0)
+    call fac_cps
+    ld a1, 0(sp)
+    addi sp, sp, 8
+    ld a0, 0(sp)
+    addi sp, sp, 8
+  .Lendif_1:
+  fac_cps_end:
+    ld ra, 32(sp)
+    ld s0, 24(sp)
+    addi sp, sp, 40
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -40
+    sd ra, 32(sp)
+    sd s0, 24(sp)
+    addi s0, sp, 40
+    li a0, 4
+    la a1, id
+    call fac_cps
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    call print_int
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    ld t0, -32(s0)
+    sd t0, -40(s0)
+    li a0, 0
+  main_end:
+    ld ra, 32(sp)
+    ld s0, 24(sp)
+    addi sp, sp, 40
+    li a0, 0
+    li a7, 93
+    ecall
+  $ riscv64-linux-gnu-as -march=rv64gc faccps_ll.s -o faccps_ll.o
+  $ riscv64-linux-gnu-gcc -static faccps_ll.o -L../../../runtime -l:libruntime.a -o faccps_ll.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./faccps_ll.elf
+  Segmentation fault (core dumped)
+  [139]
