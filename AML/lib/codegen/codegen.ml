@@ -19,6 +19,7 @@ type cg_state =
   ; frame_offset : int
   ; label_id : int
   ; instructions : instr list
+  ; arity_map : (ident, int, String.comparator_witness) Map.t
   }
 
 module Codegen = struct
@@ -133,39 +134,87 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
     a_gen_immexpr t0 imm1 >> a_gen_immexpr t1 imm2 >> a_gen_bin_op bop dst t0 t1
   | CApp (ImmId fname, args) ->
     let* state = get in
-    let reg_args, stack_args =
-      List.mapi args ~f:(fun i imm -> imm, i)
-      |> List.partition_tf ~f:(fun (_, i) -> i < 8)
-    in
-    map_m
-      (fun (arg_imm, _) ->
-         a_gen_immexpr t0 arg_imm >> emit addi sp sp (-8) >> emit sd t0 (ROff (0, sp)))
-      (List.rev stack_args)
-    >>
-    let live_caller_regs =
-      Map.to_alist state.env
-      |> List.filter_map ~f:(fun (_, loc) ->
-        match loc with
-        | Loc_reg ((A _ | T _) as r) -> Some r
-        | _ -> None)
-      |> List.dedup_and_sort ~compare:Poly.compare
-    in
-    map_m (fun r -> emit addi sp sp (-8) >> emit sd r (ROff (0, sp))) live_caller_regs
-    >> map_m (fun (arg_imm, i) -> a_gen_immexpr (A i) arg_imm) reg_args
-    >> (match Map.find state.env fname with
-      | Some loc ->
-        (match loc with
-         | Loc_reg r -> emit jalr r
-         | Loc_mem m -> emit ld t0 m >> emit jalr t0)
-      | None -> emit call fname)
-    >> (if not (equal_reg dst a0) then emit mv dst a0 else return ())
-    >> map_m
-         (fun r -> emit ld r (ROff (0, sp)) >> emit addi sp sp 8)
-         (List.rev live_caller_regs)
-    >>
-    if not (List.is_empty stack_args)
-    then emit addi sp sp (List.length stack_args * 8)
-    else return ()
+    let provided_arity = List.length args in
+    (match Map.find state.env fname with
+     | Some _loc ->
+       (* --- call to a variable --- *)
+       emit addi sp sp (-(8 * provided_arity))
+       >> map_m
+            (fun (i, arg_imm) ->
+               a_gen_immexpr t0 arg_imm >> emit sd t0 (ROff (i * 8, sp)))
+            (List.mapi args ~f:(fun i imm -> i, imm))
+          (* closure_apply(f, argc, args); a0 = f = closure pointer; a1 = argc = provided_arity; a2 = args = pointer to args array on stack*)
+       >> a_gen_immexpr a0 (ImmId fname)
+       >> emit li a1 provided_arity
+       >> emit mv a2 sp
+       >> emit call "closure_apply"
+       >> emit addi sp sp (8 * provided_arity)
+       >> if not (equal_reg dst a0) then emit mv dst a0 else return ()
+     | None ->
+       (* --- call to a global function --- *)
+       let total_arity = Map.find_exn state.arity_map fname in
+       if total_arity = provided_arity (* --- = --- *)
+       then (
+         let reg_args, stack_args =
+           List.mapi args ~f:(fun i imm -> imm, i)
+           |> List.partition_tf ~f:(fun (_, i) -> i < 8)
+         in
+         map_m
+           (fun (arg_imm, _) ->
+              a_gen_immexpr t0 arg_imm
+              >> emit addi sp sp (-8)
+              >> emit sd t0 (ROff (0, sp)))
+           (List.rev stack_args)
+         >>
+         let live_caller_regs =
+           Map.to_alist state.env
+           |> List.filter_map ~f:(fun (_, loc) ->
+             match loc with
+             | Loc_reg ((A _ | T _) as r) -> Some r
+             | _ -> None)
+           |> List.dedup_and_sort ~compare:Poly.compare
+         in
+         map_m
+           (fun r -> emit addi sp sp (-8) >> emit sd r (ROff (0, sp)))
+           live_caller_regs
+         >> map_m (fun (arg_imm, i) -> a_gen_immexpr (A i) arg_imm) reg_args
+         >> (match Map.find state.env fname with
+           | Some loc ->
+             (* -- local/global function *)
+             (match loc with
+              | Loc_reg r -> emit jalr r
+              | Loc_mem m -> emit ld t0 m >> emit jalr t0)
+           | None -> (* runtime function *) emit call fname)
+         >> (if not (equal_reg dst a0) then emit mv dst a0 else return ())
+         >> map_m
+              (fun r -> emit ld r (ROff (0, sp)) >> emit addi sp sp 8)
+              (List.rev live_caller_regs)
+         >>
+         if not (List.is_empty stack_args)
+         then emit addi sp sp (List.length stack_args * 8)
+         else return ())
+       else if provided_arity < total_arity (* --- < --- *)
+       then
+         (* create empty closure and put pointer to it in a0 *)
+         (* closure_alloc(f, total_arity); a0 = f = pointer to f; a1 = total_arity *)
+         emit la a0 fname
+         >> emit li a1 total_arity
+         >> emit call "closure_alloc"
+         >> emit addi sp sp (-(8 * provided_arity))
+         >> map_m
+              (fun (i, arg_imm) ->
+                 a_gen_immexpr t0 arg_imm >> emit sd t0 (ROff (i * 8, sp)))
+              (List.mapi args ~f:(fun i imm -> i, imm))
+         >>
+         (* closure_apply(f, argc, args); a0 = f = closure pointer (already there from prev call); a1 = argc = provided_arity; a2 = args = pointer to args array on stack*)
+         emit li a1 provided_arity
+         >> emit mv a2 sp
+         >> emit call "closure_apply"
+         (* a0 will hold new partially filled closure after `call closure_apply`*)
+         >> emit addi sp sp (8 * provided_arity)
+         >> if not (equal_reg dst a0) then emit mv dst a0 else return ()
+       else failwith "Too many arguments")
+  (* *)
   | CApp (ImmNum _, _) -> failwith "unreachable"
   | CIte (cond_imm, then_aexpr, else_aexpr) ->
     let* else_label = fresh_label "else" in
@@ -230,9 +279,36 @@ let a_gen_func name args body =
 ;;
 
 let codegen ppf (s : aprogram) =
-  let initial_state =
-    { env = Map.empty (module String); frame_offset = 0; label_id = 0; instructions = [] }
+  let arity_map =
+    List.fold
+      s
+      ~init:(Map.empty (module String))
+      ~f:(fun acc item ->
+        match item with
+        | AStr_value (_, name, expr) ->
+          let rec extract_fun_params_body (aexp : aexpr) =
+            match aexp with
+            | ACE (CFun (param, body)) ->
+              let params, final_body = extract_fun_params_body body in
+              Ast.Pattern.Pat_var param :: params, final_body
+            | _ -> [], aexp
+          in
+          let params, _ = extract_fun_params_body expr in
+          Map.set acc ~key:name ~data:(List.length params)
+        | _ -> acc)
   in
+  let arity_map = Map.set arity_map ~key:"print_int" ~data:1 in
+  let initial_state =
+    { env = Map.empty (module String)
+    ; frame_offset = 0
+    ; label_id = 0
+    ; instructions = []
+    ; arity_map
+    }
+  in
+  (* let initial_state =
+    { env = Map.empty (module String); frame_offset = 0; label_id = 0; instructions = [] }
+  in *)
   let program_gen =
     emit directive ".text"
     >> map_m

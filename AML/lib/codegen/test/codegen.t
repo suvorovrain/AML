@@ -515,18 +515,12 @@
     mul t0, t0, t1
     sd t0, -24(s0)
     addi sp, sp, -8
-    sd a0, 0(sp)
-    addi sp, sp, -8
-    sd a1, 0(sp)
-    addi sp, sp, -8
-    sd a2, 0(sp)
-    ld a0, -24(s0)
-    jalr a1
-    ld a2, 0(sp)
-    addi sp, sp, 8
-    ld a1, 0(sp)
-    addi sp, sp, 8
-    ld a0, 0(sp)
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    addi a0, a1, 0
+    li a1, 1
+    addi a2, sp, 0
+    call closure_apply
     addi sp, sp, 8
   fresh_1_end:
     ld ra, 16(sp)
@@ -552,14 +546,12 @@
     ld t0, -24(s0)
     beq t0, x0, .Lelse_0
     addi sp, sp, -8
-    sd a0, 0(sp)
-    addi sp, sp, -8
-    sd a1, 0(sp)
-    li a0, 1
-    jalr a1
-    ld a1, 0(sp)
-    addi sp, sp, 8
-    ld a0, 0(sp)
+    li t0, 1
+    sd t0, 0(sp)
+    addi a0, a1, 0
+    li a1, 1
+    addi a2, sp, 0
+    call closure_apply
     addi sp, sp, 8
     j .Lendif_1
   .Lelse_0:
@@ -567,18 +559,19 @@
     li t1, 1
     sub t0, t0, t1
     sd t0, -32(s0)
-    addi sp, sp, -8
-    sd a0, 0(sp)
-    addi sp, sp, -8
-    sd a1, 0(sp)
-    addi a0, a0, 0
-    addi a1, a1, 0
-    call fresh_1
+    la a0, fresh_1
+    li a1, 3
+    call closure_alloc
+    addi sp, sp, -16
     addi t0, a0, 0
-    ld a1, 0(sp)
-    addi sp, sp, 8
-    ld a0, 0(sp)
-    addi sp, sp, 8
+    sd t0, 0(sp)
+    addi t0, a1, 0
+    sd t0, 8(sp)
+    li a1, 2
+    addi a2, sp, 0
+    call closure_apply
+    addi sp, sp, 16
+    addi t0, a0, 0
     sd t0, -40(s0)
     addi sp, sp, -8
     sd a0, 0(sp)
@@ -627,5 +620,10 @@
   $ riscv64-linux-gnu-as -march=rv64gc faccps_ll.s -o faccps_ll.o
   $ riscv64-linux-gnu-gcc -static faccps_ll.o -L../../../runtime -l:libruntime.a -o faccps_ll.elf -Wl,--no-warnings
   $ qemu-riscv64 ./faccps_ll.elf
-  Segmentation fault (core dumped)
-  [139]
+  
+  thread '<unnamed>' panicked at library/std/src/panicking.rs:728:1:
+  !
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  fatal runtime error: failed to initiate panic, error 5, aborting
+  Aborted (core dumped)
+  [134]
