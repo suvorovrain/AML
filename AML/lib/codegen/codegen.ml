@@ -105,17 +105,72 @@ let a_gen_bin_op op dst r1 r2 =
     emit sub t2 r1 r2 >> emit slt dst x0 t2 >> emit slt t3 t2 x0 >> emit add dst dst t3
 ;;
 
-let a_gen_immexpr (dst : reg) (immexpr : immexpr) =
+let get_state_exn =
+  let* st = get_state in
+  return st
+;;
+
+(* collect caller-saved registers that are currently live in the env.
+   exclude a0 because runtime/targets use it for return/first arg *)
+let live_caller_regs_excluding_a0 : reg list Codegen.t =
+  let* st = get_state in
+  Map.to_alist st.env
+  |> List.filter_map ~f:(fun (_, loc) ->
+    match loc with
+    | Loc_reg ((A _ | T _) as r) -> Some r
+    | _ -> None)
+  |> List.dedup_and_sort ~compare:Poly.compare
+  |> List.filter ~f:(fun r -> not (equal_reg r a0))
+  |> return
+;;
+
+(* save a list of regs in stack, in order. Returns the same list *)
+let save_regs (rs : reg list) : reg list Codegen.t =
+  map_m (fun r -> emit addi sp sp (-8) >> emit sd r (ROff (0, sp))) rs >> return rs
+;;
+
+(* restore regs from the stack in reverse order *)
+let restore_regs (rs : reg list) : unit Codegen.t =
+  map_m (fun r -> emit ld r (ROff (0, sp)) >> emit addi sp sp 8) (List.rev rs)
+  >> return ()
+;;
+
+(* load first up to 8 buffered args from a temporary base (t3) into A0..A7. *)
+let load_reg_args_from_buffer (count : int) : unit Codegen.t =
+  map_m (fun i -> emit ld (A i) (ROff (i * 8, t3))) (List.init count ~f:Fn.id)
+  >> return ()
+;;
+
+let rec push_args_array (args : immexpr list) : int Codegen.t =
+  let n = List.length args in
+  emit addi sp sp (-(8 * n))
+  >> map_m
+       (fun (i, arg) -> a_gen_immexpr t0 arg >> emit sd t0 (ROff (i * 8, sp)))
+       (List.mapi args ~f:(fun i a -> i, a))
+  >> return (n * 8)
+
+and a_gen_immexpr (dst : reg) (immexpr : immexpr) =
   match immexpr with
   | ImmNum i -> emit li dst i
   | ImmId id ->
-    let* state = get_state in
-    (match Map.find state.env id with
+    let* st = get_state_exn in
+    (match Map.find st.env id with
      | Some loc ->
+       (* local identifier: either in a register or at a frame slot *)
        (match loc with
         | Loc_reg r -> emit mv dst r
         | Loc_mem m -> emit ld dst m)
-     | None -> emit la dst id)
+     | None ->
+       (* Global identifier.
+          if it's a function with positive arity --- produce a closure pointer.
+          otherwise just load the address (label) *)
+       (match Map.find st.arity_map id with
+        | Some arity when arity > 0 ->
+          emit la a0 id
+          >> emit li a1 arity
+          >> emit call "closure_alloc"
+          >> if not (equal_reg dst a0) then emit mv dst a0 else return ()
+        | _ -> emit la dst id))
 ;;
 
 let rec a_gen_expr (dst : reg) (aexpr : aexpr) : unit Codegen.t =
@@ -127,105 +182,114 @@ let rec a_gen_expr (dst : reg) (aexpr : aexpr) : unit Codegen.t =
     let* loc = allocate_local_var id in
     emit sd t0 loc >> a_gen_expr dst body
 
+(* dark magic below *)
 and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
   match cexpr with
   | CImm imm -> a_gen_immexpr dst imm
   | CBinop (bop, imm1, imm2) ->
     a_gen_immexpr t0 imm1 >> a_gen_immexpr t1 imm2 >> a_gen_bin_op bop dst t0 t1
   | CApp (ImmId fname, args) ->
-    let* state = get in
+    let* st = get_state_exn in
     let provided_arity = List.length args in
-    (match Map.find state.env fname with
-     | Some _loc ->
-       (* --- call to a variable --- *)
-       emit addi sp sp (-(8 * provided_arity))
-       >> map_m
-            (fun (i, arg_imm) ->
-               a_gen_immexpr t0 arg_imm >> emit sd t0 (ROff (i * 8, sp)))
-            (List.mapi args ~f:(fun i imm -> i, imm))
-          (* closure_apply(f, argc, args); a0 = f = closure pointer; a1 = argc = provided_arity; a2 = args = pointer to args array on stack*)
-       >> a_gen_immexpr a0 (ImmId fname)
+    (match Map.find st.env fname with
+     | Some _ ->
+       (* ----- Indirect call: variable holds a closure pointer ----- *)
+       (* place args as a contiguous array on the stack *)
+       let* _bytes = push_args_array args in
+       (* save live caller saved regs except a0 *)
+       let* lives = live_caller_regs_excluding_a0 in
+       let* lives = save_regs lives in
+       let saved_cnt = List.length lives in
+       (* load closure into a0, set a1=argc, a2=pointer to args *)
+       a_gen_immexpr a0 (ImmId fname)
        >> emit li a1 provided_arity
-       >> emit mv a2 sp
+       >> emit addi a2 sp (8 * saved_cnt)
+       (* call runtime. Result is in a0 *)
        >> emit call "closure_apply"
+       (* restore and pop the temporary arg arra. *)
+       >> restore_regs lives
        >> emit addi sp sp (8 * provided_arity)
+       (* move result if needed *)
        >> if not (equal_reg dst a0) then emit mv dst a0 else return ()
      | None ->
-       (* --- call to a global function --- *)
-       let total_arity = Map.find_exn state.arity_map fname in
-       if total_arity = provided_arity (* --- = --- *)
+       (* ----- Direct/global call ----- *)
+       let total_arity = Map.find_exn st.arity_map fname in
+       if total_arity = provided_arity
        then (
-         let reg_args, stack_args =
-           List.mapi args ~f:(fun i imm -> imm, i)
-           |> List.partition_tf ~f:(fun (_, i) -> i < 8)
-         in
-         map_m
-           (fun (arg_imm, _) ->
-              a_gen_immexpr t0 arg_imm
-              >> emit addi sp sp (-8)
-              >> emit sd t0 (ROff (0, sp)))
-           (List.rev stack_args)
-         >>
-         let live_caller_regs =
-           Map.to_alist state.env
-           |> List.filter_map ~f:(fun (_, loc) ->
-             match loc with
-             | Loc_reg ((A _ | T _) as r) -> Some r
-             | _ -> None)
-           |> List.dedup_and_sort ~compare:Poly.compare
-         in
-         map_m
-           (fun r -> emit addi sp sp (-8) >> emit sd r (ROff (0, sp)))
-           live_caller_regs
-         >> map_m (fun (arg_imm, i) -> a_gen_immexpr (A i) arg_imm) reg_args
-         >> (match Map.find state.env fname with
-           | Some loc ->
-             (* -- local/global function *)
-             (match loc with
-              | Loc_reg r -> emit jalr r
-              | Loc_mem m -> emit ld t0 m >> emit jalr t0)
-           | None -> (* runtime function *) emit call fname)
-         >> (if not (equal_reg dst a0) then emit mv dst a0 else return ())
+         (* ----- Full application ----- *)
+         let indexed = List.mapi args ~f:(fun i imm -> imm, i) in
+         let reg_args, stack_args = List.partition_tf indexed ~f:(fun (_, i) -> i < 8) in
+         let n_reg = List.length reg_args in
+         (* pre-buffer register arguments so we can call runtime/save regs safely before jalr *)
+         (if n_reg > 0 then emit addi sp sp (-8 * n_reg) else return ())
+         >> emit addi t3 sp 0
          >> map_m
-              (fun r -> emit ld r (ROff (0, sp)) >> emit addi sp sp 8)
-              (List.rev live_caller_regs)
-         >>
-         if not (List.is_empty stack_args)
-         then emit addi sp sp (List.length stack_args * 8)
-         else return ())
-       else if provided_arity < total_arity (* --- < --- *)
+              (fun (arg_imm, i) ->
+                 a_gen_immexpr t0 arg_imm >> emit sd t0 (ROff (i * 8, t3)))
+              reg_args
+         (* push stack arguments in reverse order *)
+         >> map_m
+              (fun (arg_imm, _) ->
+                 a_gen_immexpr t0 arg_imm
+                 >> emit addi sp sp (-8)
+                 >> emit sd t0 (ROff (0, sp)))
+              (List.rev stack_args)
+         (* save live caller-saved regs *)
+         >> let* lives = live_caller_regs_excluding_a0 in
+            let* lives = save_regs lives in
+            (* move buffered reg-args into A0.. and perform the call *)
+            load_reg_args_from_buffer n_reg
+            >> (match Map.find st.env fname with
+              | Some (Loc_reg r) -> emit jalr r
+              | Some (Loc_mem m) -> emit ld t0 m >> emit jalr t0
+              | None -> emit call fname)
+            (* move result, restore regs, and pop stack args/reg buffer *)
+            >> (if not (equal_reg dst a0) then emit mv dst a0 else return ())
+            >> restore_regs lives
+            >> (if not (List.is_empty stack_args)
+                then emit addi sp sp (8 * List.length stack_args)
+                else return ())
+            >> if n_reg > 0 then emit addi sp sp (8 * n_reg) else return ())
+       else if provided_arity < total_arity
        then
-         (* create empty closure and put pointer to it in a0 *)
-         (* closure_alloc(f, total_arity); a0 = f = pointer to f; a1 = total_arity *)
-         emit la a0 fname
+         (* ----- Partial application ----- *)
+         (* push the provided args as an array. *)
+         let* _bytes = push_args_array args in
+         (* save live caller-saved regs (a0 excluded) *)
+         let* lives = live_caller_regs_excluding_a0 in
+         let* lives = save_regs lives in
+         let saved_cnt = List.length lives in
+         (* !MAYBE CRINGE! optional minimal alignment: keep stack 16-byte aligned across runtime calls.
+            add one 8-byte slot when (#saved_regs + #args) is odd *)
+         let need_pad = (provided_arity + saved_cnt) land 1 = 1 in
+         (if need_pad
+          then emit addi sp sp (-8) >> emit sd x0 (ROff (0, sp))
+          else return ())
+         (* allocate empty closure for (fname, total_arity) *)
+         >> emit la a0 fname
          >> emit li a1 total_arity
          >> emit call "closure_alloc"
-         >> emit addi sp sp (-(8 * provided_arity))
-         >> map_m
-              (fun (i, arg_imm) ->
-                 a_gen_immexpr t0 arg_imm >> emit sd t0 (ROff (i * 8, sp)))
-              (List.mapi args ~f:(fun i imm -> i, imm))
-         >>
-         (* closure_apply(f, argc, args); a0 = f = closure pointer (already there from prev call); a1 = argc = provided_arity; a2 = args = pointer to args array on stack*)
-         emit li a1 provided_arity
-         >> emit mv a2 sp
+         (* apply the provided args into that closure *)
+         >> emit li a1 provided_arity
+         >> emit addi a2 sp (8 * (saved_cnt + if need_pad then 1 else 0))
          >> emit call "closure_apply"
-         (* a0 will hold new partially filled closure after `call closure_apply`*)
+         (* drop pad, restore regs, pop args array. Result (closure pointer) in a0 *)
+         >> (if need_pad then emit addi sp sp 8 else return ())
+         >> restore_regs lives
          >> emit addi sp sp (8 * provided_arity)
          >> if not (equal_reg dst a0) then emit mv dst a0 else return ()
        else failwith "Too many arguments")
-  (* *)
   | CApp (ImmNum _, _) -> failwith "unreachable"
   | CIte (cond_imm, then_aexpr, else_aexpr) ->
-    let* else_label = fresh_label "else" in
-    let* end_label = fresh_label "endif" in
+    let* l_else = fresh_label "else" in
+    let* l_end = fresh_label "endif" in
     a_gen_immexpr t0 cond_imm
-    >> emit beq t0 x0 else_label
+    >> emit beq t0 x0 l_else
     >> a_gen_expr dst then_aexpr
-    >> emit j end_label
-    >> emit label else_label
+    >> emit j l_end
+    >> emit label l_else
     >> a_gen_expr dst else_aexpr
-    >> emit label end_label
+    >> emit label l_end
   | CFun (_, _) -> failwith "TODO"
 ;;
 
