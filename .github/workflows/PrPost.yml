@@ -256,7 +256,7 @@ jobs:
             text.md
 
       - run: echo "" >> text.md
-      - run: cat _docs/achievements.txt >> text.md
+      - run: cat _docs/achievements.md >> text.md
       - run: cat text.md
 
       # - name: Find Comment
