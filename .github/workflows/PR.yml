@@ -294,6 +294,7 @@ jobs:
           echo ${{ github.event.number }} > PR_number.txt
           cp ${{ env.latest }}/_coverage/percent.txt percent.txt
 
+      - run: sudo apt install gawk --yes
       - run: echo "" > achievements.md
       - run: LOGDIR=${{ env.LANG_NAME }} bash .github/git-user-stats >> achievements.md
 
