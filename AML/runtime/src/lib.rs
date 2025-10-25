@@ -84,6 +84,17 @@ pub extern "C" fn closure_alloc(func: *const (), arity: i64) -> i64 {
 }
 
 #[no_mangle]
+/// Calls a closure with the given raw pointer and arguments.
+///
+/// # Safety
+///
+/// This function dereferences raw pointers (`clos_raw`, `argv`),
+/// so the caller must ensure that:
+/// - `clos_raw` is a valid pointer to a `Closure` object.
+/// - `argv` points to a contiguous array of at least `argc` valid `i64` values.
+/// - The closure code must not free or mutate `argv` while it is being read.
+///
+/// Violating these conditions may cause undefined behavior.
 pub unsafe extern "C" fn closure_apply(clos_raw: i64, argc: i64, argv: *const i64) -> i64 {
     unsafe {
         let clos_ptr = clos_raw as *mut Closure;
