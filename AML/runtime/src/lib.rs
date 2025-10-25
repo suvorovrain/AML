@@ -84,7 +84,7 @@ pub extern "C" fn closure_alloc(func: *const (), arity: i64) -> i64 {
 }
 
 #[no_mangle]
-pub extern "C" fn closure_apply(clos_raw: i64, argc: i64, argv: *const i64) -> i64 {
+pub unsafe extern "C" fn closure_apply(clos_raw: i64, argc: i64, argv: *const i64) -> i64 {
     unsafe {
         let clos_ptr = clos_raw as *mut Closure;
         if clos_ptr.is_null() {
