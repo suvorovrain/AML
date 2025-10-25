@@ -1,80 +1,140 @@
 (** Copyright 2025-2026, Rodion Suvorov, Dmitriy Chirkov*)
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
-  $ cat >fac.ml <<EOF
-  > let rec fac n =
-  >   if n <= 1
-  >   then 1
-  >   else (let n1 = n-1 in
-  >      let m = fac n1 in
-  >      n*m)
-  > 
-  > let main = print_int (fac 4)
-  > EOF
-  $ ../../../bin/AML.exe fac.ml fac.s
-  Generated: fac.s
-  $ cat fac.s
+  $ ../../../bin/AML.exe ./manytests/typed/010faccps_ll.ml faccps.s
+  Generated: faccps.s
+  $ cat faccps.s
     .text
-    .globl fac
-    .type fac, @function
-  fac:
-    addi sp, sp, -64
-    sd ra, 56(sp)
-    sd s0, 48(sp)
-    addi s0, sp, 64
+    .globl id
+    .type id, @function
+  id:
+    addi sp, sp, -24
+    sd ra, 16(sp)
+    sd s0, 8(sp)
+    addi s0, sp, 24
     sd a0, -24(s0)
+    ld a0, -24(s0)
+  id_end:
+    ld ra, 16(sp)
+    ld s0, 8(sp)
+    addi sp, sp, 24
+    ret
+    
+    .globl fresh_1
+    .type fresh_1, @function
+  fresh_1:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    sd a0, -24(s0)
+    sd a1, -32(s0)
+    sd a2, -40(s0)
+    ld t0, -40(s0)
+    ld t1, -24(s0)
+    mul t0, t0, t1
+    sd t0, -48(s0)
+    addi sp, sp, -8
+    ld t0, -48(s0)
+    sd t0, 0(sp)
+    ld a0, -32(s0)
+    li a1, 1
+    addi a2, sp, 0
+    call closure_apply
+    addi sp, sp, 8
+  fresh_1_end:
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl fac_cps
+    .type fac_cps, @function
+  fac_cps:
+    addi sp, sp, -56
+    sd ra, 48(sp)
+    sd s0, 40(sp)
+    addi s0, sp, 56
+    sd a0, -24(s0)
+    sd a1, -32(s0)
     ld t0, -24(s0)
     li t1, 1
-    slt t0, t1, t0
+    sub t2, t0, t1
+    slt t0, x0, t2
+    slt t3, t2, x0
+    add t0, t0, t3
     xori t0, t0, 1
-    sd t0, -32(s0)
-    ld t0, -32(s0)
+    sd t0, -40(s0)
+    ld t0, -40(s0)
     beq t0, x0, .Lelse_0
-    li a0, 1
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    ld a0, -32(s0)
+    li a1, 1
+    addi a2, sp, 0
+    call closure_apply
+    addi sp, sp, 8
     j .Lendif_1
   .Lelse_0:
     ld t0, -24(s0)
     li t1, 1
     sub t0, t0, t1
-    sd t0, -40(s0)
-    ld t0, -40(s0)
     sd t0, -48(s0)
-    addi sp, sp, -8
+    addi sp, sp, -16
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    la a0, fresh_1
+    li a1, 3
+    call closure_alloc
+    li a1, 2
+    addi a2, sp, 0
+    call closure_apply
+    addi sp, sp, 16
+    addi t0, a0, 0
+    sd t0, -56(s0)
+    addi sp, sp, -16
     addi t3, sp, 0
     ld t0, -48(s0)
     sd t0, 0(t3)
-    ld a0, 0(t3)
-    call fac
-    addi t0, a0, 0
-    addi sp, sp, 8
-    sd t0, -56(s0)
     ld t0, -56(s0)
-    sd t0, -64(s0)
-    ld t0, -24(s0)
-    ld t1, -64(s0)
-    mul a0, t0, t1
+    sd t0, 8(t3)
+    ld a0, 0(t3)
+    ld a1, 8(t3)
+    call fac_cps
+    addi t0, a0, 0
+    addi a0, t0, 0
+    addi sp, sp, 16
   .Lendif_1:
-  fac_end:
-    ld ra, 56(sp)
-    ld s0, 48(sp)
-    addi sp, sp, 64
+  fac_cps_end:
+    ld ra, 48(sp)
+    ld s0, 40(sp)
+    addi sp, sp, 56
     ret
     
     .globl main
     .type main, @function
   main:
-    addi sp, sp, -24
-    sd ra, 16(sp)
-    sd s0, 8(sp)
-    addi s0, sp, 24
-    addi sp, sp, -8
+    addi sp, sp, -40
+    sd ra, 32(sp)
+    sd s0, 24(sp)
+    addi s0, sp, 40
+    addi sp, sp, -16
     addi t3, sp, 0
     li t0, 4
     sd t0, 0(t3)
-    ld a0, 0(t3)
-    call fac
+    la a0, id
+    li a1, 1
+    call closure_alloc
     addi t0, a0, 0
-    addi sp, sp, 8
+    sd t0, 8(t3)
+    ld a0, 0(t3)
+    ld a1, 8(t3)
+    call fac_cps
+    addi t0, a0, 0
+    addi sp, sp, 16
     sd t0, -24(s0)
     addi sp, sp, -8
     addi t3, sp, 0
@@ -83,19 +143,231 @@
     ld a0, 0(t3)
     call print_int
     addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
+    sd t0, -32(s0)
+    ld t0, -32(s0)
+    sd t0, -40(s0)
+    li a0, 0
   main_end:
-    ld ra, 16(sp)
-    ld s0, 8(sp)
-    addi sp, sp, 24
+    ld ra, 32(sp)
+    ld s0, 24(sp)
+    addi sp, sp, 40
     li a0, 0
     li a7, 93
     ecall
-  $ riscv64-linux-gnu-as -march=rv64gc fac.s -o fac.o
-  $ riscv64-linux-gnu-gcc -static fac.o -L../../../runtime -l:libruntime.a -o fac.elf -Wl,--no-warnings
-  $ qemu-riscv64 ./fac.elf
+  $ riscv64-linux-gnu-as -march=rv64gc faccps.s -o faccps.o
+  $ riscv64-linux-gnu-gcc -static faccps.o -L../../../runtime -l:libruntime.a -o faccps.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./faccps.elf
   24
+
+  $ ../../../bin/AML.exe ./manytests/typed/010fibcps_ll.ml fibcps_ll.s
+  Generated: fibcps_ll.s
+  $ cat fibcps_ll.s
+    .text
+    .globl id
+    .type id, @function
+  id:
+    addi sp, sp, -24
+    sd ra, 16(sp)
+    sd s0, 8(sp)
+    addi s0, sp, 24
+    sd a0, -24(s0)
+    ld a0, -24(s0)
+  id_end:
+    ld ra, 16(sp)
+    ld s0, 8(sp)
+    addi sp, sp, 24
+    ret
+    
+    .globl fresh_2
+    .type fresh_2, @function
+  fresh_2:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    sd a0, -24(s0)
+    sd a1, -32(s0)
+    sd a2, -40(s0)
+    ld t0, -24(s0)
+    ld t1, -40(s0)
+    add t0, t0, t1
+    sd t0, -48(s0)
+    addi sp, sp, -8
+    ld t0, -48(s0)
+    sd t0, 0(sp)
+    ld a0, -32(s0)
+    li a1, 1
+    addi a2, sp, 0
+    call closure_apply
+    addi sp, sp, 8
+  fresh_2_end:
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl fresh_1
+    .type fresh_1, @function
+  fresh_1:
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
+    sd a0, -24(s0)
+    sd a1, -32(s0)
+    sd a2, -40(s0)
+    sd a3, -48(s0)
+    ld t0, -24(s0)
+    li t1, 2
+    sub t0, t0, t1
+    sd t0, -56(s0)
+    addi sp, sp, -16
+    ld t0, -48(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    la a0, fresh_2
+    li a1, 3
+    call closure_alloc
+    li a1, 2
+    addi a2, sp, 0
+    call closure_apply
+    addi sp, sp, 16
+    addi t0, a0, 0
+    sd t0, -64(s0)
+    addi sp, sp, -16
+    ld t0, -56(s0)
+    sd t0, 0(sp)
+    ld t0, -64(s0)
+    sd t0, 8(sp)
+    ld a0, -40(s0)
+    li a1, 2
+    addi a2, sp, 0
+    call closure_apply
+    addi sp, sp, 16
+  fresh_1_end:
+    ld ra, 56(sp)
+    ld s0, 48(sp)
+    addi sp, sp, 64
+    ret
+    
+    .globl fib
+    .type fib, @function
+  fib:
+    addi sp, sp, -56
+    sd ra, 48(sp)
+    sd s0, 40(sp)
+    addi s0, sp, 56
+    sd a0, -24(s0)
+    sd a1, -32(s0)
+    ld t0, -24(s0)
+    li t1, 2
+    slt t0, t0, t1
+    sd t0, -40(s0)
+    ld t0, -40(s0)
+    beq t0, x0, .Lelse_0
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld a0, -32(s0)
+    li a1, 1
+    addi a2, sp, 0
+    call closure_apply
+    addi sp, sp, 8
+    j .Lendif_1
+  .Lelse_0:
+    ld t0, -24(s0)
+    li t1, 1
+    sub t0, t0, t1
+    sd t0, -48(s0)
+    addi sp, sp, -24
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    la a0, fib
+    li a1, 2
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 16(sp)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    la a0, fresh_1
+    li a1, 4
+    call closure_alloc
+    li a1, 3
+    addi a2, sp, 8
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 24
+    addi t0, a0, 0
+    sd t0, -56(s0)
+    addi sp, sp, -16
+    addi t3, sp, 0
+    ld t0, -48(s0)
+    sd t0, 0(t3)
+    ld t0, -56(s0)
+    sd t0, 8(t3)
+    ld a0, 0(t3)
+    ld a1, 8(t3)
+    call fib
+    addi t0, a0, 0
+    addi a0, t0, 0
+    addi sp, sp, 16
+  .Lendif_1:
+  fib_end:
+    ld ra, 48(sp)
+    ld s0, 40(sp)
+    addi sp, sp, 56
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -40
+    sd ra, 32(sp)
+    sd s0, 24(sp)
+    addi s0, sp, 40
+    addi sp, sp, -16
+    addi t3, sp, 0
+    li t0, 6
+    sd t0, 0(t3)
+    la a0, id
+    li a1, 1
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 8(t3)
+    ld a0, 0(t3)
+    ld a1, 8(t3)
+    call fib
+    addi t0, a0, 0
+    addi sp, sp, 16
+    sd t0, -24(s0)
+    addi sp, sp, -8
+    addi t3, sp, 0
+    ld t0, -24(s0)
+    sd t0, 0(t3)
+    ld a0, 0(t3)
+    call print_int
+    addi t0, a0, 0
+    addi sp, sp, 8
+    sd t0, -32(s0)
+    ld t0, -32(s0)
+    sd t0, -40(s0)
+    li a0, 0
+  main_end:
+    ld ra, 32(sp)
+    ld s0, 24(sp)
+    addi sp, sp, 40
+    li a0, 0
+    li a7, 93
+    ecall
+  $ riscv64-linux-gnu-as -march=rv64gc fibcps_ll.s -o fibcps_ll.o
+  $ riscv64-linux-gnu-gcc -static fibcps_ll.o -L../../../runtime -l:libruntime.a -o fibcps_ll.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./fibcps_ll.elf
+  8
+
 
   $ cat >fib.ml <<EOF
   > let rec fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)
@@ -600,400 +872,3 @@
   $ riscv64-linux-gnu-gcc -static many_args.o -L../../../runtime -l:libruntime.a -o many_args.elf -Wl,--no-warnings
   $ qemu-riscv64 ./many_args.elf
   55
-
-  $ cat >faccps_ll.ml <<EOF
-  > let id x = x
-  > let fresh_1 n k p = k (p * n)
-  > 
-  > let rec fac_cps n k =
-  >   if n = 1
-  >   then k 1
-  >  else fac_cps (n-1) (fresh_1 n k)
-  > 
-  > let main =
-  >   let () = print_int (fac_cps 4 id) in
-  >   0
-  > EOF
-  $ ../../../bin/AML.exe faccps_ll.ml faccps_ll.s
-  Generated: faccps_ll.s
-  $ cat faccps_ll.s
-    .text
-    .globl id
-    .type id, @function
-  id:
-    addi sp, sp, -24
-    sd ra, 16(sp)
-    sd s0, 8(sp)
-    addi s0, sp, 24
-    sd a0, -24(s0)
-    ld a0, -24(s0)
-  id_end:
-    ld ra, 16(sp)
-    ld s0, 8(sp)
-    addi sp, sp, 24
-    ret
-    
-    .globl fresh_1
-    .type fresh_1, @function
-  fresh_1:
-    addi sp, sp, -48
-    sd ra, 40(sp)
-    sd s0, 32(sp)
-    addi s0, sp, 48
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    sd a2, -40(s0)
-    ld t0, -40(s0)
-    ld t1, -24(s0)
-    mul t0, t0, t1
-    sd t0, -48(s0)
-    addi sp, sp, -8
-    ld t0, -48(s0)
-    sd t0, 0(sp)
-    ld a0, -32(s0)
-    li a1, 1
-    addi a2, sp, 0
-    call closure_apply
-    addi sp, sp, 8
-  fresh_1_end:
-    ld ra, 40(sp)
-    ld s0, 32(sp)
-    addi sp, sp, 48
-    ret
-    
-    .globl fac_cps
-    .type fac_cps, @function
-  fac_cps:
-    addi sp, sp, -56
-    sd ra, 48(sp)
-    sd s0, 40(sp)
-    addi s0, sp, 56
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    ld t0, -24(s0)
-    li t1, 1
-    sub t2, t0, t1
-    slt t0, x0, t2
-    slt t3, t2, x0
-    add t0, t0, t3
-    xori t0, t0, 1
-    sd t0, -40(s0)
-    ld t0, -40(s0)
-    beq t0, x0, .Lelse_0
-    addi sp, sp, -8
-    li t0, 1
-    sd t0, 0(sp)
-    ld a0, -32(s0)
-    li a1, 1
-    addi a2, sp, 0
-    call closure_apply
-    addi sp, sp, 8
-    j .Lendif_1
-  .Lelse_0:
-    ld t0, -24(s0)
-    li t1, 1
-    sub t0, t0, t1
-    sd t0, -48(s0)
-    addi sp, sp, -16
-    ld t0, -24(s0)
-    sd t0, 0(sp)
-    ld t0, -32(s0)
-    sd t0, 8(sp)
-    la a0, fresh_1
-    li a1, 3
-    call closure_alloc
-    li a1, 2
-    addi a2, sp, 0
-    call closure_apply
-    addi sp, sp, 16
-    addi t0, a0, 0
-    sd t0, -56(s0)
-    addi sp, sp, -16
-    addi t3, sp, 0
-    ld t0, -48(s0)
-    sd t0, 0(t3)
-    ld t0, -56(s0)
-    sd t0, 8(t3)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
-    call fac_cps
-    addi t0, a0, 0
-    addi a0, t0, 0
-    addi sp, sp, 16
-  .Lendif_1:
-  fac_cps_end:
-    ld ra, 48(sp)
-    ld s0, 40(sp)
-    addi sp, sp, 56
-    ret
-    
-    .globl main
-    .type main, @function
-  main:
-    addi sp, sp, -40
-    sd ra, 32(sp)
-    sd s0, 24(sp)
-    addi s0, sp, 40
-    addi sp, sp, -16
-    addi t3, sp, 0
-    li t0, 4
-    sd t0, 0(t3)
-    la a0, id
-    li a1, 1
-    call closure_alloc
-    addi t0, a0, 0
-    sd t0, 8(t3)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
-    call fac_cps
-    addi t0, a0, 0
-    addi sp, sp, 16
-    sd t0, -24(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -24(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
-    call print_int
-    addi t0, a0, 0
-    addi sp, sp, 8
-    sd t0, -32(s0)
-    ld t0, -32(s0)
-    sd t0, -40(s0)
-    li a0, 0
-  main_end:
-    ld ra, 32(sp)
-    ld s0, 24(sp)
-    addi sp, sp, 40
-    li a0, 0
-    li a7, 93
-    ecall
-  $ riscv64-linux-gnu-as -march=rv64gc faccps_ll.s -o faccps_ll.o
-  $ riscv64-linux-gnu-gcc -static faccps_ll.o -L../../../runtime -l:libruntime.a -o faccps_ll.elf -Wl,--no-warnings
-  $ qemu-riscv64 ./faccps_ll.elf
-  24
-
-  $ cat >faccps_ll.ml <<EOF
-  > let id x = x
-  > let fresh_2 p1 k p2 =
-  > k (p1 + p2)
-  > 
-  > let fresh_1 n k fib p1 =
-  > fib (n-2) (fresh_2 p1 k)
-  > 
-  > let rec fib n k =
-  > if n < 2
-  > then k n
-  > else fib (n - 1) (fresh_1 n k fib)
-  > 
-  > let main =
-  > let z = print_int (fib 6 id)  in
-  > 0
-  > EOF
-  $ ../../../bin/AML.exe faccps_ll.ml faccps_ll.s
-  Generated: faccps_ll.s
-  $ cat faccps_ll.s
-    .text
-    .globl id
-    .type id, @function
-  id:
-    addi sp, sp, -24
-    sd ra, 16(sp)
-    sd s0, 8(sp)
-    addi s0, sp, 24
-    sd a0, -24(s0)
-    ld a0, -24(s0)
-  id_end:
-    ld ra, 16(sp)
-    ld s0, 8(sp)
-    addi sp, sp, 24
-    ret
-    
-    .globl fresh_2
-    .type fresh_2, @function
-  fresh_2:
-    addi sp, sp, -48
-    sd ra, 40(sp)
-    sd s0, 32(sp)
-    addi s0, sp, 48
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    sd a2, -40(s0)
-    ld t0, -24(s0)
-    ld t1, -40(s0)
-    add t0, t0, t1
-    sd t0, -48(s0)
-    addi sp, sp, -8
-    ld t0, -48(s0)
-    sd t0, 0(sp)
-    ld a0, -32(s0)
-    li a1, 1
-    addi a2, sp, 0
-    call closure_apply
-    addi sp, sp, 8
-  fresh_2_end:
-    ld ra, 40(sp)
-    ld s0, 32(sp)
-    addi sp, sp, 48
-    ret
-    
-    .globl fresh_1
-    .type fresh_1, @function
-  fresh_1:
-    addi sp, sp, -64
-    sd ra, 56(sp)
-    sd s0, 48(sp)
-    addi s0, sp, 64
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    sd a2, -40(s0)
-    sd a3, -48(s0)
-    ld t0, -24(s0)
-    li t1, 2
-    sub t0, t0, t1
-    sd t0, -56(s0)
-    addi sp, sp, -16
-    ld t0, -48(s0)
-    sd t0, 0(sp)
-    ld t0, -32(s0)
-    sd t0, 8(sp)
-    la a0, fresh_2
-    li a1, 3
-    call closure_alloc
-    li a1, 2
-    addi a2, sp, 0
-    call closure_apply
-    addi sp, sp, 16
-    addi t0, a0, 0
-    sd t0, -64(s0)
-    addi sp, sp, -16
-    ld t0, -56(s0)
-    sd t0, 0(sp)
-    ld t0, -64(s0)
-    sd t0, 8(sp)
-    ld a0, -40(s0)
-    li a1, 2
-    addi a2, sp, 0
-    call closure_apply
-    addi sp, sp, 16
-  fresh_1_end:
-    ld ra, 56(sp)
-    ld s0, 48(sp)
-    addi sp, sp, 64
-    ret
-    
-    .globl fib
-    .type fib, @function
-  fib:
-    addi sp, sp, -56
-    sd ra, 48(sp)
-    sd s0, 40(sp)
-    addi s0, sp, 56
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    ld t0, -24(s0)
-    li t1, 2
-    slt t0, t0, t1
-    sd t0, -40(s0)
-    ld t0, -40(s0)
-    beq t0, x0, .Lelse_0
-    addi sp, sp, -8
-    ld t0, -24(s0)
-    sd t0, 0(sp)
-    ld a0, -32(s0)
-    li a1, 1
-    addi a2, sp, 0
-    call closure_apply
-    addi sp, sp, 8
-    j .Lendif_1
-  .Lelse_0:
-    ld t0, -24(s0)
-    li t1, 1
-    sub t0, t0, t1
-    sd t0, -48(s0)
-    addi sp, sp, -24
-    ld t0, -24(s0)
-    sd t0, 0(sp)
-    ld t0, -32(s0)
-    sd t0, 8(sp)
-    la a0, fib
-    li a1, 2
-    call closure_alloc
-    addi t0, a0, 0
-    sd t0, 16(sp)
-    addi sp, sp, -8
-    sd x0, 0(sp)
-    la a0, fresh_1
-    li a1, 4
-    call closure_alloc
-    li a1, 3
-    addi a2, sp, 8
-    call closure_apply
-    addi sp, sp, 8
-    addi sp, sp, 24
-    addi t0, a0, 0
-    sd t0, -56(s0)
-    addi sp, sp, -16
-    addi t3, sp, 0
-    ld t0, -48(s0)
-    sd t0, 0(t3)
-    ld t0, -56(s0)
-    sd t0, 8(t3)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
-    call fib
-    addi t0, a0, 0
-    addi a0, t0, 0
-    addi sp, sp, 16
-  .Lendif_1:
-  fib_end:
-    ld ra, 48(sp)
-    ld s0, 40(sp)
-    addi sp, sp, 56
-    ret
-    
-    .globl main
-    .type main, @function
-  main:
-    addi sp, sp, -40
-    sd ra, 32(sp)
-    sd s0, 24(sp)
-    addi s0, sp, 40
-    addi sp, sp, -16
-    addi t3, sp, 0
-    li t0, 6
-    sd t0, 0(t3)
-    la a0, id
-    li a1, 1
-    call closure_alloc
-    addi t0, a0, 0
-    sd t0, 8(t3)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
-    call fib
-    addi t0, a0, 0
-    addi sp, sp, 16
-    sd t0, -24(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -24(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
-    call print_int
-    addi t0, a0, 0
-    addi sp, sp, 8
-    sd t0, -32(s0)
-    ld t0, -32(s0)
-    sd t0, -40(s0)
-    li a0, 0
-  main_end:
-    ld ra, 32(sp)
-    ld s0, 24(sp)
-    addi sp, sp, 40
-    li a0, 0
-    li a7, 93
-    ecall
-  $ riscv64-linux-gnu-as -march=rv64gc faccps_ll.s -o faccps_ll.o
-  $ riscv64-linux-gnu-gcc -static faccps_ll.o -L../../../runtime -l:libruntime.a -o faccps_ll.elf -Wl,--no-warnings
-  $ qemu-riscv64 ./faccps_ll.elf
-  8
