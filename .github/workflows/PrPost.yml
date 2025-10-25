@@ -254,7 +254,8 @@ jobs:
             "${{ env.LANG_NAME }}" \
             _docs/percent.txt \
             text.md
-
+      - run: echo "\n" >> text.md
+      - run: LOGDIR=${{ env.LANG_NAME }} bash .github/git-user-stats >> text.md
       - run: cat text.md
 
       # - name: Find Comment
