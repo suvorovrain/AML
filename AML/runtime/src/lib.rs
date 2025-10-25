@@ -115,6 +115,7 @@ pub extern "C" fn closure_apply(clos_raw: i64, argc: i64, argv: *const i64) -> i
             };
             Box::into_raw(Box::new(new_clos)) as i64
         } else if got == total {
+            // full application
             call_with_i64_args!(src.code, args, total)
         } else {
             eprintln!("fatal: over-application (arity={}, got={})", total, got);
