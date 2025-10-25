@@ -296,7 +296,7 @@ jobs:
 
       - run: sudo apt install gawk --yes
       - run: echo "" > achievements.md
-      - run: LOGDIR=${{ env.LANG_NAME }} bash .github/git-user-stats >> achievements.md
+      - run: LOGDIR=${{ env.latest }} bash .github/git-user-stats >> achievements.md
 
       - name: Update docs artifact
         uses: actions/upload-artifact@v4
