@@ -1,6 +1,7 @@
 (** Copyright 2025-2026, Rodion Suvorov, Dmitriy Chirkov*)
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
+=================== manytests ===================
   $ ../../../bin/AML.exe ./manytests/typed/010faccps_ll.ml faccps.s
   Generated: faccps.s
   $ cat faccps.s
@@ -368,7 +369,7 @@
   $ qemu-riscv64 ./fibcps_ll.elf
   8
 
-
+=================== without partial ===================
   $ cat >fib.ml <<EOF
   > let rec fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)
   > let main = let () = print_int (fib 4) in 0
@@ -736,6 +737,7 @@
   $ qemu-riscv64 ./ite.elf
   420
 
+=================== custom ===================
   $ cat >many_args.ml <<EOF
   > let f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 = a0+a1+a2+a3+a4+a5+a6+a7+a8+a9+a10
   > let main = print_int (f 0 1 2 3 4 5 6 7 8 9 10)
