@@ -93,7 +93,9 @@ let a_gen_bin_op op dst r1 r2 =
   | Add -> emit add dst r1 r2
   | Sub -> emit sub dst r1 r2
   | Mul -> emit mul dst r1 r2
-  | Le -> emit slt dst t1 t0 >> emit xori dst dst 1
+  | Le ->
+    (* dst = (r1 <= r2) *)
+    emit slt dst r2 r1 >> emit xori dst dst 1
   | Lt -> emit slt dst r1 r2
   | Eq ->
     emit sub t2 r1 r2
@@ -244,7 +246,8 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
               | Some (Loc_mem m) -> emit ld t0 m >> emit jalr t0
               | None -> emit call fname)
             (* move result, restore regs, and pop stack args/reg buffer *)
-            >> (if not (equal_reg dst a0) then emit mv dst a0 else return ())
+            >> emit mv t0 a0 (* save call result immediately *)
+            >> (if not (equal_reg dst t0) then emit mv dst t0 else return ())
             >> restore_regs lives
             >> (if not (List.is_empty stack_args)
                 then emit addi sp sp (8 * List.length stack_args)
@@ -306,7 +309,8 @@ let a_gen_func name args body =
   let is_main = String.equal name "main" in
   let func_label = name in
   let locals_count = a_count_local_vars body in
-  let stack_size = 16 + (locals_count * 8) in
+  let spill_count = Int.min (List.length args) 8 in
+  let stack_size = 16 + ((locals_count + spill_count) * 8) in
   emit directive (Printf.sprintf ".globl %s" func_label)
   >> emit directive (Printf.sprintf ".type %s, @function" func_label)
   >> emit label func_label
@@ -318,7 +322,9 @@ let a_gen_func name args body =
   let* global_state = get_state in
   let f i env (pat : Ast.Pattern.t) =
     match pat with
-    | Pat_var id when i < 8 -> Map.set env ~key:id ~data:(Loc_reg (A i))
+    | Pat_var id when i < 8 ->
+      (* bind first up to 8 params directly to A registers *)
+      Map.set env ~key:id ~data:(Loc_reg (A i))
     | Pat_var id ->
       let offset = (i - 8) * 8 in
       Map.set env ~key:id ~data:(Loc_mem (ROff (offset, fp)))
@@ -327,6 +333,19 @@ let a_gen_func name args body =
   let initial_env = List.foldi args ~init:(Map.empty (module String)) ~f in
   let initial_cg_state = { global_state with env = initial_env; frame_offset = 16 } in
   set_state initial_cg_state
+  >>
+  (* spill first up to 8 params from A registers into fresh frame slots and
+   bind parameter names to those Loc_mem slots *)
+  let nspill = Int.min (List.length args) 8 in
+  map_m
+    (fun i ->
+       match List.nth args i with
+       | Some (Pat_var id) ->
+         let* loc = allocate_local_var id in
+         (* updates env := Loc_mem loc *)
+         emit sd (A i) loc (* store A(i) into its slot *)
+       | _ -> return ())
+    (List.init nspill ~f:Fn.id)
   >> a_gen_expr a0 body
   >>
   let* final_state = get_state in
@@ -347,8 +366,7 @@ let codegen ppf (s : aprogram) =
     List.fold
       s
       ~init:(Map.empty (module String))
-      ~f:(fun acc item ->
-        match item with
+      ~f:(fun acc -> function
         | AStr_value (_, name, expr) ->
           let rec extract_fun_params_body (aexp : aexpr) =
             match aexp with

@@ -117,7 +117,6 @@ let%expect_test "some branches" =
       ret |}]
 ;;
 
-
 let%expect_test "many args" =
   run
     {|
@@ -131,53 +130,60 @@ let%expect_test "many args" =
       .globl f
       .type f, @function
     f:
-      addi sp, sp, -88
-      sd ra, 80(sp)
-      sd s0, 72(sp)
-      addi s0, sp, 88
-      addi t0, a0, 0
-      addi t1, a1, 0
-      add t0, t0, t1
-      sd t0, -24(s0)
+      addi sp, sp, -152
+      sd ra, 144(sp)
+      sd s0, 136(sp)
+      addi s0, sp, 152
+      sd a0, -24(s0)
+      sd a1, -32(s0)
+      sd a2, -40(s0)
+      sd a3, -48(s0)
+      sd a4, -56(s0)
+      sd a5, -64(s0)
+      sd a6, -72(s0)
+      sd a7, -80(s0)
       ld t0, -24(s0)
-      addi t1, a2, 0
-      add t0, t0, t1
-      sd t0, -32(s0)
-      ld t0, -32(s0)
-      addi t1, a3, 0
-      add t0, t0, t1
-      sd t0, -40(s0)
-      ld t0, -40(s0)
-      addi t1, a4, 0
-      add t0, t0, t1
-      sd t0, -48(s0)
-      ld t0, -48(s0)
-      addi t1, a5, 0
-      add t0, t0, t1
-      sd t0, -56(s0)
-      ld t0, -56(s0)
-      addi t1, a6, 0
-      add t0, t0, t1
-      sd t0, -64(s0)
-      ld t0, -64(s0)
-      addi t1, a7, 0
-      add t0, t0, t1
-      sd t0, -72(s0)
-      ld t0, -72(s0)
-      ld t1, 0(s0)
-      add t0, t0, t1
-      sd t0, -80(s0)
-      ld t0, -80(s0)
-      ld t1, 8(s0)
+      ld t1, -32(s0)
       add t0, t0, t1
       sd t0, -88(s0)
       ld t0, -88(s0)
+      ld t1, -40(s0)
+      add t0, t0, t1
+      sd t0, -96(s0)
+      ld t0, -96(s0)
+      ld t1, -48(s0)
+      add t0, t0, t1
+      sd t0, -104(s0)
+      ld t0, -104(s0)
+      ld t1, -56(s0)
+      add t0, t0, t1
+      sd t0, -112(s0)
+      ld t0, -112(s0)
+      ld t1, -64(s0)
+      add t0, t0, t1
+      sd t0, -120(s0)
+      ld t0, -120(s0)
+      ld t1, -72(s0)
+      add t0, t0, t1
+      sd t0, -128(s0)
+      ld t0, -128(s0)
+      ld t1, -80(s0)
+      add t0, t0, t1
+      sd t0, -136(s0)
+      ld t0, -136(s0)
+      ld t1, 0(s0)
+      add t0, t0, t1
+      sd t0, -144(s0)
+      ld t0, -144(s0)
+      ld t1, 8(s0)
+      add t0, t0, t1
+      sd t0, -152(s0)
+      ld t0, -152(s0)
       ld t1, 16(s0)
       add a0, t0, t1
     f_end:
-      ld ra, 80(sp)
-      ld s0, 72(sp)
-      addi sp, sp, 88
+      ld ra, 144(sp)
+      ld s0, 136(sp)
+      addi sp, sp, 152
       ret |}]
 ;;
-
