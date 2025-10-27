@@ -32,11 +32,8 @@ let compile input_file output_file =
   | Ok (_, _) ->
     (match anf_transform program with
      | Ok aprogram ->
-       let buf = Buffer.create 1024 in
-       let fmt = formatter_of_buffer buf in
-       codegen fmt aprogram;
-       pp_print_flush fmt ();
-       write_file output_file (Buffer.contents buf);
+       let asm = Format.asprintf "%a" codegen aprogram in
+       write_file output_file asm;
        Printf.printf "Generated: %s\n" output_file
      | Error msg -> Printf.eprintf "ANF transform error: %s\n" msg)
   | Error err -> printf "%a" pp_inf_err err
