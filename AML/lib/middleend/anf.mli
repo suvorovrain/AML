@@ -34,6 +34,7 @@ type astructure_item =
   | AStr_eval of aexpr
 
 type aprogram = astructure_item list
+type anf_state = { temps : int }
 
 val show_aprogram : aprogram -> string
-val anf_transform : program -> aprogram
+val anf_transform : Ast.program -> (astructure_item list, string) result

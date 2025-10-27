@@ -43,20 +43,21 @@ type aprogram = astructure_item list [@@deriving eq, show { with_path = false }]
 type anf_state = { temps : int }
 
 module ANFState = struct
-  type 'a t = anf_state -> 'a * anf_state
+  type 'a t = anf_state -> ('a, string) result * anf_state
 
-  let return x st = x, st
+  let return x st = Ok x, st
+  let error msg st = Error msg, st
 
   let bind : 'a t -> ('a -> 'b t) -> 'b t =
     fun t f st ->
-    let a, tran_st = t st in
-    let b, fin_st = f a tran_st in
-    b, fin_st
+    match t st with
+    | Error msg, st' -> Error msg, st'
+    | Ok a, tran_st -> f a tran_st
   ;;
 
   let ( let* ) = bind
-  let get st = st, st
-  let put st _ = (), st
+  let get st = Ok st, st
+  let put st _ = Ok (), st
 
   let rec map_m f = function
     | [] -> return []
@@ -66,7 +67,15 @@ module ANFState = struct
       return (y :: ys)
   ;;
 
-  let run m = fst (m { temps = 0 })
+  let rec fold_right_m f xs acc =
+    match xs with
+    | [] -> return acc
+    | x :: xs' ->
+      let* acc' = fold_right_m f xs' acc in
+      f x acc'
+  ;;
+
+  let run m = m { temps = 0 }
 end
 
 open ANFState
@@ -90,19 +99,19 @@ let is_binop op =
 ;;
 
 let define_binop = function
-  | "+" -> Add
-  | "-" -> Sub
-  | "*" -> Mul
-  | "<" -> Lt
-  | "<=" -> Le
-  | "=" -> Eq
-  | "<>" -> Neq
-  | s -> failwith ("unsupported binop: " ^ s)
+  | "+" -> return Add
+  | "-" -> return Sub
+  | "*" -> return Mul
+  | "<" -> return Lt
+  | "<=" -> return Le
+  | "=" -> return Eq
+  | "<>" -> return Neq
+  | s -> error ("unsupported binop: " ^ s)
 ;;
 
 let get_pattern_name = function
-  | Pattern.Pat_var name -> name
-  | _ -> failwith "not supported"
+  | Pattern.Pat_var name -> return name
+  | _ -> error "unsupported pattern (only variables allowed)"
 ;;
 
 let rec transform_list
@@ -122,15 +131,14 @@ and transform_expr expr k =
   | Exp_apply (Exp_ident op, Exp_tuple (exp1, exp2, [])) when is_binop op ->
     transform_expr exp1 (fun exp1_res ->
       transform_expr exp2 (fun exp2_res ->
+        let* bop = define_binop op in
         let* t = fresh_temp in
         let* rest = k @@ ImmId t in
-        match rest with
         (* avoid `let t = e in t` *)
+        match rest with
         | ACE (CImm (ImmId id)) when String.equal t id ->
-          return @@ ACE (CBinop (define_binop op, exp1_res, exp2_res))
-        | _ ->
-          return
-          @@ ALet (Nonrecursive, t, CBinop (define_binop op, exp1_res, exp2_res), rest)))
+          return @@ ACE (CBinop (bop, exp1_res, exp2_res))
+        | _ -> return @@ ALet (Nonrecursive, t, CBinop (bop, exp1_res, exp2_res), rest)))
   | Exp_apply (exp1, exp2) ->
     let args, fn = app_args_to_list @@ Exp_apply (exp1, exp2) in
     transform_expr fn (fun fn_res ->
@@ -162,14 +170,16 @@ and transform_expr expr k =
       return (ACE (CIte (cond_res, then_res, else_res))))
   | Exp_fun ((pat_hd, pat_tl), exp) ->
     let* body_anf = transform_expr exp (fun exp_res -> return @@ ACE (CImm exp_res)) in
-    let params =
-      List.fold_right
-        (fun pat acc -> ACE (CFun (get_pattern_name pat, acc)))
+    let* params =
+      fold_right_m
+        (fun pat acc ->
+           let* name = get_pattern_name pat in
+           return (ACE (CFun (name, acc))))
         (pat_hd :: pat_tl)
         body_anf
     in
     return params
-  | _ -> failwith "other expression in future versions"
+  | _ -> error "unsupported expression in current ANF transformer"
 ;;
 
 let transform_str_item : structure_item -> astructure_item ANFState.t = function
@@ -179,8 +189,13 @@ let transform_str_item : structure_item -> astructure_item ANFState.t = function
   | Str_value (recflag, ({ pat = Pattern.Pat_var pat; expr }, _)) ->
     let* e_anf = transform_expr expr (fun v -> return @@ ACE (CImm v)) in
     return @@ AStr_value (recflag, pat, e_anf)
-  | _ -> failwith "ADT is not unsupported"
+  | _ -> error "ADT are not supported in current ANF transformer"
 ;;
 
 let transform_str_item_list prog = map_m transform_str_item prog
-let anf_transform (prog : program) = run (transform_str_item_list prog)
+
+let anf_transform (prog : program) =
+  match run (transform_str_item_list prog) with
+  | Ok res, _ -> Ok res
+  | Error msg, _ -> Error msg
+;;

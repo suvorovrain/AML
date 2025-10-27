@@ -30,13 +30,15 @@ let compile input_file output_file =
   let program = Parser.parse_str src in
   match run_infer_program program env_with_things with
   | Ok (_, _) ->
-    let buf = Buffer.create 1024 in
-    let fmt = formatter_of_buffer buf in
-    let aprogram = anf_transform program in
-    codegen fmt aprogram;
-    pp_print_flush fmt ();
-    write_file output_file (Buffer.contents buf);
-    Printf.printf "Generated: %s\n" output_file
+    (match anf_transform program with
+     | Ok aprogram ->
+       let buf = Buffer.create 1024 in
+       let fmt = formatter_of_buffer buf in
+       codegen fmt aprogram;
+       pp_print_flush fmt ();
+       write_file output_file (Buffer.contents buf);
+       Printf.printf "Generated: %s\n" output_file
+     | Error msg -> Printf.eprintf "ANF transform error: %s\n" msg)
   | Error err -> printf "%a" pp_inf_err err
 ;;
 
@@ -45,9 +47,11 @@ let dump_anf input_file =
   let program = Parser.parse_str src in
   match run_infer_program program env_with_things with
   | Ok (_, _) ->
-    let aprogram = anf_transform program in
-    pp_anf std_formatter aprogram;
-    pp_print_flush std_formatter ()
+    (match anf_transform program with
+     | Ok aprogram ->
+       pp_anf std_formatter aprogram;
+       pp_print_flush std_formatter ()
+     | Error msg -> Printf.eprintf "ANF transform error: %s\n" msg)
   | Error err -> printf "%a" pp_inf_err err
 ;;
 

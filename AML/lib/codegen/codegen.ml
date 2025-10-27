@@ -23,17 +23,20 @@ type cg_state =
   }
 
 module Codegen = struct
-  type 'a t = Cg of (cg_state -> 'a * cg_state)
+  type 'a t = Cg of (cg_state -> ('a, string) Result.t * cg_state)
 
-  let run (state : cg_state) (Cg f) : 'a * cg_state = f state
-  let return x = Cg (fun state -> x, state)
+  let run (state : cg_state) (Cg f) : ('a, string) Result.t * cg_state = f state
+  let return x = Cg (fun state -> Ok x, state)
+  let error msg = Cg (fun state -> Error msg, state)
 
   let ( let* ) (Cg m) f =
     Cg
       (fun state ->
-        let res, new_state = m state in
-        let (Cg m') = f res in
-        m' new_state)
+        match m state with
+        | Error msg, st -> Error msg, st
+        | Ok res, new_state ->
+          let (Cg m') = f res in
+          m' new_state)
   ;;
 
   let ( >> ) (m1 : unit t) (m2 : 'a t) : 'a t =
@@ -41,8 +44,8 @@ module Codegen = struct
     m2
   ;;
 
-  let get_state = Cg (fun state -> state, state)
-  let set_state new_state = Cg (fun _ -> (), new_state)
+  let get_state = Cg (fun state -> Ok state, state)
+  let set_state new_state = Cg (fun _ -> Ok (), new_state)
 
   let emit instr =
     let k instr =
@@ -72,7 +75,6 @@ let fresh_label prefix =
 let allocate_local_var id =
   let* state = get_state in
   let new_offset = state.frame_offset + 8 in
-  (* TODO: maybe 16? *)
   let location = ROff (-new_offset, fp) in
   let new_env = Map.set state.env ~key:id ~data:(Loc_mem location) in
   let* () = set_state { state with frame_offset = new_offset; env = new_env } in
@@ -266,8 +268,8 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
            >> (if need_pad then emit addi sp sp 8 else return ())
            >> emit addi sp sp (8 * provided_arity)
            >> if not (equal_reg dst a0) then emit mv dst a0 else return ())
-       else failwith "Too many arguments")
-  | CApp (ImmNum _, _) -> failwith "unreachable"
+       else error (Printf.sprintf "Too many arguments in call to %s" fname))
+  | CApp (ImmNum _, _) -> error "unreachable"
   (* TODO: ite without else *)
   | CIte (cond_imm, then_aexpr, else_aexpr) ->
     let* l_else = fresh_label "else" in
@@ -279,7 +281,7 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
     >> emit label l_else
     >> a_gen_expr dst else_aexpr
     >> emit label l_end
-  | CFun (_, _) -> failwith "TODO"
+  | CFun (_, _) -> error "not implemented"
 ;;
 
 let rec a_count_local_vars = function
@@ -306,17 +308,20 @@ let a_gen_func name args body =
   >> emit addi fp sp stack_size
   >>
   let* global_state = get_state in
-  let f i env (pat : Ast.Pattern.t) =
-    match pat with
-    | Pat_var id when i < 8 ->
-      (* bind first up to 8 params directly to A registers *)
-      Map.set env ~key:id ~data:(Loc_reg (A i))
-    | Pat_var id ->
-      let offset = (i - 8) * 8 in
-      Map.set env ~key:id ~data:(Loc_mem (ROff (offset, fp)))
-    | _ -> failwith "unreachable"
+  let rec foldi_m i acc = function
+    | [] -> return acc
+    | pat :: rest ->
+      let* new_acc =
+        match pat with
+        | Pat_var id when i < 8 -> return (Map.set acc ~key:id ~data:(Loc_reg (A i)))
+        | Pat_var id ->
+          let offset = (i - 8) * 8 in
+          return (Map.set acc ~key:id ~data:(Loc_mem (ROff (offset, fp))))
+        | _ -> error "unreachable"
+      in
+      foldi_m (i + 1) new_acc rest
   in
-  let initial_env = List.foldi args ~init:(Map.empty (module String)) ~f in
+  let* initial_env = foldi_m 0 (Map.empty (module String)) args in
   let initial_cg_state = { global_state with env = initial_env; frame_offset = 16 } in
   set_state initial_cg_state
   >>
@@ -394,6 +399,8 @@ let codegen ppf (s : aprogram) =
            | AStr_eval expr -> a_gen_func "main" [] expr)
          s
   in
-  let (), final_state = Codegen.run initial_state program_gen in
-  pp_instrs ppf final_state.instructions
+  let result, final_state = Codegen.run initial_state program_gen in
+  match result with
+  | Ok () -> pp_instrs ppf final_state.instructions
+  | Error msg -> Stdlib.Format.fprintf ppf ";; Codegen error: %s\n" msg
 ;;
