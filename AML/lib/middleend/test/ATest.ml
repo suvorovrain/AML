@@ -8,8 +8,9 @@ open Ast.Structure
 open Middle.Anf
 
 let test_anf (prog : program) =
-  let anf_prog = anf_transform prog in
-  print_endline (show_aprogram anf_prog)
+  match anf_transform prog with
+  | Ok anf_prog -> print_endline (show_aprogram anf_prog)
+  | Error msg -> Printf.eprintf "ANF transform error: %s\n" msg
 ;;
 
 (*
