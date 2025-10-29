@@ -236,13 +236,14 @@ let rec gen_i_exp env dst = function
 
 and gen_c_exp env dst = function
   | CIExp i_exp -> gen_i_exp env dst i_exp
-  | CExp_apply (IExp_ident op, [ i_exp1; i_exp2 ]) when Ast.is_bin_op op ->
+  | CExp_apply (IExp_ident op, i_exp1, [ i_exp2 ]) when Ast.is_bin_op op ->
     let* env = gen_i_exp env (T 0) i_exp1 in
     let* env = gen_i_exp env (T 1) i_exp2 in
     let* env = ensure_reg_free env dst in
     let* () = emit_bin_op dst op (T 0) (T 1) in
     return env
-  | CExp_apply (IExp_ident fname, args) ->
+  | CExp_apply (IExp_ident fname, i_exp, i_exp_list) ->
+    let args = i_exp :: i_exp_list in
     let* env = emit_save_caller_regs env in
     let* state = get in
     (* Determine which args can overwrite regs *)
@@ -380,8 +381,8 @@ and count_loc_vars_c_exp = function
   | CExp_tuple (i_exp1, i_exp2, i_exp_list) ->
     List.fold_left (i_exp1 :: i_exp2 :: i_exp_list) ~init:0 ~f:(fun acc e ->
       acc + count_loc_vars_i_exp e)
-  | CExp_apply (i_exp1, i_exp_list) ->
-    List.fold_left (i_exp1 :: i_exp_list) ~init:0 ~f:(fun acc e ->
+  | CExp_apply (i_exp1, i_exp2, i_exp_list) ->
+    List.fold_left (i_exp1 :: i_exp2 :: i_exp_list) ~init:0 ~f:(fun acc e ->
       acc + count_loc_vars_i_exp e)
   | CExp_ifthenelse (c_exp_if, a_exp_then, None) ->
     count_loc_vars_c_exp c_exp_if + count_loc_vars_a_exp a_exp_then

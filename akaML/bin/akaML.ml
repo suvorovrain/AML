@@ -61,8 +61,9 @@ let compiler options =
             | Ok anf_ast ->
               if options.anf
               then (
-                let s = Format.asprintf "%a" Anf.Anf_pprinter.pp_a_structure anf_ast in
-                Out_channel.output_string out_channel (s ^ "\n");
+                Out_channel.output_string
+                  out_channel
+                  (Format.asprintf "%a\n" Anf.Anf_pprinter.pp_a_structure anf_ast);
                 env_infer)
               else (
                 Format.fprintf ppf "%a\n%!" RiscV.Codegen.gen_a_structure anf_ast;
