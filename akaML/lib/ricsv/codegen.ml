@@ -8,7 +8,7 @@
 
 open Ast
 open Machine
-open Anf.Anf_core
+open Middleend.Anf_core
 open Base
 open Stdlib.Format
 
@@ -455,14 +455,14 @@ let init_arity_map ast =
   env
 ;;
 
-let gen_a_structure ppf ast =
+let gen_a_structure ppf anf_ast =
   fprintf ppf ".section .text";
-  let arity_map = init_arity_map ast in
+  let arity_map = init_arity_map anf_ast in
   let arity_map = Map.set arity_map ~key:"print_int" ~data:1 in
   let init_state = { frame_offset = 0; fresh_id = 0; arity_map } in
   let program =
     let* _ =
-      List.fold ast ~init:(return init_state) ~f:(fun acc -> function
+      List.fold anf_ast ~init:(return init_state) ~f:(fun acc -> function
         | AStruct_value (_, Pat_var f_id, body_exp) ->
           let* state = acc in
           let rec extract_fun_params acc = function

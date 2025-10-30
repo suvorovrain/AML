@@ -6,7 +6,7 @@
   akaML.Pprinter
   akaML.Inferencer
   akaML.RiscV
-  akaML.Anf)
+  akaML.Middleend)
  (modules Test_parser Test_pprinter Test_inferencer Test_riscv Test_anf)
  (preprocess
   (pps ppx_expect))
@@ -40,6 +40,7 @@
   manytests/typed/010fibcps_ll.ml
   manytests/typed/010sukharev.ml
   manytests/typed/011mapcps.ml
+  manytests/typed/012faccps.ml
   manytests/typed/012fibcps.ml
   manytests/typed/013foldfoldr.ml
   manytests/typed/015tuples.ml

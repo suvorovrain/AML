@@ -1,0 +1,177 @@
+[@@@ocaml.text "/*"]
+
+(** Copyright 2025-2026, Friend-zva, RodionovMaxim05 *)
+
+(** SPDX-License-Identifier: LGPL-3.0-or-later *)
+
+[@@@ocaml.text "/*"]
+
+open Ast
+open Ast.Expression
+open Base
+open Set.Poly
+
+let rec free_vars_pat = function
+  | Pat_any -> empty
+  | Pat_var x -> singleton x
+  | Pat_constant _ -> empty
+  | Pat_tuple (pat1, pat2, pat_list) ->
+    union_list (List.map (pat1 :: pat2 :: pat_list) ~f:free_vars_pat)
+  | Pat_construct (_, None) -> empty
+  | Pat_construct (_, Some pat) -> free_vars_pat pat
+  | Pat_constraint (pat, _) -> free_vars_pat pat
+;;
+
+let rec free_vars_exp = function
+  | Exp_ident id -> singleton id
+  | Exp_constant _ -> empty
+  | Exp_let (_, { pat; exp }, _, body) ->
+    let free_def = free_vars_exp exp in
+    let free_expr = diff (free_vars_exp body) (free_vars_pat pat) in
+    union free_def free_expr
+  | Exp_fun (pat, pat_list, exp) ->
+    let bound_vars = union_list (List.map (pat :: pat_list) ~f:free_vars_pat) in
+    diff (free_vars_exp exp) bound_vars
+  | Exp_apply (exp1, exp2) -> union (free_vars_exp exp1) (free_vars_exp exp2)
+  | Exp_function (c, cs) ->
+    let fvs_case { left; right } = union (free_vars_pat left) (free_vars_exp right) in
+    let all = List.fold_left ~f:union ~init:(fvs_case c) (List.map cs ~f:fvs_case) in
+    let bound =
+      List.fold_left
+        ~f:union
+        ~init:(free_vars_pat c.left)
+        (List.map cs ~f:(fun c -> free_vars_pat c.left))
+    in
+    diff all bound
+  | Exp_match (e, c, cs) ->
+    let scrutinee = free_vars_exp e in
+    let fvs_case { left; right } = union (free_vars_pat left) (free_vars_exp right) in
+    let all = List.fold_left ~f:union ~init:(fvs_case c) (List.map cs ~f:fvs_case) in
+    let bound =
+      List.fold_left
+        ~f:union
+        ~init:(free_vars_pat c.left)
+        (List.map cs ~f:(fun c -> free_vars_pat c.left))
+    in
+    union scrutinee (diff all bound)
+  | Exp_ifthenelse (cond, then_exp, else_exp) ->
+    let else_exp = Option.value_map else_exp ~f:free_vars_exp ~default:empty in
+    union (free_vars_exp cond) (union (free_vars_exp then_exp) else_exp)
+  | Exp_tuple (exp1, exp2, exp_list) ->
+    union_list (List.map (exp1 :: exp2 :: exp_list) ~f:free_vars_exp)
+  | Exp_construct (_, None) -> empty
+  | Exp_construct (_, Some exp) -> free_vars_exp exp
+  | Exp_sequence (exp1, exp2) -> union (free_vars_exp exp1) (free_vars_exp exp2)
+  | Exp_constraint (exp, _) -> free_vars_exp exp
+;;
+
+let rec cc_exp globals = function
+  | (Exp_ident _ | Exp_constant _) as e -> e
+  | Exp_let (flag, vb, vb_list, body) ->
+    let bound =
+      List.fold_left
+        ~f:union
+        ~init:(free_vars_pat vb.pat)
+        (List.map vb_list ~f:(fun b -> free_vars_pat b.pat))
+    in
+    let new_globals = union globals bound in
+    (match flag with
+     | Recursive ->
+       let vb' = { vb with exp = cc_exp new_globals vb.exp } in
+       let vb_list' =
+         List.map vb_list ~f:(fun b -> { b with exp = cc_exp new_globals b.exp })
+       in
+       Exp_let (flag, vb', vb_list', cc_exp new_globals body)
+     | Nonrecursive ->
+       let vb' = { vb with exp = cc_exp globals vb.exp } in
+       let vb_list' =
+         List.map vb_list ~f:(fun b -> { b with exp = cc_exp globals b.exp })
+       in
+       Exp_let (flag, vb', vb_list', cc_exp new_globals body))
+  | Exp_fun (pat, pat_list, body) as lam ->
+    let all_params = pat :: pat_list in
+    let fvs = free_vars_exp lam in
+    let fvs = diff fvs globals in
+    let fvs =
+      diff
+        fvs
+        (List.fold_left ~f:union ~init:empty (List.map all_params ~f:free_vars_pat))
+    in
+    let body' = cc_exp globals body in
+    if is_empty fvs
+    then Exp_fun (pat, pat_list, body')
+    else (
+      let safe_tl = function
+        | [] -> []
+        | _ :: tail -> tail
+      in
+      let env_vars = to_list fvs in
+      let env_pats = List.map env_vars ~f:(fun x -> Pat_var x) in
+      let new_params = env_pats @ all_params in
+      let new_fun = Exp_fun (List.hd_exn new_params, safe_tl new_params, body') in
+      List.fold_left ~f:(fun acc x -> Exp_apply (acc, Exp_ident x)) ~init:new_fun env_vars)
+  | Exp_apply (f, arg) -> Exp_apply (cc_exp globals f, cc_exp globals arg)
+  | Exp_function (case, case_list) ->
+    let case' = { case with right = cc_exp globals case.right } in
+    let case_list' =
+      List.map case_list ~f:(fun c -> { c with right = cc_exp globals c.right })
+    in
+    Exp_function (case', case_list')
+  | Exp_match (exp, case, case_list) ->
+    let exp' = cc_exp globals exp in
+    let case' = { case with right = cc_exp globals case.right } in
+    let case_list' =
+      List.map case_list ~f:(fun c -> { c with right = cc_exp globals c.right })
+    in
+    Exp_match (exp', case', case_list')
+  | Exp_ifthenelse (cond, then_exp, else_exp) ->
+    let else_exp' = Option.map else_exp ~f:(cc_exp globals) in
+    Exp_ifthenelse (cc_exp globals cond, cc_exp globals then_exp, else_exp')
+  | Exp_tuple (exp1, exp2, exp_list) ->
+    Exp_tuple
+      (cc_exp globals exp1, cc_exp globals exp2, List.map exp_list ~f:(cc_exp globals))
+  | Exp_construct (_, None) as exp -> exp
+  | Exp_construct (tag, Some payload) -> Exp_construct (tag, Some (cc_exp globals payload))
+  | Exp_sequence (exp1, exp2) -> Exp_sequence (cc_exp globals exp1, cc_exp globals exp2)
+  | Exp_constraint (exp, typ) -> Exp_constraint (cc_exp globals exp, typ)
+;;
+
+let cc_structure_item globals = function
+  | Struct_eval exp ->
+    let exp' = cc_exp globals exp in
+    globals, Struct_eval exp'
+  | Struct_value (flag, vb, vb_list) ->
+    let bound_names =
+      List.fold_left
+        ~f:union
+        ~init:(free_vars_pat vb.pat)
+        (List.map vb_list ~f:(fun b -> free_vars_pat b.pat))
+    in
+    let new_globals = union globals bound_names in
+    (match flag with
+     | Recursive ->
+       let vb' = { vb with exp = cc_exp new_globals vb.exp } in
+       let vb_list' =
+         List.map vb_list ~f:(fun vb -> { vb with exp = cc_exp new_globals vb.exp })
+       in
+       new_globals, Struct_value (flag, vb', vb_list')
+     | Nonrecursive ->
+       let vb' = { vb with exp = cc_exp globals vb.exp } in
+       let vb_list' =
+         List.map vb_list ~f:(fun vb -> { vb with exp = cc_exp globals vb.exp })
+       in
+       new_globals, Struct_value (flag, vb', vb_list'))
+;;
+
+let stdlib_globals = of_list ([ "~-"; "print_int" ] @ bin_op_list)
+
+let closure_conversion (ast : structure) =
+  let initial_globals = stdlib_globals in
+  let rec helper globals acc = function
+    | [] -> List.rev acc
+    | item :: rest ->
+      let globals, item' = cc_structure_item globals item in
+      helper globals (item' :: acc) rest
+  in
+  helper initial_globals [] ast
+;;

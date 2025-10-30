@@ -90,3 +90,47 @@ SPDX-License-Identifier: LGPL-3.0-or-later
   let main = let temp15 = fib 6 id in
              let z = print_int temp15 in
              0;;
+
+  $ ../bin/akaML.exe -anf -fromfile manytests/typed/012faccps.ml
+  let rec fac =
+    fun n ->
+      (fun k ->
+         (let temp0 = n < 2 in
+         if temp0 then k 1
+         else (let temp2 = n - 1 in
+           fun k ->
+             (fun n ->
+                (fun a ->
+                   (let temp3 = a * n in
+                   let temp5 = k temp3 in
+                   let temp6 = temp5 k n in
+                   fac temp2 temp6))))));;
+  let main =
+    fun x -> (let temp10 = x in
+             let temp11 = fac 6 temp10 in
+             print_int temp11);;
+
+  $ ../bin/akaML.exe -anf -fromfile manytests/typed/012fibcps.ml
+  let rec fib =
+    fun n ->
+      (fun k ->
+         (let temp0 = n < 2 in
+         if temp0 then k n
+         else (let temp2 = n - 1 in
+           fun k ->
+             (fun n ->
+                (fun a ->
+                   (let temp3 = n - 2 in
+                   fun a ->
+                     (fun k ->
+                        (fun b ->
+                           (let temp4 = a + b in
+                           let temp6 = k temp4 in
+                           let temp7 = temp6 a k in
+                           let temp9 = fib temp3 temp7 in
+                           let temp10 = temp9 k n in
+                           fib temp2 temp10)))))))));;
+  let main =
+    fun x -> (let temp14 = x in
+             let temp15 = fib 6 temp14 in
+             print_int temp15);;
