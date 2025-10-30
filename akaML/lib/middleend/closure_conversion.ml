@@ -65,29 +65,30 @@ let rec free_vars_exp = function
   | Exp_constraint (exp, _) -> free_vars_exp exp
 ;;
 
-let rec cc_exp globals = function
+let rec process_bindings globals flag vb vb_list =
+  let bound =
+    List.fold_left
+      ~f:union
+      ~init:(free_vars_pat vb.pat)
+      (List.map vb_list ~f:(fun vb -> free_vars_pat vb.pat))
+  in
+  let globals =
+    match flag with
+    | Recursive -> union globals bound
+    | Nonrecursive -> globals
+  in
+  let vb' = { vb with exp = cc_exp globals vb.exp } in
+  let vb_list' =
+    List.map vb_list ~f:(fun vb -> { vb with exp = cc_exp globals vb.exp })
+  in
+  let new_globals = union globals bound in
+  vb', vb_list', new_globals
+
+and cc_exp globals = function
   | (Exp_ident _ | Exp_constant _) as e -> e
   | Exp_let (flag, vb, vb_list, body) ->
-    let bound =
-      List.fold_left
-        ~f:union
-        ~init:(free_vars_pat vb.pat)
-        (List.map vb_list ~f:(fun b -> free_vars_pat b.pat))
-    in
-    let new_globals = union globals bound in
-    (match flag with
-     | Recursive ->
-       let vb' = { vb with exp = cc_exp new_globals vb.exp } in
-       let vb_list' =
-         List.map vb_list ~f:(fun b -> { b with exp = cc_exp new_globals b.exp })
-       in
-       Exp_let (flag, vb', vb_list', cc_exp new_globals body)
-     | Nonrecursive ->
-       let vb' = { vb with exp = cc_exp globals vb.exp } in
-       let vb_list' =
-         List.map vb_list ~f:(fun b -> { b with exp = cc_exp globals b.exp })
-       in
-       Exp_let (flag, vb', vb_list', cc_exp new_globals body))
+    let vb', vb_list', new_globals = process_bindings globals flag vb vb_list in
+    Exp_let (flag, vb', vb_list', cc_exp new_globals body)
   | Exp_fun (pat, pat_list, body) as lam ->
     let all_params = pat :: pat_list in
     let fvs = free_vars_exp lam in
@@ -141,29 +142,11 @@ let cc_structure_item globals = function
     let exp' = cc_exp globals exp in
     globals, Struct_eval exp'
   | Struct_value (flag, vb, vb_list) ->
-    let bound_names =
-      List.fold_left
-        ~f:union
-        ~init:(free_vars_pat vb.pat)
-        (List.map vb_list ~f:(fun b -> free_vars_pat b.pat))
-    in
-    let new_globals = union globals bound_names in
-    (match flag with
-     | Recursive ->
-       let vb' = { vb with exp = cc_exp new_globals vb.exp } in
-       let vb_list' =
-         List.map vb_list ~f:(fun vb -> { vb with exp = cc_exp new_globals vb.exp })
-       in
-       new_globals, Struct_value (flag, vb', vb_list')
-     | Nonrecursive ->
-       let vb' = { vb with exp = cc_exp globals vb.exp } in
-       let vb_list' =
-         List.map vb_list ~f:(fun vb -> { vb with exp = cc_exp globals vb.exp })
-       in
-       new_globals, Struct_value (flag, vb', vb_list'))
+    let vb', vb_list', new_globals = process_bindings globals flag vb vb_list in
+    new_globals, Struct_value (flag, vb', vb_list')
 ;;
 
-let stdlib_globals = of_list ([ "~-"; "print_int" ] @ bin_op_list)
+let stdlib_globals = of_list ([ "print_int" ] @ un_op_list @ bin_op_list)
 
 let closure_conversion (ast : structure) =
   let initial_globals = stdlib_globals in
