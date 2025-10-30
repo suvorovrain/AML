@@ -5,6 +5,7 @@
 open Ast.Expression
 open Ast.Structure
 open Ast
+open Base
 
 type immexpr =
   | ImmNum of int
@@ -40,10 +41,14 @@ type astructure_item =
 [@@deriving eq, show { with_path = false }]
 
 type aprogram = astructure_item list [@@deriving eq, show { with_path = false }]
-type anf_state = { temps : int }
+
+type anf_state =
+  { temps : int
+  ; arity_map : (ident, int, String.comparator_witness) Map.t
+  }
 
 module ANFState = struct
-  type 'a t = anf_state -> ('a, string) result * anf_state
+  type 'a t = anf_state -> ('a, string) Result.t * anf_state
 
   let return x st = Ok x, st
   let error msg st = Error msg, st
@@ -75,15 +80,22 @@ module ANFState = struct
       f x acc'
   ;;
 
-  let run m = m { temps = 0 }
+  let run m = m { temps = 0; arity_map = Map.empty (module String) }
 end
 
 open ANFState
 
+let record_arity name arity =
+  let* st = get in
+  let new_map = Map.set st.arity_map ~key:name ~data:arity in
+  let* () = put { st with arity_map = new_map } in
+  return ()
+;;
+
 let fresh_temp =
   let* st = get in
   let name = Printf.sprintf "t_%d" st.temps in
-  let* () = put { temps = st.temps + 1 } in
+  let* () = put { temps = st.temps + 1; arity_map = st.arity_map } in
   return name
 ;;
 
@@ -95,7 +107,7 @@ let rec app_args_to_list = function
 ;;
 
 let is_binop op =
-  List.mem op [ "+"; "-"; "*"; "/"; "<"; "<="; ">"; ">="; "="; "<>"; "||"; "&&" ]
+  Stdlib.List.mem op [ "+"; "-"; "*"; "/"; "<"; "<="; ">"; ">="; "="; "<>"; "||"; "&&" ]
 ;;
 
 let define_binop = function
@@ -143,6 +155,12 @@ and transform_expr expr k =
     let args, fn = app_args_to_list @@ Exp_apply (exp1, exp2) in
     transform_expr fn (fun fn_res ->
       transform_list args (fun args_res ->
+        let arity = List.length args_res in
+        let* () =
+          match fn_res with
+          | ImmId name -> record_arity name arity
+          | _ -> return ()
+        in
         let* t = fresh_temp in
         let* rest = k (ImmId t) in
         match rest with
@@ -196,6 +214,6 @@ let transform_str_item_list prog = map_m transform_str_item prog
 
 let anf_transform (prog : program) =
   match run (transform_str_item_list prog) with
-  | Ok res, _ -> Ok res
+  | Ok res, st -> Ok (res, st.arity_map)
   | Error msg, _ -> Error msg
 ;;

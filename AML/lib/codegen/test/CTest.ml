@@ -13,7 +13,7 @@ let run str =
     (match run_infer_program program env_with_things with
      | Ok _ ->
        (match anf_transform program with
-        | Ok aprogram -> Format.printf "%a\n%!" codegen aprogram
+        | Ok (aprogram,_) -> Format.printf "%a\n%!" codegen aprogram
         | Error msg -> Format.eprintf "ANF transform error: %s\n%!" msg)
      | Error _ -> Format.eprintf "Parsing error\n%!")
 ;;

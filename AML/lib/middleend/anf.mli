@@ -4,6 +4,7 @@
 
 open Ast
 open Ast.Expression
+open Base
 
 type immexpr =
   | ImmNum of int
@@ -34,7 +35,10 @@ type astructure_item =
   | AStr_eval of aexpr
 
 type aprogram = astructure_item list
-type anf_state = { temps : int }
+type anf_state =
+  { temps : int
+  ; arity_map : (ident, int, String.comparator_witness) Map.t
+  }
 
 val show_aprogram : aprogram -> string
-val anf_transform : Ast.program -> (astructure_item list, string) result
+val anf_transform : Ast.program -> (astructure_item list * (ident, int, String.comparator_witness) Map.t, string) Result.t

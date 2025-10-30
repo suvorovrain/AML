@@ -31,7 +31,7 @@ let compile input_file output_file =
   match run_infer_program program env_with_things with
   | Ok (_, _) ->
     (match anf_transform program with
-     | Ok aprogram ->
+     | Ok (aprogram, _) ->
        let asm = Format.asprintf "%a" codegen aprogram in
        write_file output_file asm;
        Printf.printf "Generated: %s\n" output_file
@@ -45,7 +45,7 @@ let dump_anf input_file =
   match run_infer_program program env_with_things with
   | Ok (_, _) ->
     (match anf_transform program with
-     | Ok aprogram ->
+     | Ok (aprogram,_) ->
        pp_anf std_formatter aprogram;
        pp_print_flush std_formatter ()
      | Error msg -> Printf.eprintf "ANF transform error: %s\n" msg)

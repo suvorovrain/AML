@@ -9,7 +9,7 @@ open Middle.Anf
 
 let test_anf (prog : program) =
   match anf_transform prog with
-  | Ok anf_prog -> print_endline (show_aprogram anf_prog)
+  | Ok (anf_prog, _) -> print_endline (show_aprogram anf_prog)
   | Error msg -> Printf.eprintf "ANF transform error: %s\n" msg
 ;;
 
