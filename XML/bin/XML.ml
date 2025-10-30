@@ -14,6 +14,7 @@ type options =
   ; mutable output_file_name : string option
   ; mutable show_ast : bool
   ; mutable show_anf : bool
+  ; mutable show_cc : bool
   }
 
 (* ------------------------------- *)
@@ -24,7 +25,8 @@ let to_asm ast : string =
   let anf_ast = Middleend.Anf.anf_program ast in
   let buf = Buffer.create 1024 in
   let ppf = formatter_of_buffer buf in
-  Backend.Codegen.gen_program ppf anf_ast;
+  let cc_program = Middleend.Cc.cc_program anf_ast in
+  Backend.Codegen.gen_program ppf cc_program;
   pp_print_flush ppf ();
   Buffer.contents buf
 ;;
@@ -39,6 +41,11 @@ let compile_and_write options source_code =
   if options.show_anf
   then (
     Middleend.Pprinter.print_anf_program std_formatter anf_ast;
+    exit 0);
+  let cc_ast = Middleend.Cc.cc_program anf_ast in
+  if options.show_cc
+  then (
+    Middleend.Pprinter.print_anf_program std_formatter cc_ast;
     exit 0);
   let asm_code = to_asm ast in
   match options.output_file_name with
@@ -88,6 +95,7 @@ let () =
     ; output_file_name = None
     ; show_ast = false
     ; show_anf = false
+    ; show_cc = false
     }
   in
   let usage_msg =
@@ -106,6 +114,9 @@ let () =
     ; ( "--anf"
       , Arg.Unit (fun () -> options.show_anf <- true)
       , "         Show the ANF representation and exit" )
+    ; ( "--cc"
+      , Arg.Unit (fun () -> options.show_cc <- true)
+      , "         Show the representation after applying CC and exit" )
     ; ( "-fromfile"
       , Arg.String (fun fname -> options.from_file_name <- Some fname)
       , " <file>  Read source from file (preferred over positional arg)" )

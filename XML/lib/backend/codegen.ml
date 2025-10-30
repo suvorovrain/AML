@@ -40,6 +40,14 @@ module ArityMap = struct
   let find (t : t) (x : ident) : int option = M.find_opt x t
 end
 
+let initial_arity_map =
+    let arity_map = ArityMap.empty () in
+    let arity_map = ArityMap.bind arity_map "print_int" 1 in
+    let arity_map = ArityMap.bind arity_map "malloc" 1 in
+    let arity_map = ArityMap.bind arity_map "alloc_closure" 2 in
+  ArityMap.bind arity_map "apply1" 2 
+;;
+
 type cg_state =
   { env : Env.t
   ; stack_offset : int
@@ -120,7 +128,6 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
     emit_bin_op op dst (T 0) (T 1);
     ok state
   | Comp_app (func_imm, args_imms) ->
-    (* сохранить живые регистры *)
     let live_regs_to_save =
       Env.fold
         (fun _ loc acc ->
@@ -154,7 +161,6 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
       | Imm_ident fname ->
         (match Env.find state.env fname with
          | Some _ ->
-           (* замыкание из окружения *)
            let* () = gen_im_expr state (T 0) func_imm in
            let* () = apply_chain () in
            ok state
@@ -166,31 +172,19 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
               let* () = apply_chain () in
               ok state
             | Some n when argc = n ->
-              (* аргументов хватает - делаем вызов сразу*)
-              List.iter
-                (fun arg_imm ->
-                   let () =
-                     let _ = () in
+              List.iteri
+                (fun i arg_imm ->
+                   if i < Array.length Target.arg_regs
+                   then
+                     let (_ : unit r) = gen_im_expr state (A i) arg_imm in
                      ()
-                   in
-                   emit addi SP SP (-Target.word_size);
-                   let (_ : unit r) = gen_im_expr state (T 0) arg_imm in
-                   emit sd (T 0) (SP, 0))
-                (List.rev args_imms);
-              let rec load_args i = function
-                | [] -> ok ()
-                | _ :: tl when i < Array.length Target.arg_regs ->
-                  emit ld (A i) (SP, 0);
-                  emit addi SP SP Target.word_size;
-                  load_args (i + 1) tl
-                | _ -> err `Stack_args_not_impl_direct
-              in
-              let* () = load_args 0 args_imms in
+                   else (* Handle stack arguments if necessary *)
+                     ())
+                args_imms;
               emit call fname;
               emit mv (T 0) (A 0);
               ok state
             | Some n when argc < n ->
-              (* частичное применение если аргументов меньше чем надо, в будущем чуть придется поравить чтобы создавать одно замыканние а не много*)
               let m = argc in
               if m > 0 then emit addi SP SP (-m * Target.word_size);
               let rec save_args i = function
@@ -219,26 +213,7 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
               if m > 0 then emit addi SP SP (m * Target.word_size);
               ok state
             | Some n -> err (`Too_many_args (fname, n, argc))
-            | None ->
-              (* внешняя функция для того чтобы не было ошибки с вызовом рантайма *)
-              List.iter
-                (fun arg_imm ->
-                   let (_ : unit r) = gen_im_expr state (T 0) arg_imm in
-                   emit addi SP SP (-Target.word_size);
-                   emit sd (T 0) (SP, 0))
-                (List.rev args_imms);
-              let rec load_args i = function
-                | [] -> ok ()
-                | _ :: tl when i < Array.length Target.arg_regs ->
-                  emit ld (A i) (SP, 0);
-                  emit addi SP SP Target.word_size;
-                  load_args (i + 1) tl
-                | _ -> err `Stack_args_not_impl_external
-              in
-              let* () = load_args 0 args_imms in
-              emit call fname;
-              emit mv (T 0) (A 0);
-              ok state))
+            | None -> err (`Unbound_identifier fname)))
       | Imm_num _ -> err `Call_non_function
     in
     List.iter
@@ -260,7 +235,6 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
     emit label lbl_end;
     ok state_else
   | Comp_func (params, body) ->
-    (* создаём уникальный ярлык функции, добавляем в deferred *)
     let func_label, state = fresh_label "lambda" state in
     let arity' = ArityMap.bind state.arity func_label (List.length params) in
     let state =
@@ -275,9 +249,27 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
     if not (equal_reg dst (A 0)) then emit mv dst (A 0);
     ok state
   | Comp_tuple _ -> err `Tuple_not_impl
+  | Comp_alloc imms ->
+    let size = List.length imms * Target.word_size in
+    emit li (A 0) size;
+    emit call "malloc";
+    let* () =
+      List.mapi
+        (fun i imm ->
+           let* () = gen_im_expr state (T 1) imm in
+           emit sd (T 1) (A 0, i * Target.word_size);
+           ok ())
+        imms
+      |> List.fold_left (fun acc r -> let* () = acc in r) (ok ())
+    in
+    if not (equal_reg dst (A 0)) then emit mv dst (A 0);
+    ok state
+  | Comp_load (addr_imm, offset) ->
+    let* () = gen_im_expr state (T 0) addr_imm in
+    emit ld dst (T 0, offset);
+    ok state
 ;;
 
-(* counts the number of let bindings to allocate space on stack *)
 let rec count_locals_in_anf (aexpr : anf_expr) : int =
   match aexpr with
   | Anf_let (_, _, comp_expr, body) ->
@@ -288,7 +280,7 @@ let rec count_locals_in_anf (aexpr : anf_expr) : int =
 
 and count_locals_in_comp (cexpr : comp_expr) : int =
   match cexpr with
-  | Comp_imm _ | Comp_binop _ | Comp_app _ | Comp_func _ | Comp_tuple _ -> 0
+  | Comp_imm _ | Comp_binop _ | Comp_app _ | Comp_func _ | Comp_tuple _ | Comp_alloc _ | Comp_load _ -> 0
   | Comp_branch (_, then_anf, else_anf) ->
     let locals_in_then = count_locals_in_anf then_anf in
     let locals_in_else = count_locals_in_anf else_anf in
@@ -352,7 +344,7 @@ let gen_program_res ppf (program : aprogram) : unit r =
       program
   in
   if has_main then gen_start ppf;
-  let arity_map = prefill_arities (ArityMap.empty ()) program in
+  let arity_map = prefill_arities initial_arity_map program in
   let st0 =
     { env = Env.empty ()
     ; stack_offset = 0
