@@ -104,3 +104,9 @@ let ll_program (prog : aprogram) : aprogram LLState.t =
   in
   return items
 ;;
+
+let ll_transform (p : aprogram) : (aprogram, string) Result.t =
+  match LLState.run (ll_program p) with
+  | Ok transformed_prog, { lifted; _ } -> Ok (lifted @ transformed_prog)
+  | Error msg, _ -> Error msg
+;;

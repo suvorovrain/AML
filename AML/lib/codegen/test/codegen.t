@@ -2,6 +2,34 @@
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
 =================== manytests ===================
+  $ ../../../bin/AML.exe --dump-anf ./manytests/typed/010faccps_ll.ml
+  let id =
+    fun x ->
+      x
+  
+  let fresh_1 =
+    fun n ->
+      fun k ->
+        fun p ->
+          let t_0 = p * n in
+          k t_0
+  
+  let rec fac_cps =
+    fun n ->
+      fun k ->
+        let t_2 = n = 1 in
+        if t_2 then
+          k 1
+        else
+          let t_4 = n - 1 in
+          let t_5 = fresh_1 n k in
+          fac_cps t_4 t_5
+  
+  let main =
+    let t_7 = fac_cps 4 id in
+    let t_8 = print_int t_7 in
+    let t_9 = t_8 in
+    0
   $ ../../../bin/AML.exe ./manytests/typed/010faccps_ll.ml faccps.s
   Generated: faccps.s
   $ cat faccps.s
@@ -874,3 +902,86 @@
   $ riscv64-linux-gnu-gcc -static many_args.o -L../../../runtime -l:libruntime.a -o many_args.elf -Wl,--no-warnings
   $ qemu-riscv64 ./many_args.elf
   55
+
+=================== custom (before cc + ll) ===================
+  $ cat >many_args_pa.ml <<EOF
+  > let wrap f = if 1 = 1 then f else f
+  > 
+  > let test3 a b c =
+  > let a = print_int a in
+  > let b = print_int b in
+  > let c = print_int c in
+  > 0
+  > 
+  > let test10 a b c d e f g h i j = a + b + c + d + e + f + g + h + i + j
+  > 
+  > let main =
+  > let rez =
+  >     (wrap test10 1 10 100 1000 10000 100000 1000000 10000000 100000000
+  >        1000000000)
+  > in
+  > let () = print_int rez in
+  > let temp2 = wrap test3 1 10 100 in
+  > 0
+  > EOF
+  $ ../../../bin/AML.exe many_args_pa.ml many_args_pa.s
+  Generated: many_args_pa.s
+  $ cat many_args_pa.s
+  ;; Codegen error: Too many arguments in call to wrap
+
+  $ riscv64-linux-gnu-as -march=rv64gc many_args_pa.s -o many_args_pa.o
+  many_args_pa.s: Assembler messages:
+  many_args_pa.s:1: Error: unrecognized opcode `codegen error:Too many arguments in call to wrap'
+  [1]
+  $ riscv64-linux-gnu-gcc -static many_args_pa.o -L../../../runtime -l:libruntime.a -o many_args_pa.elf -Wl,--no-warnings
+  collect2: error: ld returned 1 exit status
+  [1]
+  $ qemu-riscv64 ./many_args_pa.elf
+  [1]
+
+
+=================== custom (partial application 4) ===================
+  $ cat >many_args_pa.ml <<EOF
+  > let f a0 a1 a2 a3 a4 = a0 a1 a2 a3 a4 
+  > let add4 a1 a2 a3 a4  = a1+a2+a3+a4
+  > let g a = (f add4) a 
+  > let main = print_int (g 1 1 1 1)
+  > EOF
+  $ ../../../bin/AML.exe many_args_pa.ml many_args_pa.s
+  Generated: many_args_pa.s
+  $ cat many_args_pa.s
+  ;; Codegen error: Too many arguments in call to g
+
+  $ riscv64-linux-gnu-as -march=rv64gc many_args_pa.s -o many_args_pa.o
+  many_args_pa.s: Assembler messages:
+  many_args_pa.s:1: Error: unrecognized opcode `codegen error:Too many arguments in call to g'
+  [1]
+  $ riscv64-linux-gnu-gcc -static many_args_pa.o -L../../../runtime -l:libruntime.a -o many_args_pa.elf -Wl,--no-warnings
+  collect2: error: ld returned 1 exit status
+  [1]
+  $ qemu-riscv64 ./many_args_pa.elf
+  [1]
+
+
+=================== custom (partial application 10) ===================
+  $ cat >many_args_pam.ml <<EOF
+  > let f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 = a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10
+  > let add10 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 = a1+a2+a3+a4+a5+a6+a7+a8+a9+a10
+  > let g a = (f add10) a 
+  > let main = print_int (g 1 1 1 1 1 1 1 1 1 1)
+  > EOF
+  $ ../../../bin/AML.exe many_args_pam.ml many_args_pam.s
+  Generated: many_args_pam.s
+  $ cat many_args_pam.s
+  ;; Codegen error: Too many arguments in call to g
+
+  $ riscv64-linux-gnu-as -march=rv64gc many_args_pam.s -o many_args_pam.o
+  many_args_pam.s: Assembler messages:
+  many_args_pam.s:1: Error: unrecognized opcode `codegen error:Too many arguments in call to g'
+  [1]
+  $ riscv64-linux-gnu-gcc -static many_args_pam.o -L../../../runtime -l:libruntime.a -o many_args_pam.elf -Wl,--no-warnings
+  collect2: error: ld returned 1 exit status
+  [1]
+  $ qemu-riscv64 ./many_args_pam.elf
+  [1]
+
