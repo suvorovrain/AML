@@ -6,6 +6,7 @@ open Ast
 open Ast.Expression
 open Ast.Structure
 open Middle.Anf
+open Middle.Anf_types
 
 let test_anf (prog : program) =
   match anf_transform prog with

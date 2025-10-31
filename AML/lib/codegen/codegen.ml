@@ -6,7 +6,7 @@ open Base
 open Machine
 open Ast
 open Ast.Pattern
-open Middle.Anf
+open Middle.Anf_types
 
 type location =
   | Loc_reg of reg
