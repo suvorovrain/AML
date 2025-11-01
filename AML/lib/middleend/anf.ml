@@ -137,15 +137,23 @@ and transform_expr expr k =
       return (ACE (CIte (cond_res, then_res, else_res))))
   | Exp_fun ((pat_hd, pat_tl), exp) ->
     let* body_anf = transform_expr exp (fun exp_res -> return @@ ACE (CImm exp_res)) in
-    let* params =
+    let* func_aexpr =
       fold_right_m
-        (fun pat acc ->
+        (fun pat acc_body ->
            let* name = get_pattern_name pat in
-           return (ACE (CFun (name, acc))))
+           return (ACE (CFun (name, acc_body))))
         (pat_hd :: pat_tl)
         body_anf
     in
-    return params
+    let* t = fresh_temp in
+    let* rest = k (ImmId t) in
+    (match func_aexpr with
+     | ACE cfun ->
+       (match rest with
+        | ACE (CImm (ImmId id)) when String.equal t id -> return (ACE cfun)
+        | _ -> return (ALet (Nonrecursive, t, cfun, rest)))
+     | ALet _ ->
+       error "Internal error: ANF of function unexpectedly created a let-binding")
   | _ -> error "unsupported expression in current ANF transformer"
 ;;
 

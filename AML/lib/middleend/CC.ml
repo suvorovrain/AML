@@ -107,8 +107,8 @@ let rec cc_aexpr (aexpr : aexpr) : aexpr CCState.t =
        let fvs = free_vars_cexpr (CFun (arg, f_body)) in
        let fvs_without_self =
          match rec_flag with
-         | Ast.Expression.Recursive -> S.remove fvs name
-         | _ -> fvs
+         | Recursive -> S.remove fvs name
+         | Nonrecursive -> fvs
        in
        let captured_list = S.to_list (S.inter fvs_without_self st.bound) in
        let* helper_name = fresh_name name in
@@ -116,15 +116,14 @@ let rec cc_aexpr (aexpr : aexpr) : aexpr CCState.t =
          S.union
            (S.of_list (module String) (arg :: captured_list))
            (match rec_flag with
-            | Ast.Expression.Recursive -> S.singleton (module String) helper_name
-            | _ -> S.empty (module String))
+            | Recursive -> S.singleton (module String) helper_name
+            | Nonrecursive -> S.empty (module String))
        in
        let new_f_body_bound = S.union inner_bound_vars st.bound in
        let new_subst =
          match rec_flag with
-         | Ast.Expression.Recursive ->
-           Map.set st.subst ~key:name ~data:(ImmId helper_name)
-         | _ -> st.subst
+         | Recursive -> Map.set st.subst ~key:name ~data:(ImmId helper_name)
+         | Nonrecursive -> st.subst
        in
        let* new_f_body = with_new_scope new_f_body_bound new_subst (cc_aexpr f_body) in
        let helper_fun_cexpr =
@@ -222,7 +221,7 @@ and cc_cexpr (cexpr : cexpr) : cexpr CCState.t =
     let* thn_aexpr = cc_aexpr thn in
     let* els_aexpr = cc_aexpr els in
     return (CIte (i, thn_aexpr, els_aexpr))
-  | CFun (_, _) -> error "unreachable"
+  | CFun (_, _) -> error "unreachable: cc_cexpr should not encounter CFun"
 ;;
 
 let cc_str_item (item : astructure_item) : astructure_item list CCState.t =
@@ -235,8 +234,8 @@ let cc_str_item (item : astructure_item) : astructure_item list CCState.t =
     let fvs = free_vars_aexpr func_aexpr in
     let fvs_without_self =
       match rec_flag with
-      | Ast.Expression.Recursive -> S.remove fvs name
-      | _ -> fvs
+      | Recursive -> S.remove fvs name
+      | Nonrecursive -> fvs
     in
     let captured_list = S.to_list (S.inter fvs_without_self st_before.bound) in
     let* helper_name = fresh_name name in
@@ -245,13 +244,13 @@ let cc_str_item (item : astructure_item) : astructure_item list CCState.t =
         (S.of_list (module String) (arg :: captured_list))
         (match rec_flag with
          | Recursive -> S.singleton (module String) helper_name
-         | _ -> S.empty (module String))
+         | Nonrecursive -> S.empty (module String))
     in
     let new_f_body_bound = S.union inner_bound_vars st_before.bound in
     let new_subst_for_body =
       match rec_flag with
       | Recursive -> Map.set st_before.subst ~key:name ~data:(ImmId helper_name)
-      | _ -> st_before.subst
+      | Nonrecursive -> st_before.subst
     in
     let* new_f_body =
       with_new_scope new_f_body_bound new_subst_for_body (cc_aexpr f_body)
@@ -281,8 +280,8 @@ let cc_str_item (item : astructure_item) : astructure_item list CCState.t =
     let* st_before = get in
     let new_bound_for_body =
       match rec_flag with
-      | Ast.Expression.Recursive -> S.add st_before.bound name
-      | _ -> st_before.bound
+      | Recursive -> S.add st_before.bound name
+      | Nonrecursive -> st_before.bound
     in
     let* new_aexpr = with_new_scope new_bound_for_body st_before.subst (cc_aexpr aexpr) in
     let* st_after = get in
