@@ -25,35 +25,51 @@ let rec free_vars_pat = function
 let rec free_vars_exp = function
   | Exp_ident id -> singleton id
   | Exp_constant _ -> empty
-  | Exp_let (_, { pat; exp }, _, body) ->
-    let free_def = free_vars_exp exp in
-    let free_expr = diff (free_vars_exp body) (free_vars_pat pat) in
-    union free_def free_expr
+  | Exp_let (flag, vb, vb_list, body) ->
+    let bound =
+      List.fold_left
+        ~f:union
+        ~init:(free_vars_pat vb.pat)
+        (List.map vb_list ~f:(fun vb -> free_vars_pat vb.pat))
+    in
+    let free_defs =
+      let defs = (vb.pat, vb.exp) :: List.map vb_list ~f:(fun vb -> vb.pat, vb.exp) in
+      match flag with
+      | Recursive ->
+        union_list (List.map defs ~f:(fun (_, exp) -> diff (free_vars_exp exp) bound))
+      | Nonrecursive -> union_list (List.map defs ~f:(fun (_, exp) -> free_vars_exp exp))
+    in
+    let free_body = diff (free_vars_exp body) bound in
+    union free_defs free_body
   | Exp_fun (pat, pat_list, exp) ->
     let bound_vars = union_list (List.map (pat :: pat_list) ~f:free_vars_pat) in
     diff (free_vars_exp exp) bound_vars
   | Exp_apply (exp1, exp2) -> union (free_vars_exp exp1) (free_vars_exp exp2)
-  | Exp_function (c, cs) ->
+  | Exp_function (case, case_list) ->
     let fvs_case { left; right } = union (free_vars_pat left) (free_vars_exp right) in
-    let all = List.fold_left ~f:union ~init:(fvs_case c) (List.map cs ~f:fvs_case) in
+    let all_free =
+      List.fold_left ~f:union ~init:(fvs_case case) (List.map case_list ~f:fvs_case)
+    in
     let bound =
       List.fold_left
         ~f:union
-        ~init:(free_vars_pat c.left)
-        (List.map cs ~f:(fun c -> free_vars_pat c.left))
+        ~init:(free_vars_pat case.left)
+        (List.map case_list ~f:(fun c -> free_vars_pat c.left))
     in
-    diff all bound
-  | Exp_match (e, c, cs) ->
-    let scrutinee = free_vars_exp e in
+    diff all_free bound
+  | Exp_match (exp, case, case_list) ->
+    let exp_free_vars = free_vars_exp exp in
     let fvs_case { left; right } = union (free_vars_pat left) (free_vars_exp right) in
-    let all = List.fold_left ~f:union ~init:(fvs_case c) (List.map cs ~f:fvs_case) in
+    let all_free =
+      List.fold_left ~f:union ~init:(fvs_case case) (List.map case_list ~f:fvs_case)
+    in
     let bound =
       List.fold_left
         ~f:union
-        ~init:(free_vars_pat c.left)
-        (List.map cs ~f:(fun c -> free_vars_pat c.left))
+        ~init:(free_vars_pat case.left)
+        (List.map case_list ~f:(fun c -> free_vars_pat c.left))
     in
-    union scrutinee (diff all bound)
+    union exp_free_vars (diff all_free bound)
   | Exp_ifthenelse (cond, then_exp, else_exp) ->
     let else_exp = Option.value_map else_exp ~f:free_vars_exp ~default:empty in
     union (free_vars_exp cond) (union (free_vars_exp then_exp) else_exp)
@@ -72,17 +88,16 @@ let rec process_bindings globals flag vb vb_list =
       ~init:(free_vars_pat vb.pat)
       (List.map vb_list ~f:(fun vb -> free_vars_pat vb.pat))
   in
-  let globals =
+  let globals_for_defs =
     match flag with
     | Recursive -> union globals bound
     | Nonrecursive -> globals
   in
-  let vb' = { vb with exp = cc_exp globals vb.exp } in
+  let vb' = { vb with exp = cc_exp globals_for_defs vb.exp } in
   let vb_list' =
-    List.map vb_list ~f:(fun vb -> { vb with exp = cc_exp globals vb.exp })
+    List.map vb_list ~f:(fun vb -> { vb with exp = cc_exp globals_for_defs vb.exp })
   in
-  let new_globals = union globals bound in
-  vb', vb_list', new_globals
+  vb', vb_list', globals
 
 and cc_exp globals = function
   | (Exp_ident _ | Exp_constant _) as e -> e
@@ -142,7 +157,14 @@ let cc_structure_item globals = function
     let exp' = cc_exp globals exp in
     globals, Struct_eval exp'
   | Struct_value (flag, vb, vb_list) ->
-    let vb', vb_list', new_globals = process_bindings globals flag vb vb_list in
+    let vb', vb_list', _ = process_bindings globals flag vb vb_list in
+    let bound =
+      List.fold_left
+        ~f:union
+        ~init:(free_vars_pat vb.pat)
+        (List.map vb_list ~f:(fun vb -> free_vars_pat vb.pat))
+    in
+    let new_globals = union globals bound in
     new_globals, Struct_value (flag, vb', vb_list')
 ;;
 

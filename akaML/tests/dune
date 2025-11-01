@@ -7,7 +7,7 @@
   akaML.Inferencer
   akaML.RiscV
   akaML.Middleend)
- (modules Test_parser Test_pprinter Test_inferencer Test_riscv Test_anf)
+ (modules Test_parser Test_pprinter Test_inferencer Test_riscv Test_anf Test_cc Test_ll)
  (preprocess
   (pps ppx_expect))
  (inline_tests)
