@@ -2,57 +2,9 @@
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
 =================== manytests ===================
-  $ ../../../bin/AML.exe --dump-cc-anf ./manytests/typed/010faccps_ll.ml
-  let id_cc_0 =
-    fun x ->
-      x
-  
-  let id =
-    id_cc_0
-  
-  let fresh_1_cc_1 =
-    fun n ->
-      let f_cc_2 = fun n ->
-        fun k ->
-          let f_cc_4 = fun k ->
-            fun n ->
-              fun p ->
-                let t_1 = p * n in
-                k t_1 in
-          let closure_cc_5 = f_cc_4 k n in
-          closure_cc_5 in
-      let closure_cc_3 = f_cc_2 n in
-      closure_cc_3
-  
-  let fresh_1 =
-    fresh_1_cc_1
-  
-  let rec fac_cps_cc_6 =
-    fun fresh_1 ->
-      fun n ->
-        let f_cc_7 = fun fresh_1 ->
-          fun n ->
-            fun k ->
-              let t_4 = n = 1 in
-              if t_4 then
-                k 1
-              else
-                let t_6 = n - 1 in
-                let t_7 = fresh_1 n k in
-                fac_cps_cc_6 t_6 t_7 in
-        let closure_cc_8 = f_cc_7 fresh_1 n in
-        closure_cc_8
-  
-  let fac_cps =
-    fac_cps_cc_6 fresh_1
-  
-  let main =
-    let t_10 = fac_cps 4 id in
-    let t_11 = print_int t_10 in
-    let t_12 = t_11 in
-    0
   $ ../../../bin/AML.exe ./manytests/typed/010faccps_ll.ml faccps.s
   Generated: faccps.s
+ 2
   $ cat faccps.s
     .text
     .globl id
@@ -62,7 +14,8 @@
     sd ra, 16(sp)
     sd s0, 8(sp)
     addi s0, sp, 24
-    sd a0, -24(s0)
+    ld t0, 0(a1)
+    sd t0, -24(s0)
     ld a0, -24(s0)
   id_end:
     ld ra, 16(sp)
@@ -77,9 +30,12 @@
     sd ra, 40(sp)
     sd s0, 32(sp)
     addi s0, sp, 48
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    sd a2, -40(s0)
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
     ld t0, -40(s0)
     ld t1, -24(s0)
     mul t0, t0, t1
@@ -105,8 +61,10 @@
     sd ra, 48(sp)
     sd s0, 40(sp)
     addi s0, sp, 56
-    sd a0, -24(s0)
-    sd a1, -32(s0)
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
     ld t0, -24(s0)
     li t1, 1
     sub t2, t0, t1
@@ -146,16 +104,13 @@
     addi t0, a0, 0
     sd t0, -56(s0)
     addi sp, sp, -16
-    addi t3, sp, 0
     ld t0, -48(s0)
-    sd t0, 0(t3)
+    sd t0, 0(sp)
     ld t0, -56(s0)
-    sd t0, 8(t3)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
+    sd t0, 8(sp)
+    li a0, 2
+    addi a1, sp, 0
     call fac_cps
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 16
   .Lendif_1:
   fac_cps_end:
@@ -172,28 +127,27 @@
     sd s0, 24(sp)
     addi s0, sp, 40
     addi sp, sp, -16
-    addi t3, sp, 0
     li t0, 4
-    sd t0, 0(t3)
+    sd t0, 0(sp)
     la a0, id
     li a1, 1
     call closure_alloc
     addi t0, a0, 0
-    sd t0, 8(t3)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
+    sd t0, 8(sp)
+    li a0, 2
+    addi a1, sp, 0
     call fac_cps
-    addi t0, a0, 0
     addi sp, sp, 16
+    addi t0, a0, 0
     sd t0, -24(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -24(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call print_int
-    addi t0, a0, 0
     addi sp, sp, 8
+    addi t0, a0, 0
     sd t0, -32(s0)
     ld t0, -32(s0)
     sd t0, -40(s0)
@@ -221,7 +175,8 @@
     sd ra, 16(sp)
     sd s0, 8(sp)
     addi s0, sp, 24
-    sd a0, -24(s0)
+    ld t0, 0(a1)
+    sd t0, -24(s0)
     ld a0, -24(s0)
   id_end:
     ld ra, 16(sp)
@@ -236,9 +191,12 @@
     sd ra, 40(sp)
     sd s0, 32(sp)
     addi s0, sp, 48
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    sd a2, -40(s0)
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
     ld t0, -24(s0)
     ld t1, -40(s0)
     add t0, t0, t1
@@ -264,10 +222,14 @@
     sd ra, 56(sp)
     sd s0, 48(sp)
     addi s0, sp, 64
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    sd a2, -40(s0)
-    sd a3, -48(s0)
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
     ld t0, -24(s0)
     li t1, 2
     sub t0, t0, t1
@@ -309,8 +271,10 @@
     sd ra, 48(sp)
     sd s0, 40(sp)
     addi s0, sp, 56
-    sd a0, -24(s0)
-    sd a1, -32(s0)
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
     ld t0, -24(s0)
     li t1, 2
     slt t0, t0, t1
@@ -354,16 +318,13 @@
     addi t0, a0, 0
     sd t0, -56(s0)
     addi sp, sp, -16
-    addi t3, sp, 0
     ld t0, -48(s0)
-    sd t0, 0(t3)
+    sd t0, 0(sp)
     ld t0, -56(s0)
-    sd t0, 8(t3)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
+    sd t0, 8(sp)
+    li a0, 2
+    addi a1, sp, 0
     call fib
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 16
   .Lendif_1:
   fib_end:
@@ -380,28 +341,27 @@
     sd s0, 24(sp)
     addi s0, sp, 40
     addi sp, sp, -16
-    addi t3, sp, 0
     li t0, 6
-    sd t0, 0(t3)
+    sd t0, 0(sp)
     la a0, id
     li a1, 1
     call closure_alloc
     addi t0, a0, 0
-    sd t0, 8(t3)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
+    sd t0, 8(sp)
+    li a0, 2
+    addi a1, sp, 0
     call fib
-    addi t0, a0, 0
     addi sp, sp, 16
+    addi t0, a0, 0
     sd t0, -24(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -24(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call print_int
-    addi t0, a0, 0
     addi sp, sp, 8
+    addi t0, a0, 0
     sd t0, -32(s0)
     ld t0, -32(s0)
     sd t0, -40(s0)
@@ -434,7 +394,8 @@
     sd ra, 56(sp)
     sd s0, 48(sp)
     addi s0, sp, 64
-    sd a0, -24(s0)
+    ld t0, 0(a1)
+    sd t0, -24(s0)
     ld t0, -24(s0)
     li t1, 2
     slt t0, t0, t1
@@ -449,26 +410,26 @@
     sub t0, t0, t1
     sd t0, -40(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -40(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call fib
-    addi t0, a0, 0
     addi sp, sp, 8
+    addi t0, a0, 0
     sd t0, -48(s0)
     ld t0, -24(s0)
     li t1, 2
     sub t0, t0, t1
     sd t0, -56(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -56(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call fib
-    addi t0, a0, 0
     addi sp, sp, 8
+    addi t0, a0, 0
     sd t0, -64(s0)
     ld t0, -48(s0)
     ld t1, -64(s0)
@@ -488,22 +449,22 @@
     sd s0, 24(sp)
     addi s0, sp, 40
     addi sp, sp, -8
-    addi t3, sp, 0
     li t0, 4
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call fib
-    addi t0, a0, 0
     addi sp, sp, 8
+    addi t0, a0, 0
     sd t0, -24(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -24(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call print_int
-    addi t0, a0, 0
     addi sp, sp, 8
+    addi t0, a0, 0
     sd t0, -32(s0)
     ld t0, -32(s0)
     sd t0, -40(s0)
@@ -540,7 +501,8 @@
     sd ra, 24(sp)
     sd s0, 16(sp)
     addi s0, sp, 32
-    sd a0, -24(s0)
+    ld t0, 0(a1)
+    sd t0, -24(s0)
     li t0, 0
     ld t1, -24(s0)
     sub t2, t0, t1
@@ -551,24 +513,20 @@
     ld t0, -32(s0)
     beq t0, x0, .Lelse_0
     addi sp, sp, -8
-    addi t3, sp, 0
     li t0, 0
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call print_int
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
     j .Lendif_1
   .Lelse_0:
     addi sp, sp, -8
-    addi t3, sp, 0
     li t0, 1
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call print_int
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
   .Lendif_1:
   large_end:
@@ -617,26 +575,22 @@
     li t0, 0
     sd t0, -48(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -48(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
     j .Lendif_7
   .Lelse_6:
     li t0, 1
     sd t0, -56(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -56(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
   .Lendif_7:
     j .Lendif_5
@@ -654,39 +608,35 @@
     li t0, 0
     sd t0, -72(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -72(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
     j .Lendif_9
   .Lelse_8:
     li t0, 1
     sd t0, -80(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -80(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
   .Lendif_9:
   .Lendif_5:
     j .Lendif_3
   .Lelse_2:
     addi sp, sp, -8
-    addi t3, sp, 0
     li t0, 42
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call print_int
-    addi t0, a0, 0
     addi sp, sp, 8
+    addi t0, a0, 0
     sd t0, -88(s0)
     ld t0, -88(s0)
     sd t0, -96(s0)
@@ -713,26 +663,22 @@
     li t0, 0
     sd t0, -120(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -120(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
     j .Lendif_13
   .Lelse_12:
     li t0, 1
     sd t0, -128(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -128(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
   .Lendif_13:
     j .Lendif_11
@@ -750,26 +696,22 @@
     li t0, 0
     sd t0, -144(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -144(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
     j .Lendif_15
   .Lelse_14:
     li t0, 1
     sd t0, -152(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -152(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
   .Lendif_15:
   .Lendif_11:
@@ -798,61 +740,75 @@
     .globl f
     .type f, @function
   f:
-    addi sp, sp, -152
-    sd ra, 144(sp)
-    sd s0, 136(sp)
-    addi s0, sp, 152
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    sd a2, -40(s0)
-    sd a3, -48(s0)
-    sd a4, -56(s0)
-    sd a5, -64(s0)
-    sd a6, -72(s0)
-    sd a7, -80(s0)
+    addi sp, sp, -176
+    sd ra, 168(sp)
+    sd s0, 160(sp)
+    addi s0, sp, 176
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    ld t0, 64(a1)
+    sd t0, -88(s0)
+    ld t0, 72(a1)
+    sd t0, -96(s0)
+    ld t0, 80(a1)
+    sd t0, -104(s0)
     ld t0, -24(s0)
     ld t1, -32(s0)
     add t0, t0, t1
-    sd t0, -88(s0)
-    ld t0, -88(s0)
-    ld t1, -40(s0)
-    add t0, t0, t1
-    sd t0, -96(s0)
-    ld t0, -96(s0)
-    ld t1, -48(s0)
-    add t0, t0, t1
-    sd t0, -104(s0)
-    ld t0, -104(s0)
-    ld t1, -56(s0)
-    add t0, t0, t1
     sd t0, -112(s0)
     ld t0, -112(s0)
-    ld t1, -64(s0)
+    ld t1, -40(s0)
     add t0, t0, t1
     sd t0, -120(s0)
     ld t0, -120(s0)
-    ld t1, -72(s0)
+    ld t1, -48(s0)
     add t0, t0, t1
     sd t0, -128(s0)
     ld t0, -128(s0)
-    ld t1, -80(s0)
+    ld t1, -56(s0)
     add t0, t0, t1
     sd t0, -136(s0)
     ld t0, -136(s0)
-    ld t1, 0(s0)
+    ld t1, -64(s0)
     add t0, t0, t1
     sd t0, -144(s0)
     ld t0, -144(s0)
-    ld t1, 8(s0)
+    ld t1, -72(s0)
     add t0, t0, t1
     sd t0, -152(s0)
     ld t0, -152(s0)
-    ld t1, 16(s0)
+    ld t1, -80(s0)
+    add t0, t0, t1
+    sd t0, -160(s0)
+    ld t0, -160(s0)
+    ld t1, -88(s0)
+    add t0, t0, t1
+    sd t0, -168(s0)
+    ld t0, -168(s0)
+    ld t1, -96(s0)
+    add t0, t0, t1
+    sd t0, -176(s0)
+    ld t0, -176(s0)
+    ld t1, -104(s0)
     add a0, t0, t1
   f_end:
-    ld ra, 144(sp)
-    ld s0, 136(sp)
-    addi sp, sp, 152
+    ld ra, 168(sp)
+    ld s0, 160(sp)
+    addi sp, sp, 176
     ret
     
     .globl main
@@ -862,54 +818,41 @@
     sd ra, 16(sp)
     sd s0, 8(sp)
     addi s0, sp, 24
-    addi sp, sp, -64
-    addi t3, sp, 0
+    addi sp, sp, -88
     li t0, 0
-    sd t0, 0(t3)
+    sd t0, 0(sp)
     li t0, 1
-    sd t0, 8(t3)
+    sd t0, 8(sp)
     li t0, 2
-    sd t0, 16(t3)
+    sd t0, 16(sp)
     li t0, 3
-    sd t0, 24(t3)
+    sd t0, 24(sp)
     li t0, 4
-    sd t0, 32(t3)
+    sd t0, 32(sp)
     li t0, 5
-    sd t0, 40(t3)
+    sd t0, 40(sp)
     li t0, 6
-    sd t0, 48(t3)
+    sd t0, 48(sp)
     li t0, 7
-    sd t0, 56(t3)
-    li t0, 10
-    addi sp, sp, -8
-    sd t0, 0(sp)
-    li t0, 9
-    addi sp, sp, -8
-    sd t0, 0(sp)
+    sd t0, 56(sp)
     li t0, 8
-    addi sp, sp, -8
-    sd t0, 0(sp)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
-    ld a2, 16(t3)
-    ld a3, 24(t3)
-    ld a4, 32(t3)
-    ld a5, 40(t3)
-    ld a6, 48(t3)
-    ld a7, 56(t3)
+    sd t0, 64(sp)
+    li t0, 9
+    sd t0, 72(sp)
+    li t0, 10
+    sd t0, 80(sp)
+    li a0, 11
+    addi a1, sp, 0
     call f
+    addi sp, sp, 88
     addi t0, a0, 0
-    addi sp, sp, 24
-    addi sp, sp, 64
     sd t0, -24(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
     ld t0, -24(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
     call print_int
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
   main_end:
     ld ra, 16(sp)
@@ -948,17 +891,251 @@
   $ ../../../bin/AML.exe many_args_pa.ml many_args_pa.s
   Generated: many_args_pa.s
   $ cat many_args_pa.s
-  ;; Codegen error: Too many arguments in call to wrap
+    .text
+    .globl wrap
+    .type wrap, @function
+  wrap:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    li t0, 1
+    li t1, 1
+    sub t2, t0, t1
+    slt t0, x0, t2
+    slt t3, t2, x0
+    add t0, t0, t3
+    xori t0, t0, 1
+    sd t0, -32(s0)
+    ld t0, -32(s0)
+    beq t0, x0, .Lelse_0
+    ld a0, -24(s0)
+    j .Lendif_1
+  .Lelse_0:
+    ld a0, -24(s0)
+  .Lendif_1:
+  wrap_end:
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl test3
+    .type test3, @function
+  test3:
+    addi sp, sp, -88
+    sd ra, 80(sp)
+    sd s0, 72(sp)
+    addi s0, sp, 88
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call print_int
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -48(s0)
+    ld t0, -48(s0)
+    sd t0, -56(s0)
+    addi sp, sp, -8
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call print_int
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -64(s0)
+    ld t0, -64(s0)
+    sd t0, -72(s0)
+    addi sp, sp, -8
+    ld t0, -40(s0)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call print_int
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -80(s0)
+    ld t0, -80(s0)
+    sd t0, -88(s0)
+    li a0, 0
+  test3_end:
+    ld ra, 80(sp)
+    ld s0, 72(sp)
+    addi sp, sp, 88
+    ret
+    
+    .globl test10
+    .type test10, @function
+  test10:
+    addi sp, sp, -160
+    sd ra, 152(sp)
+    sd s0, 144(sp)
+    addi s0, sp, 160
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    ld t0, 64(a1)
+    sd t0, -88(s0)
+    ld t0, 72(a1)
+    sd t0, -96(s0)
+    ld t0, -24(s0)
+    ld t1, -32(s0)
+    add t0, t0, t1
+    sd t0, -104(s0)
+    ld t0, -104(s0)
+    ld t1, -40(s0)
+    add t0, t0, t1
+    sd t0, -112(s0)
+    ld t0, -112(s0)
+    ld t1, -48(s0)
+    add t0, t0, t1
+    sd t0, -120(s0)
+    ld t0, -120(s0)
+    ld t1, -56(s0)
+    add t0, t0, t1
+    sd t0, -128(s0)
+    ld t0, -128(s0)
+    ld t1, -64(s0)
+    add t0, t0, t1
+    sd t0, -136(s0)
+    ld t0, -136(s0)
+    ld t1, -72(s0)
+    add t0, t0, t1
+    sd t0, -144(s0)
+    ld t0, -144(s0)
+    ld t1, -80(s0)
+    add t0, t0, t1
+    sd t0, -152(s0)
+    ld t0, -152(s0)
+    ld t1, -88(s0)
+    add t0, t0, t1
+    sd t0, -160(s0)
+    ld t0, -160(s0)
+    ld t1, -96(s0)
+    add a0, t0, t1
+  test10_end:
+    ld ra, 152(sp)
+    ld s0, 144(sp)
+    addi sp, sp, 160
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
+    addi sp, sp, -88
+    la a0, test10
+    li a1, 10
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    li t0, 1
+    sd t0, 8(sp)
+    li t0, 10
+    sd t0, 16(sp)
+    li t0, 100
+    sd t0, 24(sp)
+    li t0, 1000
+    sd t0, 32(sp)
+    li t0, 10000
+    sd t0, 40(sp)
+    li t0, 100000
+    sd t0, 48(sp)
+    li t0, 1000000
+    sd t0, 56(sp)
+    li t0, 10000000
+    sd t0, 64(sp)
+    li t0, 100000000
+    sd t0, 72(sp)
+    li t0, 1000000000
+    sd t0, 80(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call wrap
+    addi a0, a0, 0
+    li a1, 10
+    addi a2, sp, 8
+    call closure_apply
+    addi sp, sp, 88
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    ld t0, -24(s0)
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call print_int
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    ld t0, -40(s0)
+    sd t0, -48(s0)
+    addi sp, sp, -32
+    la a0, test3
+    li a1, 3
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    li t0, 1
+    sd t0, 8(sp)
+    li t0, 10
+    sd t0, 16(sp)
+    li t0, 100
+    sd t0, 24(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call wrap
+    addi a0, a0, 0
+    li a1, 3
+    addi a2, sp, 8
+    call closure_apply
+    addi sp, sp, 32
+    addi t0, a0, 0
+    sd t0, -56(s0)
+    ld t0, -56(s0)
+    sd t0, -64(s0)
+    li a0, 0
+  main_end:
+    ld ra, 56(sp)
+    ld s0, 48(sp)
+    addi sp, sp, 64
+    li a0, 0
+    li a7, 93
+    ecall
 
   $ riscv64-linux-gnu-as -march=rv64gc many_args_pa.s -o many_args_pa.o
-  many_args_pa.s: Assembler messages:
-  many_args_pa.s:1: Error: unrecognized opcode `codegen error:Too many arguments in call to wrap'
-  [1]
   $ riscv64-linux-gnu-gcc -static many_args_pa.o -L../../../runtime -l:libruntime.a -o many_args_pa.elf -Wl,--no-warnings
-  collect2: error: ld returned 1 exit status
-  [1]
   $ qemu-riscv64 ./many_args_pa.elf
-  [1]
+  1111111111110100
 
 
 =================== custom (partial application 4) ===================
@@ -1121,17 +1298,151 @@
   $ ../../../bin/AML.exe many_args_pa.ml many_args_pa.s
   Generated: many_args_pa.s
   $ cat many_args_pa.s
-  ;; Codegen error: Too many arguments in call to g
+    .text
+    .globl f
+    .type f, @function
+  f:
+    addi sp, sp, -56
+    sd ra, 48(sp)
+    sd s0, 40(sp)
+    addi s0, sp, 56
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    addi sp, sp, -32
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    ld t0, -40(s0)
+    sd t0, 8(sp)
+    ld t0, -48(s0)
+    sd t0, 16(sp)
+    ld t0, -56(s0)
+    sd t0, 24(sp)
+    ld a0, -24(s0)
+    li a1, 4
+    addi a2, sp, 0
+    call closure_apply
+    addi sp, sp, 32
+  f_end:
+    ld ra, 48(sp)
+    ld s0, 40(sp)
+    addi sp, sp, 56
+    ret
+    
+    .globl add4
+    .type add4, @function
+  add4:
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, -24(s0)
+    ld t1, -32(s0)
+    add t0, t0, t1
+    sd t0, -56(s0)
+    ld t0, -56(s0)
+    ld t1, -40(s0)
+    add t0, t0, t1
+    sd t0, -64(s0)
+    ld t0, -64(s0)
+    ld t1, -48(s0)
+    add a0, t0, t1
+  add4_end:
+    ld ra, 56(sp)
+    ld s0, 48(sp)
+    addi sp, sp, 64
+    ret
+    
+    .globl g
+    .type g, @function
+  g:
+    addi sp, sp, -24
+    sd ra, 16(sp)
+    sd s0, 8(sp)
+    addi s0, sp, 24
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    addi sp, sp, -16
+    la a0, add4
+    li a1, 4
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    ld t0, -24(s0)
+    sd t0, 8(sp)
+    la a0, f
+    li a1, 5
+    call closure_alloc
+    li a1, 2
+    addi a2, sp, 0
+    call closure_apply
+    addi sp, sp, 16
+  g_end:
+    ld ra, 16(sp)
+    ld s0, 8(sp)
+    addi sp, sp, 24
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -24
+    sd ra, 16(sp)
+    sd s0, 8(sp)
+    addi s0, sp, 24
+    addi sp, sp, -32
+    li t0, 1
+    sd t0, 0(sp)
+    li t0, 1
+    sd t0, 8(sp)
+    li t0, 1
+    sd t0, 16(sp)
+    li t0, 1
+    sd t0, 24(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call g
+    addi a0, a0, 0
+    li a1, 3
+    addi a2, sp, 8
+    call closure_apply
+    addi sp, sp, 32
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call print_int
+    addi sp, sp, 8
+  main_end:
+    ld ra, 16(sp)
+    ld s0, 8(sp)
+    addi sp, sp, 24
+    li a0, 0
+    li a7, 93
+    ecall
 
   $ riscv64-linux-gnu-as -march=rv64gc many_args_pa.s -o many_args_pa.o
-  many_args_pa.s: Assembler messages:
-  many_args_pa.s:1: Error: unrecognized opcode `codegen error:Too many arguments in call to g'
-  [1]
   $ riscv64-linux-gnu-gcc -static many_args_pa.o -L../../../runtime -l:libruntime.a -o many_args_pa.elf -Wl,--no-warnings
-  collect2: error: ld returned 1 exit status
-  [1]
   $ qemu-riscv64 ./many_args_pa.elf
-  [1]
+  4
 
 
 =================== custom (partial application 10) ===================
@@ -1144,15 +1455,234 @@
   $ ../../../bin/AML.exe many_args_pam.ml many_args_pam.s
   Generated: many_args_pam.s
   $ cat many_args_pam.s
-  ;; Codegen error: Too many arguments in call to g
+    .text
+    .globl f
+    .type f, @function
+  f:
+    addi sp, sp, -104
+    sd ra, 96(sp)
+    sd s0, 88(sp)
+    addi s0, sp, 104
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    ld t0, 64(a1)
+    sd t0, -88(s0)
+    ld t0, 72(a1)
+    sd t0, -96(s0)
+    ld t0, 80(a1)
+    sd t0, -104(s0)
+    addi sp, sp, -80
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    ld t0, -40(s0)
+    sd t0, 8(sp)
+    ld t0, -48(s0)
+    sd t0, 16(sp)
+    ld t0, -56(s0)
+    sd t0, 24(sp)
+    ld t0, -64(s0)
+    sd t0, 32(sp)
+    ld t0, -72(s0)
+    sd t0, 40(sp)
+    ld t0, -80(s0)
+    sd t0, 48(sp)
+    ld t0, -88(s0)
+    sd t0, 56(sp)
+    ld t0, -96(s0)
+    sd t0, 64(sp)
+    ld t0, -104(s0)
+    sd t0, 72(sp)
+    ld a0, -24(s0)
+    li a1, 10
+    addi a2, sp, 0
+    call closure_apply
+    addi sp, sp, 80
+  f_end:
+    ld ra, 96(sp)
+    ld s0, 88(sp)
+    addi sp, sp, 104
+    ret
+    
+    .globl add10
+    .type add10, @function
+  add10:
+    addi sp, sp, -160
+    sd ra, 152(sp)
+    sd s0, 144(sp)
+    addi s0, sp, 160
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    ld t0, 64(a1)
+    sd t0, -88(s0)
+    ld t0, 72(a1)
+    sd t0, -96(s0)
+    ld t0, -24(s0)
+    ld t1, -32(s0)
+    add t0, t0, t1
+    sd t0, -104(s0)
+    ld t0, -104(s0)
+    ld t1, -40(s0)
+    add t0, t0, t1
+    sd t0, -112(s0)
+    ld t0, -112(s0)
+    ld t1, -48(s0)
+    add t0, t0, t1
+    sd t0, -120(s0)
+    ld t0, -120(s0)
+    ld t1, -56(s0)
+    add t0, t0, t1
+    sd t0, -128(s0)
+    ld t0, -128(s0)
+    ld t1, -64(s0)
+    add t0, t0, t1
+    sd t0, -136(s0)
+    ld t0, -136(s0)
+    ld t1, -72(s0)
+    add t0, t0, t1
+    sd t0, -144(s0)
+    ld t0, -144(s0)
+    ld t1, -80(s0)
+    add t0, t0, t1
+    sd t0, -152(s0)
+    ld t0, -152(s0)
+    ld t1, -88(s0)
+    add t0, t0, t1
+    sd t0, -160(s0)
+    ld t0, -160(s0)
+    ld t1, -96(s0)
+    add a0, t0, t1
+  add10_end:
+    ld ra, 152(sp)
+    ld s0, 144(sp)
+    addi sp, sp, 160
+    ret
+    
+    .globl g
+    .type g, @function
+  g:
+    addi sp, sp, -24
+    sd ra, 16(sp)
+    sd s0, 8(sp)
+    addi s0, sp, 24
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    addi sp, sp, -16
+    la a0, add10
+    li a1, 10
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    ld t0, -24(s0)
+    sd t0, 8(sp)
+    la a0, f
+    li a1, 11
+    call closure_alloc
+    li a1, 2
+    addi a2, sp, 0
+    call closure_apply
+    addi sp, sp, 16
+  g_end:
+    ld ra, 16(sp)
+    ld s0, 8(sp)
+    addi sp, sp, 24
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -24
+    sd ra, 16(sp)
+    sd s0, 8(sp)
+    addi s0, sp, 24
+    addi sp, sp, -80
+    li t0, 1
+    sd t0, 0(sp)
+    li t0, 1
+    sd t0, 8(sp)
+    li t0, 1
+    sd t0, 16(sp)
+    li t0, 1
+    sd t0, 24(sp)
+    li t0, 1
+    sd t0, 32(sp)
+    li t0, 1
+    sd t0, 40(sp)
+    li t0, 1
+    sd t0, 48(sp)
+    li t0, 1
+    sd t0, 56(sp)
+    li t0, 1
+    sd t0, 64(sp)
+    li t0, 1
+    sd t0, 72(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call g
+    addi a0, a0, 0
+    li a1, 9
+    addi a2, sp, 8
+    call closure_apply
+    addi sp, sp, 80
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call print_int
+    addi sp, sp, 8
+  main_end:
+    ld ra, 16(sp)
+    ld s0, 8(sp)
+    addi sp, sp, 24
+    li a0, 0
+    li a7, 93
+    ecall
 
   $ riscv64-linux-gnu-as -march=rv64gc many_args_pam.s -o many_args_pam.o
-  many_args_pam.s: Assembler messages:
-  many_args_pam.s:1: Error: unrecognized opcode `codegen error:Too many arguments in call to g'
-  [1]
   $ riscv64-linux-gnu-gcc -static many_args_pam.o -L../../../runtime -l:libruntime.a -o many_args_pam.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./many_args_pam.elf
+  10
+
+  $ ../../../bin/AML.exe ./manytests/typed/012faccps.ml faccps.s
+  Generated: faccps.s
+  $ cat faccps.s
+  ;; Codegen error: CFun in ANF position is not lowered: expected lambda-lifting beforehand
+  $ riscv64-linux-gnu-as -march=rv64gc faccps.s -o faccps.o
+  faccps.s: Assembler messages:
+  faccps.s:1: Error: unrecognized opcode `codegen error:CFun in ANF position is not lowered:expected lambda-lifting beforehand'
+  [1]
+  $ riscv64-linux-gnu-gcc -static faccps.o -L../../../runtime -l:libruntime.a -o faccps.elf -Wl,--no-warnings
   collect2: error: ld returned 1 exit status
   [1]
-  $ qemu-riscv64 ./many_args_pam.elf
+  $ qemu-riscv64 ./faccps.elf
   [1]
-

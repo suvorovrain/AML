@@ -136,6 +136,7 @@ and transform_expr expr k =
       let* else_res = transform_expr else_expr k in
       return (ACE (CIte (cond_res, then_res, else_res))))
   | Exp_fun ((pat_hd, pat_tl), exp) ->
+    (* 1. Transform the function body with the identity continuation *)
     let* body_anf = transform_expr exp (fun exp_res -> return @@ ACE (CImm exp_res)) in
     let* func_aexpr =
       fold_right_m
