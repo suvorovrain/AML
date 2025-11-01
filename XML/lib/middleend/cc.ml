@@ -47,9 +47,9 @@ let construct_fun patterns body =
 ;;
 
 (* Recursively computes the set of free variables in expression. *)
-let rec free_vars_in bound_vars expr =
-  match expr with
-  | Exp_ident id -> if SSet.mem id bound_vars then SSet.empty else SSet.singleton id
+let rec free_vars_in bound_vars = function
+  | Exp_ident id when SSet.mem id bound_vars -> SSet.empty
+  | Exp_ident id -> SSet.singleton id
   | Exp_constant _ | Exp_construct (_, None) -> SSet.empty
   | Exp_tuple (e1, e2, es) ->
     List.fold_left

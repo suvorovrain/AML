@@ -144,8 +144,7 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
       live_regs_to_save;
     let* state_after_call =
       let apply_chain closure_reg args st =
-        let rec loop current_closure_reg_inner args_inner =
-          match args_inner with
+        let rec loop current_closure_reg_inner = function
           | [] -> ok st
           | arg_imm :: tl ->
             let* () = gen_im_expr st (T 1) arg_imm in
