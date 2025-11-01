@@ -12,6 +12,8 @@ type location =
   | Loc_reg of reg
   | Loc_mem of reg
 
+let _ = Loc_reg (A 1)
+
 type env = (ident, location, String.comparator_witness) Map.t
 
 type cg_state =
@@ -98,9 +100,7 @@ let a_gen_bin_op op dst r1 r2 =
     emit sub t2 r1 r2 >> emit slt dst x0 t2 >> emit slt t3 t2 x0 >> emit add dst dst t3
 ;;
 
-(* collect caller-saved registers that are currently live in the env.
-   exclude a0 because runtime/targets use it for return/first arg *)
-let live_caller_regs_excluding_a0 : reg list Codegen.t =
+let live_caller_regs_excluding_abi : reg list Codegen.t =
   let* st = get_state in
   Map.to_alist st.env
   |> List.filter_map ~f:(fun (_, loc) ->
@@ -108,33 +108,24 @@ let live_caller_regs_excluding_a0 : reg list Codegen.t =
     | Loc_reg ((A _ | T _) as r) -> Some r
     | _ -> None)
   |> List.dedup_and_sort ~compare:Poly.compare
-  |> List.filter ~f:(fun r -> not (equal_reg r a0))
+  |> List.filter ~f:(fun r -> not (equal_reg r a0 || equal_reg r a1 || equal_reg r a2))
   |> return
 ;;
 
-(* save a list of regs in stack, in order. Returns the same list *)
 let save_regs (rs : reg list) : reg list Codegen.t =
   map_m (fun r -> emit addi sp sp (-8) >> emit sd r (ROff (0, sp))) rs >> return rs
 ;;
 
-(* restore regs from the stack in reverse order *)
 let restore_regs (rs : reg list) : unit Codegen.t =
   map_m (fun r -> emit ld r (ROff (0, sp)) >> emit addi sp sp 8) (List.rev rs)
   >> return ()
 ;;
 
-(* Utility: run some code with caller-saved registers saved and restored *)
 let with_saved_caller_regs (body : reg list -> unit Codegen.t) : unit Codegen.t =
-  let* lives = live_caller_regs_excluding_a0 in
+  let* lives = live_caller_regs_excluding_abi in
   let* lives = save_regs lives in
   let* () = body lives in
   restore_regs lives
-;;
-
-(* load first up to 8 buffered args from a temporary base (t3) into A0..A7. *)
-let load_reg_args_from_buffer (count : int) : unit Codegen.t =
-  map_m (fun i -> emit ld (A i) (ROff (i * 8, t3))) (List.init count ~f:Fn.id)
-  >> return ()
 ;;
 
 let rec push_args_array (args : immexpr list) : int Codegen.t =
@@ -152,14 +143,10 @@ and a_gen_immexpr (dst : reg) (immexpr : immexpr) =
     let* st = get_state in
     (match Map.find st.env id with
      | Some loc ->
-       (* local identifier: either in a register or at a frame slot *)
        (match loc with
         | Loc_reg r -> emit mv dst r
         | Loc_mem m -> emit ld dst m)
      | None ->
-       (* global identifier.
-          if it's a function with positive arity --- produce a closure pointer.
-          otherwise just load the address (label) *)
        (match Map.find st.arity_map id with
         | Some arity when arity > 0 ->
           emit la a0 id
@@ -188,89 +175,63 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
     let provided_arity = List.length args in
     (match Map.find st.env fname with
      | Some _ ->
-       (* ----- indirect call ----- *)
-       (* place args as a contiguous array on the stack *)
        let* _bytes = push_args_array args in
-       (* perform call with automatic save/restore of live caller-saved regs *)
        with_saved_caller_regs (fun lives ->
          let saved_cnt = List.length lives in
-         (* load closure into a0, set_state a1=argc, a2=pointer to args *)
          a_gen_immexpr a0 (ImmId fname)
          >> emit li a1 provided_arity
          >> emit addi a2 sp (8 * saved_cnt)
-         (* call runtime. Result is in a0 *)
          >> emit call "closure_apply"
-         (* restore and pop the temporary arg array *)
          >> emit addi sp sp (8 * provided_arity)
-         (* move result if needed *)
          >> if not (equal_reg dst a0) then emit mv dst a0 else return ())
      | None ->
-       (* ----- direct/global call ----- *)
        let total_arity = Map.find_exn st.arity_map fname in
-       if total_arity = provided_arity
-       then (
-         (* ----- full application ----- *)
-         let indexed = List.mapi args ~f:(fun i imm -> imm, i) in
-         let reg_args, stack_args = List.partition_tf indexed ~f:(fun (_, i) -> i < 8) in
-         let n_reg = List.length reg_args in
-         (* pre-buffer register arguments so we can call runtime/save regs safely before jal/jalr *)
-         (if n_reg > 0 then emit addi sp sp (-8 * n_reg) else return ())
-         >> emit addi t3 sp 0
-         >> map_m
-              (fun (arg_imm, i) ->
-                 a_gen_immexpr t0 arg_imm >> emit sd t0 (ROff (i * 8, t3)))
-              reg_args
-         (* push stack arguments in reverse order *)
-         >> map_m
-              (fun (arg_imm, _) ->
-                 a_gen_immexpr t0 arg_imm
-                 >> emit addi sp sp (-8)
-                 >> emit sd t0 (ROff (0, sp)))
-              (List.rev stack_args)
-         (* perform call with automatic save/restore of live caller-saved regs *)
-         >> with_saved_caller_regs (fun _ ->
-           (* move buffered reg-args into A0.. and perform the call *)
-           load_reg_args_from_buffer n_reg
-           >> (match Map.find st.env fname with
-             | Some (Loc_reg r) -> emit jalr r
-             | Some (Loc_mem m) -> emit ld t0 m >> emit jalr t0
-             | None -> emit call fname)
-           (* move result, restore regs, and pop stack args/reg buffer *)
-           >> emit mv t0 a0 (* save call result immediately *)
-           >> (if not (equal_reg dst t0) then emit mv dst t0 else return ())
-           >> (if not (List.is_empty stack_args)
-               then emit addi sp sp (8 * List.length stack_args)
-               else return ())
-           >> if n_reg > 0 then emit addi sp sp (8 * n_reg) else return ()))
-       else if provided_arity < total_arity
+       if provided_arity = total_arity
        then
-         (* ----- partial application ----- *)
-         (* push the provided args as an array *)
          let* _bytes = push_args_array args in
-         (* perform call with automatic save/restore of live caller-saved regs *)
          with_saved_caller_regs (fun lives ->
            let saved_cnt = List.length lives in
-           (* alignment: keep stack 16-byte aligned across runtime calls.
-          add one 8-byte slot when (#saved_regs + #args) is odd *)
+           emit li a0 provided_arity
+           >> emit addi a1 sp (8 * saved_cnt)
+           >> emit call fname
+           >> emit addi sp sp (8 * provided_arity)
+           >> if not (equal_reg dst a0) then emit mv dst a0 else return ())
+       else if provided_arity < total_arity
+       then
+         let* _bytes = push_args_array args in
+         with_saved_caller_regs (fun lives ->
+           let saved_cnt = List.length lives in
            let need_pad = (provided_arity + saved_cnt) land 1 = 1 in
            (if need_pad
             then emit addi sp sp (-8) >> emit sd x0 (ROff (0, sp))
             else return ())
-           (* allocate empty closure for (fname, total_arity) *)
-           >> emit la a0 fname
-           >> emit li a1 total_arity
-           >> emit call "closure_alloc"
-           (* apply the provided args into that closure *)
+           >> emit la a0 fname (* a0 := &fname *)
+           >> emit li a1 total_arity (* a1 := arity(fname) *)
+           >> emit call "closure_alloc" (* a0 := closure_ptr *)
            >> emit li a1 provided_arity
            >> emit addi a2 sp (8 * (saved_cnt + if need_pad then 1 else 0))
            >> emit call "closure_apply"
-           (* drop pad, pop args array; result (closure pointer) in a0 *)
            >> (if need_pad then emit addi sp sp 8 else return ())
            >> emit addi sp sp (8 * provided_arity)
            >> if not (equal_reg dst a0) then emit mv dst a0 else return ())
-       else error (Printf.sprintf "Too many arguments in call to %s" fname))
+       else
+         let* _bytes = push_args_array args in
+         with_saved_caller_regs (fun lives ->
+           let saved_cnt = List.length lives in
+           let rest = provided_arity - total_arity in
+           emit li a0 total_arity
+           >> emit addi a1 sp (8 * saved_cnt)
+           >> emit call fname
+           >> (if rest > 0
+               then
+                 emit mv a0 a0
+                 >> emit li a1 rest
+                 >> emit addi a2 sp (8 * (saved_cnt + total_arity))
+                 >> emit call "closure_apply"
+               else return ())
+           >> emit addi sp sp (8 * provided_arity)
+           >> if not (equal_reg dst a0) then emit mv dst a0 else return ()))
   | CApp (ImmNum _, _) -> error "unreachable"
-  (* TODO: ite without else *)
   | CIte (cond_imm, then_aexpr, else_aexpr) ->
     let* l_else = fresh_label "else" in
     let* l_end = fresh_label "endif" in
@@ -281,7 +242,8 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
     >> emit label l_else
     >> a_gen_expr dst else_aexpr
     >> emit label l_end
-  | CFun (_, _) -> error "not implemented"
+  | CFun (_, _) ->
+    error "CFun in ANF position is not lowered: expected lambda-lifting beforehand"
 ;;
 
 let rec a_count_local_vars = function
@@ -293,12 +255,23 @@ let rec a_count_local_vars = function
      | _ -> 0)
 ;;
 
+let a_bind_params_from_argv (params : Ast.Pattern.t list) : unit Codegen.t =
+  map_m
+    (fun (i, pat) ->
+       match pat with
+       | Pat_var id ->
+         let* slot = allocate_local_var id in
+         (* ld t0, i*8(a1) ; sd t0, slot *)
+         emit ld t0 (ROff (i * 8, a1)) >> emit sd t0 slot
+       | _ -> error "only simple variables are supported in parameters")
+    (List.mapi params ~f:(fun i p -> i, p))
+;;
+
 let a_gen_func name args body =
   let is_main = String.equal name "main" in
   let func_label = name in
-  let locals_count = a_count_local_vars body in
-  let spill_count = Int.min (List.length args) 8 in
-  let stack_size = 16 + ((locals_count + spill_count) * 8) in
+  let locals_count = a_count_local_vars body + List.length args in
+  let stack_size = 16 + (locals_count * 8) in
   emit directive (Printf.sprintf ".globl %s" func_label)
   >> emit directive (Printf.sprintf ".type %s, @function" func_label)
   >> emit label func_label
@@ -308,35 +281,11 @@ let a_gen_func name args body =
   >> emit addi fp sp stack_size
   >>
   let* global_state = get_state in
-  let rec foldi_m i acc = function
-    | [] -> return acc
-    | pat :: rest ->
-      let* new_acc =
-        match pat with
-        | Pat_var id when i < 8 -> return (Map.set acc ~key:id ~data:(Loc_reg (A i)))
-        | Pat_var id ->
-          let offset = (i - 8) * 8 in
-          return (Map.set acc ~key:id ~data:(Loc_mem (ROff (offset, fp))))
-        | _ -> error "unreachable"
-      in
-      foldi_m (i + 1) new_acc rest
+  let initial_cg_state =
+    { global_state with env = Map.empty (module String); frame_offset = 16 }
   in
-  let* initial_env = foldi_m 0 (Map.empty (module String)) args in
-  let initial_cg_state = { global_state with env = initial_env; frame_offset = 16 } in
   set_state initial_cg_state
-  >>
-  (* spill first up to 8 params from A registers into fresh frame slots and
-   bind parameter names to those Loc_mem slots *)
-  let nspill = Int.min (List.length args) 8 in
-  map_m
-    (fun i ->
-       match List.nth args i with
-       | Some (Pat_var id) ->
-         let* loc = allocate_local_var id in
-         (* updates env := Loc_mem loc *)
-         emit sd (A i) loc (* store A(i) into its slot *)
-       | _ -> return ())
-    (List.init nspill ~f:Fn.id)
+  >> a_bind_params_from_argv args
   >> a_gen_expr a0 body
   >>
   let* final_state = get_state in
@@ -379,9 +328,6 @@ let codegen ppf (s : aprogram) =
     ; arity_map
     }
   in
-  (* let initial_state =
-    { env = Map.empty (module String); frame_offset = 0; label_id = 0; instructions = [] }
-  in *)
   let program_gen =
     emit directive ".text"
     >> map_m
