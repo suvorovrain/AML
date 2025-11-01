@@ -22,11 +22,11 @@ type options =
 (* ------------------------------- *)
 
 let to_asm ast : string =
-  let anf_ast = Middleend.Anf.anf_program ast in
+  let cc_program = Middleend.Cc.cc_program ast in
+  let anf_ast = Middleend.Anf.anf_program cc_program in
   let buf = Buffer.create 1024 in
   let ppf = formatter_of_buffer buf in
-  let cc_program = Middleend.Cc.cc_program anf_ast in
-  Backend.Codegen.gen_program ppf cc_program;
+  Backend.Codegen.gen_program ppf anf_ast;
   pp_print_flush ppf ();
   Buffer.contents buf
 ;;
@@ -37,17 +37,17 @@ let compile_and_write options source_code =
   then (
     printf "%a\n" Common.Pprinter.pprint_program ast;
     exit 0);
-  let anf_ast = Middleend.Anf.anf_program ast in
+  let cc_ast = Middleend.Cc.cc_program ast in
+  if options.show_cc
+  then (
+    printf "%a\n" Common.Pprinter.pprint_program cc_ast;
+    exit 0);
+  let anf_ast = Middleend.Anf.anf_program cc_ast in
   if options.show_anf
   then (
     Middleend.Pprinter.print_anf_program std_formatter anf_ast;
     exit 0);
-  let cc_ast = Middleend.Cc.cc_program anf_ast in
-  if options.show_cc
-  then (
-    Middleend.Pprinter.print_anf_program std_formatter cc_ast;
-    exit 0);
-  let asm_code = to_asm ast in
+    let asm_code = to_asm ast in
   match options.output_file_name with
   | Some out_file ->
     (try
