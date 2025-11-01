@@ -54,7 +54,10 @@ let compiler options =
             env_infer)
           else (
             let ppf = Format.formatter_of_out_channel out_channel in
-            let cc_ast = Middleend.Closure_conversion.closure_conversion ast in
+            let cc_ast =
+              Middleend.Lambda_lifting.lambda_lifting
+                (Middleend.Closure_conversion.closure_conversion ast)
+            in
             match Middleend.Anf_core.anf_structure cc_ast with
             | Error e_anf ->
               Format.eprintf "ANF transformation error: %s\n%!" e_anf;
