@@ -45,12 +45,12 @@ let initial_arity_map =
     let arity_map = ArityMap.bind arity_map "print_int" 1 in
     let arity_map = ArityMap.bind arity_map "malloc" 1 in
     let arity_map = ArityMap.bind arity_map "alloc_closure" 2 in
-  ArityMap.bind arity_map "apply1" 2 
+  ArityMap.bind arity_map "apply1" 2
 ;;
 
 type cg_state =
   { env : Env.t
-  ; stack_offset : int
+  ; stack_offset : int (* current offset for new local variables *)
   ; arity : ArityMap.t
   ; next_label : int
   ; deferred : (string * ident list * anf_expr) list
@@ -142,77 +142,99 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
          emit addi SP SP (-Target.word_size);
          emit sd reg (SP, 0))
       live_regs_to_save;
-    let argc = List.length args_imms in
-    let apply_chain () : unit r =
-      let rec loop = function
-        | [] -> ok ()
-        | arg_imm :: tl ->
-          let* () = gen_im_expr state (T 1) arg_imm in
-          emit mv (A 0) (T 0);
-          emit mv (A 1) (T 1);
-          emit call "apply1";
-          emit mv (T 0) (A 0);
-          loop tl
+
+    let* state_after_call =
+      let apply_chain closure_reg args st =
+        let rec loop current_closure_reg_inner args_inner =
+          match args_inner with
+          | [] -> ok st
+          | arg_imm :: tl ->
+            let* () = gen_im_expr st (T 1) arg_imm in
+            emit mv (A 0) current_closure_reg_inner;
+            emit mv (A 1) (T 1);
+            emit call "apply1";
+            emit mv (T 0) (A 0);
+            loop (T 0) tl
+        in
+        loop closure_reg args
       in
-      loop args_imms
-    in
-    let* state =
       match func_imm with
       | Imm_ident fname ->
         (match Env.find state.env fname with
          | Some _ ->
            let* () = gen_im_expr state (T 0) func_imm in
-           let* () = apply_chain () in
-           ok state
+           apply_chain (T 0) args_imms state
          | None ->
            (match ArityMap.find state.arity fname with
             | Some n when n = 0 ->
               emit call fname;
               emit mv (T 0) (A 0);
-              let* () = apply_chain () in
-              ok state
-            | Some n when argc = n ->
-              List.iteri
-                (fun i arg_imm ->
-                   if i < Array.length Target.arg_regs
-                   then
-                     let (_ : unit r) = gen_im_expr state (A i) arg_imm in
-                     ()
-                   else (* Handle stack arguments if necessary *)
-                     ())
-                args_imms;
-              emit call fname;
-              emit mv (T 0) (A 0);
-              ok state
-            | Some n when argc < n ->
-              let m = argc in
+              apply_chain (T 0) args_imms state
+            | Some n when List.length args_imms = n ->
+                let num_args = List.length args_imms in
+                (* process every arg and save on stack *)
+                let* () =
+                  List.fold_left
+                    (fun acc_res arg_imm ->
+                      let* () = acc_res in
+                      let* () = gen_im_expr state (T 0) arg_imm in (* process and save in t0 *)
+                      emit addi SP SP (-Target.word_size);        (* get stack space *)
+                      emit sd (T 0) (SP, 0);                      (* save result on stack *)
+                      ok ()
+                    )
+                    (ok ())
+                    args_imms
+                in
+
+                (* load from stack to aN registers *)
+                List.iteri
+                  (fun i _ ->
+                    if i < Array.length Target.arg_regs then
+                      let arg_reg = A i in
+                      let stack_offset = (num_args - 1 - i) * Target.word_size in
+                      emit ld arg_reg (SP, stack_offset)
+                    else () (* args on stack are not supported *) 
+                  )
+                  args_imms;
+
+                (* clear the stack *)
+                if num_args > 0 then
+                  emit addi SP SP (num_args * Target.word_size);
+
+                emit call fname;
+                emit mv (T 0) (A 0); 
+                ok state
+            | Some n when List.length args_imms < n ->
+              let m = List.length args_imms in
               if m > 0 then emit addi SP SP (-m * Target.word_size);
-              let rec save_args i = function
-                | [] -> ok ()
-                | arg_imm :: tl ->
-                  let* () = gen_im_expr state (T 1) arg_imm in
-                  emit sd (T 1) (SP, i * Target.word_size);
-                  save_args (i + 1) tl
+              let* () =
+                List.mapi
+                  (fun i arg_imm ->
+                     let* () = gen_im_expr state (T 1) arg_imm in
+                     emit sd (T 1) (SP, i * Target.word_size);
+                     ok ())
+                  args_imms
+                |> List.fold_left (fun acc r -> let* () = acc in r) (ok ())
               in
-              let* () = save_args 0 args_imms in
               emit la (A 0) fname;
               emit li (A 1) n;
               emit call "alloc_closure";
               emit mv (T 0) (A 0);
-              let rec apply_saved i = function
-                | [] -> ok ()
-                | _ :: tl ->
+              let rec apply_saved i =
+                if i >= m
+                then ok ()
+                else (
                   emit ld (T 1) (SP, i * Target.word_size);
                   emit mv (A 0) (T 0);
                   emit mv (A 1) (T 1);
                   emit call "apply1";
                   emit mv (T 0) (A 0);
-                  apply_saved (i + 1) tl
+                  apply_saved (i + 1))
               in
-              let* () = apply_saved 0 args_imms in
+              let* () = apply_saved 0 in
               if m > 0 then emit addi SP SP (m * Target.word_size);
               ok state
-            | Some n -> err (`Too_many_args (fname, n, argc))
+            | Some n -> err (`Too_many_args (fname, n, List.length args_imms))
             | None -> err (`Unbound_identifier fname)))
       | Imm_num _ -> err `Call_non_function
     in
@@ -222,18 +244,20 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
          emit addi SP SP Target.word_size)
       (List.rev live_regs_to_save);
     if not (equal_reg dst (T 0)) then emit mv dst (T 0);
-    ok state
+
+    ok state_after_call
   | Comp_branch (cond_imm, then_anf, else_anf) ->
     let* () = gen_im_expr state (T 0) cond_imm in
-    let lbl_else, state = fresh_label "else" state in
-    let lbl_end, state = fresh_label "endif" state in
+    let lbl_else, state_after_labels = fresh_label "else" state in
+    let lbl_end, final_state = fresh_label "endif" state_after_labels in
     emit beq (T 0) Zero lbl_else;
     let* state_then = gen_anf_expr state dst then_anf in
     emit j lbl_end;
     emit label lbl_else;
-    let* state_else = gen_anf_expr state_then dst else_anf in
+    let* state_else = gen_anf_expr state dst else_anf in
     emit label lbl_end;
-    ok state_else
+    let final_stack_offset = min state_then.stack_offset state_else.stack_offset in
+    ok { final_state with stack_offset = final_stack_offset }
   | Comp_func (params, body) ->
     let func_label, state = fresh_label "lambda" state in
     let arity' = ArityMap.bind state.arity func_label (List.length params) in
@@ -307,14 +331,16 @@ let gen_func
   in
   let* env_params = env_params_res in
   let local_count = count_locals_in_anf body_anf in
-  let stack_size = (2 + local_count) * Target.word_size in
-  emit_prologue func_name stack_size;
-  let local_state = { st with env = env_params; stack_offset = 0; arity = arity_map } in
-  let* state_after = gen_anf_expr local_state (A 0) body_anf in
+  let initial_frame_size = (2 + local_count + 5) * Target.word_size in
+  emit_prologue func_name initial_frame_size;
+  let initial_state_for_body = { st with
+                                  env = env_params;
+                                  stack_offset = 0;
+                                  arity = arity_map } in
+  let* state_after = gen_anf_expr initial_state_for_body (A 0) body_anf in
   flush_queue ppf;
-  emit_epilogue stack_size;
+  emit_epilogue initial_frame_size;
   ok { st with next_label = state_after.next_label; deferred = state_after.deferred }
-;;
 
 let gen_start ppf =
   fprintf ppf ".section .text\n";
@@ -329,7 +355,7 @@ let prefill_arities (arity_map0 : ArityMap.t) (program : aprogram) : ArityMap.t 
          (match anf_expr with
           | Anf_let (_, _, Comp_func (ps, _), _) -> ArityMap.bind am name (List.length ps)
           | Anf_comp_expr (Comp_func (ps, _)) -> ArityMap.bind am name (List.length ps)
-          | _ -> ArityMap.bind am name 0)
+          | _ -> ArityMap.bind am name 0 )
        | _ -> am)
     arity_map0
     program
@@ -410,3 +436,4 @@ let gen_program ppf (program : aprogram) =
   | Error `Tuple_not_impl -> invalid_arg "Tuple values are not yet implemented"
   | Error `Too_many_reg_params -> invalid_arg "Too many arguments for register passing"
 ;;
+
