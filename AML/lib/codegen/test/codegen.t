@@ -2,33 +2,54 @@
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
 =================== manytests ===================
-  $ ../../../bin/AML.exe --dump-anf ./manytests/typed/010faccps_ll.ml
-  let id =
+  $ ../../../bin/AML.exe --dump-cc-anf ./manytests/typed/010faccps_ll.ml
+  let id_cc_0 =
     fun x ->
       x
   
-  let fresh_1 =
-    fun n ->
-      fun k ->
-        fun p ->
-          let t_0 = p * n in
-          k t_0
+  let id =
+    id_cc_0
   
-  let rec fac_cps =
+  let fresh_1_cc_1 =
     fun n ->
-      fun k ->
-        let t_2 = n = 1 in
-        if t_2 then
-          k 1
-        else
-          let t_4 = n - 1 in
-          let t_5 = fresh_1 n k in
-          fac_cps t_4 t_5
+      let f_cc_2 = fun n ->
+        fun k ->
+          let f_cc_4 = fun k ->
+            fun n ->
+              fun p ->
+                let t_1 = p * n in
+                k t_1 in
+          let closure_cc_5 = f_cc_4 k n in
+          closure_cc_5 in
+      let closure_cc_3 = f_cc_2 n in
+      closure_cc_3
+  
+  let fresh_1 =
+    fresh_1_cc_1
+  
+  let rec fac_cps_cc_6 =
+    fun fresh_1 ->
+      fun n ->
+        let f_cc_7 = fun fresh_1 ->
+          fun n ->
+            fun k ->
+              let t_4 = n = 1 in
+              if t_4 then
+                k 1
+              else
+                let t_6 = n - 1 in
+                let t_7 = fresh_1 n k in
+                fac_cps_cc_6 t_6 t_7 in
+        let closure_cc_8 = f_cc_7 fresh_1 n in
+        closure_cc_8
+  
+  let fac_cps =
+    fac_cps_cc_6 fresh_1
   
   let main =
-    let t_7 = fac_cps 4 id in
-    let t_8 = print_int t_7 in
-    let t_9 = t_8 in
+    let t_10 = fac_cps 4 id in
+    let t_11 = print_int t_10 in
+    let t_12 = t_11 in
     0
   $ ../../../bin/AML.exe ./manytests/typed/010faccps_ll.ml faccps.s
   Generated: faccps.s
@@ -947,6 +968,156 @@
   > let g a = (f add4) a 
   > let main = print_int (g 1 1 1 1)
   > EOF
+  $ ../../../bin/AML.exe --dump-cc-ll-anf many_args_pa.ml
+  let t_14 =
+    fun a4 ->
+      a0 a1 a2 a3 a4
+  
+  let t_13 =
+    fun a3 ->
+      t_14
+  
+  let t_12 =
+    fun a2 ->
+      t_13
+  
+  let t_11 =
+    fun a1 ->
+      t_12
+  
+  let t_10 =
+    fun a0 ->
+      t_11
+  
+  let t_9 =
+    fun a3 ->
+      let f_cc_7 = t_10 in
+      let closure_cc_8 = f_cc_7 a0 a1 a2 a3 in
+      closure_cc_8
+  
+  let t_8 =
+    fun a2 ->
+      t_9
+  
+  let t_7 =
+    fun a1 ->
+      t_8
+  
+  let t_6 =
+    fun a0 ->
+      t_7
+  
+  let t_5 =
+    fun a2 ->
+      let f_cc_5 = t_6 in
+      let closure_cc_6 = f_cc_5 a0 a1 a2 in
+      closure_cc_6
+  
+  let t_4 =
+    fun a1 ->
+      t_5
+  
+  let t_3 =
+    fun a0 ->
+      t_4
+  
+  let t_2 =
+    fun a1 ->
+      let f_cc_3 = t_3 in
+      let closure_cc_4 = f_cc_3 a0 a1 in
+      closure_cc_4
+  
+  let t_1 =
+    fun a0 ->
+      t_2
+  
+  let t_0 =
+    fun a0 ->
+      let f_cc_1 = t_1 in
+      let closure_cc_2 = f_cc_1 a0 in
+      closure_cc_2
+  
+  let t_24 =
+    fun a4 ->
+      let t_2 = a1 + a2 in
+      let t_3 = t_2 + a3 in
+      t_3 + a4
+  
+  let t_23 =
+    fun a3 ->
+      t_24
+  
+  let t_22 =
+    fun a2 ->
+      t_23
+  
+  let t_21 =
+    fun a1 ->
+      t_22
+  
+  let t_20 =
+    fun a3 ->
+      let f_cc_14 = t_21 in
+      let closure_cc_15 = f_cc_14 a1 a2 a3 in
+      closure_cc_15
+  
+  let t_19 =
+    fun a2 ->
+      t_20
+  
+  let t_18 =
+    fun a1 ->
+      t_19
+  
+  let t_17 =
+    fun a2 ->
+      let f_cc_12 = t_18 in
+      let closure_cc_13 = f_cc_12 a1 a2 in
+      closure_cc_13
+  
+  let t_16 =
+    fun a1 ->
+      t_17
+  
+  let t_15 =
+    fun a1 ->
+      let f_cc_10 = t_16 in
+      let closure_cc_11 = f_cc_10 a1 in
+      closure_cc_11
+  
+  let t_27 =
+    fun a ->
+      f add4 a
+  
+  let t_26 =
+    fun f ->
+      t_27
+  
+  let t_25 =
+    fun add4 ->
+      t_26
+  
+  let f_cc_0 =
+    t_0
+  
+  let f =
+    f_cc_0
+  
+  let add4_cc_9 =
+    t_15
+  
+  let add4 =
+    add4_cc_9
+  
+  let g_cc_16 =
+    t_25
+  
+  let g =
+    g_cc_16 add4 f
+  
+  let main =
+    let t_8 = g 1 1 1 1 in
+    print_int t_8
   $ ../../../bin/AML.exe many_args_pa.ml many_args_pa.s
   Generated: many_args_pa.s
   $ cat many_args_pa.s

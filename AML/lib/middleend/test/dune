@@ -12,5 +12,7 @@
  (deps
   ../../../bin/AML.exe
   ./manytests/typed/010faccps_ll.ml
+  ./manytests/typed/012faccps.ml
+  ./manytests/typed/fac.ml
   ./manytests/typed/010fibcps_ll.ml
   ./manytests/typed/010fac_anf.ml))

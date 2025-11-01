@@ -27,24 +27,24 @@
     fun n ->
       fun k ->
         fun p ->
-          let t_0 = p * n in
-          k t_0
+          let t_1 = p * n in
+          k t_1
   
   let rec fac_cps =
     fun n ->
       fun k ->
-        let t_2 = n = 1 in
-        if t_2 then
+        let t_4 = n = 1 in
+        if t_4 then
           k 1
         else
-          let t_4 = n - 1 in
-          let t_5 = fresh_1 n k in
-          fac_cps t_4 t_5
+          let t_6 = n - 1 in
+          let t_7 = fresh_1 n k in
+          fac_cps t_6 t_7
   
   let main =
-    let t_7 = fac_cps 4 id in
-    let t_8 = print_int t_7 in
-    let t_9 = t_8 in
+    let t_10 = fac_cps 4 id in
+    let t_11 = print_int t_10 in
+    let t_12 = t_11 in
     0
   $ ../../../bin/AML.exe --dump-anf ./manytests/typed/010fibcps_ll.ml
   let id =
@@ -55,33 +55,33 @@
     fun p1 ->
       fun k ->
         fun p2 ->
-          let t_0 = p1 + p2 in
-          k t_0
+          let t_1 = p1 + p2 in
+          k t_1
   
   let fresh_1 =
     fun n ->
       fun k ->
         fun fib ->
           fun p1 ->
-            let t_2 = n - 2 in
-            let t_3 = fresh_2 p1 k in
-            fib t_2 t_3
+            let t_4 = n - 2 in
+            let t_5 = fresh_2 p1 k in
+            fib t_4 t_5
   
   let rec fib =
     fun n ->
       fun k ->
-        let t_5 = n < 2 in
-        if t_5 then
+        let t_8 = n < 2 in
+        if t_8 then
           k n
         else
-          let t_7 = n - 1 in
-          let t_8 = fresh_1 n k fib in
-          fib t_7 t_8
+          let t_10 = n - 1 in
+          let t_11 = fresh_1 n k fib in
+          fib t_10 t_11
   
   let main =
-    let t_10 = fib 6 id in
-    let t_11 = print_int t_10 in
-    let z = t_11 in
+    let t_14 = fib 6 id in
+    let t_15 = print_int t_14 in
+    let z = t_15 in
     0
 
 =================== custom (before cc + ll) ===================
@@ -118,12 +118,12 @@
     fun a ->
       fun b ->
         fun c ->
-          let t_1 = print_int a in
-          let a = t_1 in
-          let t_2 = print_int b in
-          let b = t_2 in
-          let t_3 = print_int c in
-          let c = t_3 in
+          let t_2 = print_int a in
+          let a = t_2 in
+          let t_3 = print_int b in
+          let b = t_3 in
+          let t_4 = print_int c in
+          let c = t_4 in
           0
   
   let test10 =
@@ -137,23 +137,23 @@
                   fun h ->
                     fun i ->
                       fun j ->
-                        let t_4 = a + b in
-                        let t_5 = t_4 + c in
-                        let t_6 = t_5 + d in
-                        let t_7 = t_6 + e in
-                        let t_8 = t_7 + f in
-                        let t_9 = t_8 + g in
-                        let t_10 = t_9 + h in
-                        let t_11 = t_10 + i in
-                        t_11 + j
+                        let t_6 = a + b in
+                        let t_7 = t_6 + c in
+                        let t_8 = t_7 + d in
+                        let t_9 = t_8 + e in
+                        let t_10 = t_9 + f in
+                        let t_11 = t_10 + g in
+                        let t_12 = t_11 + h in
+                        let t_13 = t_12 + i in
+                        t_13 + j
   
   let main =
-    let t_13 = wrap test10 1 10 100 1000 10000 100000 1000000 10000000 100000000 1000000000 in
-    let rez = t_13 in
-    let t_14 = print_int rez in
-    let () = t_14 in
-    let t_15 = wrap test3 1 10 100 in
-    let temp2 = t_15 in
+    let t_16 = wrap test10 1 10 100 1000 10000 100000 1000000 10000000 100000000 1000000000 in
+    let rez = t_16 in
+    let t_17 = print_int rez in
+    let () = t_17 in
+    let t_18 = wrap test3 1 10 100 in
+    let temp2 = t_18 in
     0
 
 =================== custom (after cc, before ll) ===================
@@ -196,12 +196,12 @@
           let f_cc_4 = fun a ->
             fun b ->
               fun c ->
-                let t_1 = print_int a in
-                let a = t_1 in
-                let t_2 = print_int b in
-                let b = t_2 in
-                let t_3 = print_int c in
-                let c = t_3 in
+                let t_2 = print_int a in
+                let a = t_2 in
+                let t_3 = print_int b in
+                let b = t_3 in
+                let t_4 = print_int c in
+                let c = t_4 in
                 0 in
           let closure_cc_5 = f_cc_4 a b in
           closure_cc_5 in
@@ -267,15 +267,15 @@
                                                                                                             fun h ->
                                                                                                               fun i ->
                                                                                                                 fun j ->
-                                                                                                                  let t_4 = a + b in
-                                                                                                                  let t_5 = t_4 + c in
-                                                                                                                  let t_6 = t_5 + d in
-                                                                                                                  let t_7 = t_6 + e in
-                                                                                                                  let t_8 = t_7 + f in
-                                                                                                                  let t_9 = t_8 + g in
-                                                                                                                  let t_10 = t_9 + h in
-                                                                                                                  let t_11 = t_10 + i in
-                                                                                                                  t_11 + j in
+                                                                                                                  let t_6 = a + b in
+                                                                                                                  let t_7 = t_6 + c in
+                                                                                                                  let t_8 = t_7 + d in
+                                                                                                                  let t_9 = t_8 + e in
+                                                                                                                  let t_10 = t_9 + f in
+                                                                                                                  let t_11 = t_10 + g in
+                                                                                                                  let t_12 = t_11 + h in
+                                                                                                                  let t_13 = t_12 + i in
+                                                                                                                  t_13 + j in
                                                                                               let closure_cc_24 = f_cc_23 a b c d e f g h i in
                                                                                               closure_cc_24 in
                                                                             let closure_cc_22 = f_cc_21 a b c d e f g h in
@@ -299,12 +299,12 @@
     test10_cc_6
   
   let main =
-    let t_13 = wrap test10 1 10 100 1000 10000 100000 1000000 10000000 100000000 1000000000 in
-    let rez = t_13 in
-    let t_14 = print_int rez in
-    let () = t_14 in
-    let t_15 = wrap test3 1 10 100 in
-    let temp2 = t_15 in
+    let t_16 = wrap test10 1 10 100 1000 10000 100000 1000000 10000000 100000000 1000000000 in
+    let rez = t_16 in
+    let t_17 = print_int rez in
+    let () = t_17 in
+    let t_18 = wrap test3 1 10 100 in
+    let temp2 = t_18 in
     0
 
 =================== custom (after cc + ll) ===================
@@ -339,12 +339,12 @@
   
   let t_6 =
     fun c ->
-      let t_1 = print_int a in
-      let a = t_1 in
-      let t_2 = print_int b in
-      let b = t_2 in
-      let t_3 = print_int c in
-      let c = t_3 in
+      let t_2 = print_int a in
+      let a = t_2 in
+      let t_3 = print_int b in
+      let b = t_3 in
+      let t_4 = print_int c in
+      let c = t_4 in
       0
   
   let t_5 =
@@ -373,15 +373,15 @@
   
   let t_61 =
     fun j ->
-      let t_4 = a + b in
-      let t_5 = t_4 + c in
-      let t_6 = t_5 + d in
-      let t_7 = t_6 + e in
-      let t_8 = t_7 + f in
-      let t_9 = t_8 + g in
-      let t_10 = t_9 + h in
-      let t_11 = t_10 + i in
-      t_11 + j
+      let t_6 = a + b in
+      let t_7 = t_6 + c in
+      let t_8 = t_7 + d in
+      let t_9 = t_8 + e in
+      let t_10 = t_9 + f in
+      let t_11 = t_10 + g in
+      let t_12 = t_11 + h in
+      let t_13 = t_12 + i in
+      t_13 + j
   
   let t_60 =
     fun i ->
@@ -636,11 +636,432 @@
     test10_cc_6
   
   let main =
-    let t_13 = wrap test10 1 10 100 1000 10000 100000 1000000 10000000 100000000 1000000000 in
-    let rez = t_13 in
-    let t_14 = print_int rez in
-    let () = t_14 in
-    let t_15 = wrap test3 1 10 100 in
-    let temp2 = t_15 in
+    let t_16 = wrap test10 1 10 100 1000 10000 100000 1000000 10000000 100000000 1000000000 in
+    let rez = t_16 in
+    let t_17 = print_int rez in
+    let () = t_17 in
+    let t_18 = wrap test3 1 10 100 in
+    let temp2 = t_18 in
     0
+
+
+=================== faccps_ll (before cc + ll) ===================
+  $ ../../../bin/AML.exe --dump-anf ./manytests/typed/010faccps_ll.ml
+  let id =
+    fun x ->
+      x
+  
+  let fresh_1 =
+    fun n ->
+      fun k ->
+        fun p ->
+          let t_1 = p * n in
+          k t_1
+  
+  let rec fac_cps =
+    fun n ->
+      fun k ->
+        let t_4 = n = 1 in
+        if t_4 then
+          k 1
+        else
+          let t_6 = n - 1 in
+          let t_7 = fresh_1 n k in
+          fac_cps t_6 t_7
+  
+  let main =
+    let t_10 = fac_cps 4 id in
+    let t_11 = print_int t_10 in
+    let t_12 = t_11 in
+    0
+
+
+
+
+=================== faccps_ll (after cc, before ll) ===================
+  $ ../../../bin/AML.exe --dump-cc-anf ./manytests/typed/010faccps_ll.ml
+  let id_cc_0 =
+    fun x ->
+      x
+  
+  let id =
+    id_cc_0
+  
+  let fresh_1_cc_1 =
+    fun n ->
+      let f_cc_2 = fun n ->
+        fun k ->
+          let f_cc_4 = fun k ->
+            fun n ->
+              fun p ->
+                let t_1 = p * n in
+                k t_1 in
+          let closure_cc_5 = f_cc_4 k n in
+          closure_cc_5 in
+      let closure_cc_3 = f_cc_2 n in
+      closure_cc_3
+  
+  let fresh_1 =
+    fresh_1_cc_1
+  
+  let rec fac_cps_cc_6 =
+    fun fresh_1 ->
+      fun n ->
+        let f_cc_7 = fun fresh_1 ->
+          fun n ->
+            fun k ->
+              let t_4 = n = 1 in
+              if t_4 then
+                k 1
+              else
+                let t_6 = n - 1 in
+                let t_7 = fresh_1 n k in
+                fac_cps_cc_6 t_6 t_7 in
+        let closure_cc_8 = f_cc_7 fresh_1 n in
+        closure_cc_8
+  
+  let fac_cps =
+    fac_cps_cc_6 fresh_1
+  
+  let main =
+    let t_10 = fac_cps 4 id in
+    let t_11 = print_int t_10 in
+    let t_12 = t_11 in
+    0
+
+
+
+=================== faccps_ll (after cc + ll) ===================
+  $ ../../../bin/AML.exe --dump-cc-ll-anf ./manytests/typed/010faccps_ll.ml
+  let t_0 =
+    fun x ->
+      x
+  
+  let t_6 =
+    fun p ->
+      let t_1 = p * n in
+      k t_1
+  
+  let t_5 =
+    fun n ->
+      t_6
+  
+  let t_4 =
+    fun k ->
+      t_5
+  
+  let t_3 =
+    fun k ->
+      let f_cc_4 = t_4 in
+      let closure_cc_5 = f_cc_4 k n in
+      closure_cc_5
+  
+  let t_2 =
+    fun n ->
+      t_3
+  
+  let t_1 =
+    fun n ->
+      let f_cc_2 = t_2 in
+      let closure_cc_3 = f_cc_2 n in
+      closure_cc_3
+  
+  let t_11 =
+    fun k ->
+      let t_4 = n = 1 in
+      if t_4 then
+        k 1
+      else
+        let t_6 = n - 1 in
+        let t_7 = fresh_1 n k in
+        fac_cps_cc_6 t_6 t_7
+  
+  let t_10 =
+    fun n ->
+      t_11
+  
+  let t_9 =
+    fun fresh_1 ->
+      t_10
+  
+  let t_8 =
+    fun n ->
+      let f_cc_7 = t_9 in
+      let closure_cc_8 = f_cc_7 fresh_1 n in
+      closure_cc_8
+  
+  let t_7 =
+    fun fresh_1 ->
+      t_8
+  
+  let id_cc_0 =
+    t_0
+  
+  let id =
+    id_cc_0
+  
+  let fresh_1_cc_1 =
+    t_1
+  
+  let fresh_1 =
+    fresh_1_cc_1
+  
+  let rec fac_cps_cc_6 =
+    t_7
+  
+  let fac_cps =
+    fac_cps_cc_6 fresh_1
+  
+  let main =
+    let t_10 = fac_cps 4 id in
+    let t_11 = print_int t_10 in
+    let t_12 = t_11 in
+    0
+
+
+
+
+
+=================== faccps (before cc + ll) ===================
+  $ ../../../bin/AML.exe --dump-anf ./manytests/typed/012faccps.ml
+  let rec fac =
+    fun n ->
+      fun k ->
+        let t_0 = n < 2 in
+        if t_0 then
+          k 1
+        else
+          let t_2 = n - 1 in
+          let t_5 = fun a ->
+            let t_3 = a * n in
+            k t_3 in
+          fac t_2 t_5
+  
+  let main =
+    let t_8 = fun x ->
+      x in
+    let t_9 = fac 6 t_8 in
+    print_int t_9
+
+=================== faccps (after cc, before ll) ===================
+  $ ../../../bin/AML.exe --dump-cc-anf ./manytests/typed/012faccps.ml
+  let rec fac_cc_0 =
+    fun n ->
+      let f_cc_1 = fun n ->
+        fun k ->
+          let t_0 = n < 2 in
+          if t_0 then
+            k 1
+          else
+            let t_2 = n - 1 in
+            let t_5_cc_3 = fun k ->
+              fun n ->
+                fun a ->
+                  let t_3 = a * n in
+                  k t_3 in
+            let t_5 = t_5_cc_3 k n in
+            fac_cc_0 t_2 t_5 in
+      let closure_cc_2 = f_cc_1 n in
+      closure_cc_2
+  
+  let fac =
+    fac_cc_0
+  
+  let main =
+    let t_8_cc_4 = fun x ->
+      x in
+    let t_8 = t_8_cc_4 in
+    let t_9 = fac 6 t_8 in
+    print_int t_9
+
+=================== faccps (after cc + ll) ===================
+  $ ../../../bin/AML.exe --dump-cc-ll-anf ./manytests/typed/012faccps.ml
+  let t_5 =
+    fun a ->
+      let t_3 = a * n in
+      k t_3
+  
+  let t_4 =
+    fun n ->
+      t_5
+  
+  let t_3 =
+    fun k ->
+      t_4
+  
+  let t_2 =
+    fun k ->
+      let t_0 = n < 2 in
+      if t_0 then
+        k 1
+      else
+        let t_2 = n - 1 in
+        let t_5_cc_3 = t_3 in
+        let t_5 = t_5_cc_3 k n in
+        fac_cc_0 t_2 t_5
+  
+  let t_1 =
+    fun n ->
+      t_2
+  
+  let t_0 =
+    fun n ->
+      let f_cc_1 = t_1 in
+      let closure_cc_2 = f_cc_1 n in
+      closure_cc_2
+  
+  let t_6 =
+    fun x ->
+      x
+  
+  let rec fac_cc_0 =
+    t_0
+  
+  let fac =
+    fac_cc_0
+  
+  let main =
+    let t_8_cc_4 = t_6 in
+    let t_8 = t_8_cc_4 in
+    let t_9 = fac 6 t_8 in
+    print_int t_9
+
+
+
+
+
+
+
+
+=================== fac (before cc + ll) ===================
+  $ ../../../bin/AML.exe --dump-anf ./manytests/typed/fac.ml
+  let rec fib =
+    fun n ->
+      fun k ->
+        let t_0 = n < 2 in
+        if t_0 then
+          k n
+        else
+          let t_2 = n - 1 in
+          let t_8 = fun a ->
+            let t_3 = n - 2 in
+            let t_6 = fun b ->
+              let t_4 = a + b in
+              k t_4 in
+            fib t_3 t_6 in
+          fib t_2 t_8
+  
+  let main =
+    let t_11 = fun x ->
+      x in
+    let t_12 = fib 6 t_11 in
+    print_int t_12
+
+
+
+=================== fac (after cc, before ll) ===================
+  $ ../../../bin/AML.exe --dump-cc-anf ./manytests/typed/fac.ml
+  let rec fib_cc_0 =
+    fun n ->
+      let f_cc_1 = fun n ->
+        fun k ->
+          let t_0 = n < 2 in
+          if t_0 then
+            k n
+          else
+            let t_2 = n - 1 in
+            let t_8_cc_3 = fun k ->
+              fun n ->
+                fun a ->
+                  let t_3 = n - 2 in
+                  let t_6_cc_4 = fun a ->
+                    fun k ->
+                      fun b ->
+                        let t_4 = a + b in
+                        k t_4 in
+                  let t_6 = t_6_cc_4 a k in
+                  fib_cc_0 t_3 t_6 in
+            let t_8 = t_8_cc_3 k n in
+            fib_cc_0 t_2 t_8 in
+      let closure_cc_2 = f_cc_1 n in
+      closure_cc_2
+  
+  let fib =
+    fib_cc_0
+  
+  let main =
+    let t_11_cc_5 = fun x ->
+      x in
+    let t_11 = t_11_cc_5 in
+    let t_12 = fib 6 t_11 in
+    print_int t_12
+
+
+=================== fac (after cc + ll) ===================
+  $ ../../../bin/AML.exe --dump-cc-ll-anf ./manytests/typed/fac.ml
+  let t_8 =
+    fun b ->
+      let t_4 = a + b in
+      k t_4
+  
+  let t_7 =
+    fun k ->
+      t_8
+  
+  let t_6 =
+    fun a ->
+      t_7
+  
+  let t_5 =
+    fun a ->
+      let t_3 = n - 2 in
+      let t_6_cc_4 = t_6 in
+      let t_6 = t_6_cc_4 a k in
+      fib_cc_0 t_3 t_6
+  
+  let t_4 =
+    fun n ->
+      t_5
+  
+  let t_3 =
+    fun k ->
+      t_4
+  
+  let t_2 =
+    fun k ->
+      let t_0 = n < 2 in
+      if t_0 then
+        k n
+      else
+        let t_2 = n - 1 in
+        let t_8_cc_3 = t_3 in
+        let t_8 = t_8_cc_3 k n in
+        fib_cc_0 t_2 t_8
+  
+  let t_1 =
+    fun n ->
+      t_2
+  
+  let t_0 =
+    fun n ->
+      let f_cc_1 = t_1 in
+      let closure_cc_2 = f_cc_1 n in
+      closure_cc_2
+  
+  let t_9 =
+    fun x ->
+      x
+  
+  let rec fib_cc_0 =
+    t_0
+  
+  let fib =
+    fib_cc_0
+  
+  let main =
+    let t_11_cc_5 = t_9 in
+    let t_11 = t_11_cc_5 in
+    let t_12 = fib 6 t_11 in
+    print_int t_12
+
 
