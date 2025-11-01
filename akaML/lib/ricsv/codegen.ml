@@ -317,7 +317,25 @@ and gen_c_exp env dst = function
     in
     let arity = Map.find state.arity_map fname in
     (match List.length args, arity with
-     (* Branch on whether fname has arity known and matches exact args_received *)
+     (* Branch in which the arity of fname is known and is less than args_received *)
+     | args_received, Some arity when args_received > arity ->
+       let first_args = List.take args arity in
+       let rest_args = List.drop args arity in
+       let* tmp_id = fresh in
+       let tmp_name = Printf.sprintf "%d_partial" tmp_id in
+       let* env =
+         gen_c_exp
+           env
+           dst
+           (CExp_apply (IExp_ident fname, List.hd_exn first_args, List.tl_exn first_args))
+       in
+       let* loc = emit_store dst ~comm:tmp_name in
+       let env = Map.set env ~key:tmp_name ~data:loc in
+       gen_c_exp
+         env
+         dst
+         (CExp_apply (IExp_ident tmp_name, List.hd_exn rest_args, List.tl_exn rest_args))
+     (* Branch in which the arity of fname is known and it exactly matches args_received *)
      | args_received, Some args_count when args_received = args_count ->
        let arg_regs = [ A 0; A 1; A 2; A 3; A 4; A 5; A 6; A 7 ] in
        let env = load_into_regs env arg_regs args in
