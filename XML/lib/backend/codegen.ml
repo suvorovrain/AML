@@ -41,10 +41,10 @@ module ArityMap = struct
 end
 
 let initial_arity_map =
-    let arity_map = ArityMap.empty () in
-    let arity_map = ArityMap.bind arity_map "print_int" 1 in
-    let arity_map = ArityMap.bind arity_map "malloc" 1 in
-    let arity_map = ArityMap.bind arity_map "alloc_closure" 2 in
+  let arity_map = ArityMap.empty () in
+  let arity_map = ArityMap.bind arity_map "print_int" 1 in
+  let arity_map = ArityMap.bind arity_map "malloc" 1 in
+  let arity_map = ArityMap.bind arity_map "alloc_closure" 2 in
   ArityMap.bind arity_map "apply1" 2
 ;;
 
@@ -142,7 +142,6 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
          emit addi SP SP (-Target.word_size);
          emit sd reg (SP, 0))
       live_regs_to_save;
-
     let* state_after_call =
       let apply_chain closure_reg args st =
         let rec loop current_closure_reg_inner args_inner =
@@ -171,39 +170,37 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
               emit mv (T 0) (A 0);
               apply_chain (T 0) args_imms state
             | Some n when List.length args_imms = n ->
-                let num_args = List.length args_imms in
-                (* process every arg and save on stack *)
-                let* () =
-                  List.fold_left
-                    (fun acc_res arg_imm ->
-                      let* () = acc_res in
-                      let* () = gen_im_expr state (T 0) arg_imm in (* process and save in t0 *)
-                      emit addi SP SP (-Target.word_size);        (* get stack space *)
-                      emit sd (T 0) (SP, 0);                      (* save result on stack *)
-                      ok ()
-                    )
-                    (ok ())
-                    args_imms
-                in
-
-                (* load from stack to aN registers *)
-                List.iteri
-                  (fun i _ ->
-                    if i < Array.length Target.arg_regs then
-                      let arg_reg = A i in
-                      let stack_offset = (num_args - 1 - i) * Target.word_size in
-                      emit ld arg_reg (SP, stack_offset)
-                    else () (* args on stack are not supported *) 
-                  )
-                  args_imms;
-
-                (* clear the stack *)
-                if num_args > 0 then
-                  emit addi SP SP (num_args * Target.word_size);
-
-                emit call fname;
-                emit mv (T 0) (A 0); 
-                ok state
+              let num_args = List.length args_imms in
+              (* process every arg and save on stack *)
+              let* () =
+                List.fold_left
+                  (fun acc_res arg_imm ->
+                     let* () = acc_res in
+                     let* () = gen_im_expr state (T 0) arg_imm in
+                     (* process and save in t0 *)
+                     emit addi SP SP (-Target.word_size);
+                     (* get stack space *)
+                     emit sd (T 0) (SP, 0);
+                     (* save result on stack *)
+                     ok ())
+                  (ok ())
+                  args_imms
+              in
+              (* load from stack to aN registers *)
+              List.iteri
+                (fun i _ ->
+                   if i < Array.length Target.arg_regs
+                   then (
+                     let arg_reg = A i in
+                     let stack_offset = (num_args - 1 - i) * Target.word_size in
+                     emit ld arg_reg (SP, stack_offset))
+                   else () (* args on stack are not supported *))
+                args_imms;
+              (* clear the stack *)
+              if num_args > 0 then emit addi SP SP (num_args * Target.word_size);
+              emit call fname;
+              emit mv (T 0) (A 0);
+              ok state
             | Some n when List.length args_imms < n ->
               let m = List.length args_imms in
               if m > 0 then emit addi SP SP (-m * Target.word_size);
@@ -214,7 +211,11 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
                      emit sd (T 1) (SP, i * Target.word_size);
                      ok ())
                   args_imms
-                |> List.fold_left (fun acc r -> let* () = acc in r) (ok ())
+                |> List.fold_left
+                     (fun acc r ->
+                        let* () = acc in
+                        r)
+                     (ok ())
               in
               emit la (A 0) fname;
               emit li (A 1) n;
@@ -244,7 +245,6 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
          emit addi SP SP Target.word_size)
       (List.rev live_regs_to_save);
     if not (equal_reg dst (T 0)) then emit mv dst (T 0);
-
     ok state_after_call
   | Comp_branch (cond_imm, then_anf, else_anf) ->
     let* () = gen_im_expr state (T 0) cond_imm in
@@ -284,7 +284,11 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
            emit sd (T 1) (A 0, i * Target.word_size);
            ok ())
         imms
-      |> List.fold_left (fun acc r -> let* () = acc in r) (ok ())
+      |> List.fold_left
+           (fun acc r ->
+              let* () = acc in
+              r)
+           (ok ())
     in
     if not (equal_reg dst (A 0)) then emit mv dst (A 0);
     ok state
@@ -304,7 +308,13 @@ let rec count_locals_in_anf (aexpr : anf_expr) : int =
 
 and count_locals_in_comp (cexpr : comp_expr) : int =
   match cexpr with
-  | Comp_imm _ | Comp_binop _ | Comp_app _ | Comp_func _ | Comp_tuple _ | Comp_alloc _ | Comp_load _ -> 0
+  | Comp_imm _
+  | Comp_binop _
+  | Comp_app _
+  | Comp_func _
+  | Comp_tuple _
+  | Comp_alloc _
+  | Comp_load _ -> 0
   | Comp_branch (_, then_anf, else_anf) ->
     let locals_in_then = count_locals_in_anf then_anf in
     let locals_in_else = count_locals_in_anf else_anf in
@@ -333,14 +343,14 @@ let gen_func
   let local_count = count_locals_in_anf body_anf in
   let initial_frame_size = (2 + local_count + 5) * Target.word_size in
   emit_prologue func_name initial_frame_size;
-  let initial_state_for_body = { st with
-                                  env = env_params;
-                                  stack_offset = 0;
-                                  arity = arity_map } in
+  let initial_state_for_body =
+    { st with env = env_params; stack_offset = 0; arity = arity_map }
+  in
   let* state_after = gen_anf_expr initial_state_for_body (A 0) body_anf in
   flush_queue ppf;
   emit_epilogue initial_frame_size;
   ok { st with next_label = state_after.next_label; deferred = state_after.deferred }
+;;
 
 let gen_start ppf =
   fprintf ppf ".section .text\n";
@@ -355,7 +365,7 @@ let prefill_arities (arity_map0 : ArityMap.t) (program : aprogram) : ArityMap.t 
          (match anf_expr with
           | Anf_let (_, _, Comp_func (ps, _), _) -> ArityMap.bind am name (List.length ps)
           | Anf_comp_expr (Comp_func (ps, _)) -> ArityMap.bind am name (List.length ps)
-          | _ -> ArityMap.bind am name 0 )
+          | _ -> ArityMap.bind am name 0)
        | _ -> am)
     arity_map0
     program
@@ -436,4 +446,3 @@ let gen_program ppf (program : aprogram) =
   | Error `Tuple_not_impl -> invalid_arg "Tuple values are not yet implemented"
   | Error `Too_many_reg_params -> invalid_arg "Too many arguments for register passing"
 ;;
-

@@ -47,7 +47,7 @@ let compile_and_write options source_code =
   then (
     Middleend.Pprinter.print_anf_program std_formatter anf_ast;
     exit 0);
-    let asm_code = to_asm ast in
+  let asm_code = to_asm ast in
   match options.output_file_name with
   | Some out_file ->
     (try

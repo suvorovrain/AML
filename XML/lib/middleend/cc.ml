@@ -6,9 +6,8 @@ open Common.Ast
 open Common.Ast.Expression
 open Common.Ast.Pattern
 open Common.Ast.Structure
-
-module SSet = Set.Make(String)
-module SMap = Map.Make(String)
+module SSet = Set.Make (String)
+module SMap = Map.Make (String)
 
 (* list of ops that shouldn't be inclosured *)
 let std_lib_names =
@@ -57,18 +56,26 @@ let rec free_vars_in bound_vars expr =
       (fun acc e -> SSet.union acc (free_vars_in bound_vars e))
       SSet.empty
       (e1 :: e2 :: es)
-  | Exp_apply (e1, e2) -> SSet.union (free_vars_in bound_vars e1) (free_vars_in bound_vars e2)
+  | Exp_apply (e1, e2) ->
+    SSet.union (free_vars_in bound_vars e1) (free_vars_in bound_vars e2)
   | Exp_construct (_, Some e) -> free_vars_in bound_vars e
   | Exp_constraint (e, _) -> free_vars_in bound_vars e
   | Exp_fun ((p, ps), body) ->
     let fun_bound_vars =
-      List.fold_left (fun acc p -> SSet.union acc (SSet.of_list (pattern_vars p))) SSet.empty (p :: ps)
+      List.fold_left
+        (fun acc p -> SSet.union acc (SSet.of_list (pattern_vars p)))
+        SSet.empty
+        (p :: ps)
     in
     free_vars_in (SSet.union bound_vars fun_bound_vars) body
   | Exp_if (e1, e2, e3_opt) ->
     let fv1 = free_vars_in bound_vars e1 in
     let fv2 = free_vars_in bound_vars e2 in
-    let fv3 = match e3_opt with Some e3 -> free_vars_in bound_vars e3 | None -> SSet.empty in
+    let fv3 =
+      match e3_opt with
+      | Some e3 -> free_vars_in bound_vars e3
+      | None -> SSet.empty
+    in
     SSet.union fv1 (SSet.union fv2 fv3)
   | Exp_match (e, (case, cases)) ->
     let fv_e = free_vars_in bound_vars e in
@@ -76,9 +83,9 @@ let rec free_vars_in bound_vars expr =
     let fv_cases =
       List.fold_left
         (fun acc { first; second } ->
-          let case_bound_vars = SSet.of_list (pattern_vars first) in
-          let fv_second = free_vars_in (SSet.union bound_vars case_bound_vars) second in
-          SSet.union acc fv_second)
+           let case_bound_vars = SSet.of_list (pattern_vars first) in
+           let fv_second = free_vars_in (SSet.union bound_vars case_bound_vars) second in
+           SSet.union acc fv_second)
         SSet.empty
         all_cases
     in
@@ -86,9 +93,14 @@ let rec free_vars_in bound_vars expr =
   | Exp_let (rec_flag, (vb, vbs), body) ->
     let bindings = vb :: vbs in
     let bound_in_let =
-      List.fold_left (fun acc b -> SSet.union acc (SSet.of_list (pattern_vars b.pat))) SSet.empty bindings
+      List.fold_left
+        (fun acc b -> SSet.union acc (SSet.of_list (pattern_vars b.pat)))
+        SSet.empty
+        bindings
     in
-    let bound_for_rhss = if rec_flag = Recursive then SSet.union bound_vars bound_in_let else bound_vars in
+    let bound_for_rhss =
+      if rec_flag = Recursive then SSet.union bound_vars bound_in_let else bound_vars
+    in
     let fv_rhss =
       List.fold_left
         (fun acc b -> SSet.union acc (free_vars_in bound_for_rhss b.expr))
@@ -101,9 +113,9 @@ let rec free_vars_in bound_vars expr =
     let all_cases = case :: cases in
     List.fold_left
       (fun acc { first; second } ->
-        let case_bound_vars = SSet.of_list (pattern_vars first) in
-        let fv_second = free_vars_in (SSet.union bound_vars case_bound_vars) second in
-        SSet.union acc fv_second)
+         let case_bound_vars = SSet.of_list (pattern_vars first) in
+         let fv_second = free_vars_in (SSet.union bound_vars case_bound_vars) second in
+         SSet.union acc fv_second)
       SSet.empty
       all_cases
 ;;
@@ -115,16 +127,16 @@ let rec closure_expr toplvl_set env expr =
   | Exp_ident id ->
     (match SMap.find_opt id env with
      | Some free_vars when not (SSet.is_empty free_vars) ->
-       SSet.fold
-         (fun fv acc -> Exp_apply (acc, Exp_ident fv))
-         free_vars
-         (Exp_ident id)
+       SSet.fold (fun fv acc -> Exp_apply (acc, Exp_ident fv)) free_vars (Exp_ident id)
      | _ -> expr)
   (* conversion `fun p1 ... -> body` *)
   | Exp_fun ((p, ps), body) ->
     let patterns = p :: ps in
     let fun_bound_vars =
-      List.fold_left (fun acc p -> SSet.union acc (SSet.of_list (pattern_vars p))) SSet.empty patterns
+      List.fold_left
+        (fun acc p -> SSet.union acc (SSet.of_list (pattern_vars p)))
+        SSet.empty
+        patterns
     in
     let free_vars = free_vars_in fun_bound_vars body in
     let captured_vars = SSet.diff free_vars toplvl_set in
@@ -147,10 +159,12 @@ let rec closure_expr toplvl_set env expr =
   | Exp_function (case, cases) ->
     let fresh_arg_name = "__fun_arg" in
     let desugared_expr =
-      Exp_fun ((Pat_var fresh_arg_name, []), Exp_match (Exp_ident fresh_arg_name, (case, cases)))
+      Exp_fun
+        ((Pat_var fresh_arg_name, []), Exp_match (Exp_ident fresh_arg_name, (case, cases)))
     in
     closure_expr toplvl_set env desugared_expr
-  | Exp_apply (e1, e2) -> Exp_apply (closure_expr toplvl_set env e1, closure_expr toplvl_set env e2)
+  | Exp_apply (e1, e2) ->
+    Exp_apply (closure_expr toplvl_set env e1, closure_expr toplvl_set env e2)
   | Exp_tuple (e1, e2, es) ->
     let f = closure_expr toplvl_set env in
     Exp_tuple (f e1, f e2, List.map f es)
@@ -159,7 +173,9 @@ let rec closure_expr toplvl_set env expr =
     Exp_if (f e1, f e2, Option.map f e3_opt)
   | Exp_match (e, (case, cases)) ->
     let e' = closure_expr toplvl_set env e in
-    let transform_case { first; second } = { first; second = closure_expr toplvl_set env second } in
+    let transform_case { first; second } =
+      { first; second = closure_expr toplvl_set env second }
+    in
     let all_cases = case :: cases in
     let new_cases = List.map transform_case all_cases in
     (match new_cases with
@@ -169,6 +185,7 @@ let rec closure_expr toplvl_set env expr =
   | Exp_construct (id, Some e) -> Exp_construct (id, Some (closure_expr toplvl_set env e))
   | Exp_construct (_, None) -> expr
   | Exp_constraint (e, t) -> Exp_constraint (closure_expr toplvl_set env e, t)
+
 (*Recursively converts the list of links. This function is required for correct handling of recursive ('let rec') and non-recursive connections, correctly updating the environment  'env'. *)
 and transform_bindings toplvl_set env rec_flag bindings =
   let transform_one binding env =
@@ -177,9 +194,14 @@ and transform_bindings toplvl_set env rec_flag bindings =
     | Pat_var v, Exp_fun ((p, ps), body) ->
       let patterns = p :: ps in
       let bound_in_fun =
-        List.fold_left (fun acc p -> SSet.union acc (SSet.of_list (pattern_vars p))) SSet.empty patterns
+        List.fold_left
+          (fun acc p -> SSet.union acc (SSet.of_list (pattern_vars p)))
+          SSet.empty
+          patterns
       in
-      let bound_for_body = if rec_flag = Recursive then SSet.add v bound_in_fun else bound_in_fun in
+      let bound_for_body =
+        if rec_flag = Recursive then SSet.add v bound_in_fun else bound_in_fun
+      in
       let free_vars = free_vars_in bound_for_body body in
       let captured_vars = SSet.diff free_vars toplvl_set in
       let captured_vars_list = SSet.elements captured_vars in
@@ -189,25 +211,30 @@ and transform_bindings toplvl_set env rec_flag bindings =
       let new_body = closure_expr toplvl_set env_for_body body in
       let new_fun = construct_fun saturated_patterns new_body in
       let final_expr =
-        List.fold_left (fun acc fv -> Exp_apply (acc, Exp_ident fv)) new_fun captured_vars_list
+        List.fold_left
+          (fun acc fv -> Exp_apply (acc, Exp_ident fv))
+          new_fun
+          captured_vars_list
       in
       let new_binding = { pat; expr = final_expr } in
       let final_env = SMap.add v captured_vars env in
-      (new_binding, final_env)
+      new_binding, final_env
     | _ ->
       let new_expr = closure_expr toplvl_set env expr in
       let new_binding = { pat; expr = new_expr } in
       let bound_vars = pattern_vars pat in
-      let final_env = List.fold_left (fun acc v -> SMap.add v SSet.empty acc) env bound_vars in
-      (new_binding, final_env)
+      let final_env =
+        List.fold_left (fun acc v -> SMap.add v SSet.empty acc) env bound_vars
+      in
+      new_binding, final_env
   in
   if rec_flag = Nonrecursive
   then (
     let transformed, final_env =
       List.fold_left
         (fun (bindings_acc, current_env) b ->
-          let new_b, next_env = transform_one b current_env in
-          new_b :: bindings_acc, next_env)
+           let new_b, next_env = transform_one b current_env in
+           new_b :: bindings_acc, next_env)
         ([], env)
         bindings
     in
@@ -218,16 +245,16 @@ and transform_bindings toplvl_set env rec_flag bindings =
     let env_with_fvs, _ =
       List.fold_left
         (fun (env_acc, _) b ->
-          let _, next_env = transform_one b env_acc in
-          next_env, [])
+           let _, next_env = transform_one b env_acc in
+           next_env, [])
         (env_rec, [])
         bindings
     in
     let transformed, final_env =
       List.fold_left
         (fun (bindings_acc, _) b ->
-          let new_b, _ = transform_one b env_with_fvs in
-          new_b :: bindings_acc, env_with_fvs)
+           let new_b, _ = transform_one b env_with_fvs in
+           new_b :: bindings_acc, env_with_fvs)
         ([], env_with_fvs)
         bindings
     in
@@ -255,11 +282,10 @@ let cc_program (ast : program) : program =
   let transformed_ast, _ =
     List.fold_left
       (fun (items_acc, current_toplvl_set) item ->
-        let new_item, next_toplvl_set = closure_structure_item current_toplvl_set item in
-        new_item :: items_acc, next_toplvl_set)
+         let new_item, next_toplvl_set = closure_structure_item current_toplvl_set item in
+         new_item :: items_acc, next_toplvl_set)
       ([], toplvl_set)
       ast
   in
   List.rev transformed_ast
 ;;
-

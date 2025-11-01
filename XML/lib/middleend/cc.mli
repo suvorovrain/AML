@@ -4,4 +4,4 @@
 
 open Common
 
-val cc_program: Ast.program -> Ast.program
+val cc_program : Ast.program -> Ast.program
