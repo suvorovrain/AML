@@ -6,5 +6,4 @@
 
 [@@@ocaml.text "/*"]
 
-val stdlib_globals : string Base.Set.Poly.t
 val closure_conversion : Ast.structure -> Ast.structure_item list

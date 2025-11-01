@@ -127,66 +127,62 @@ let rec ll_exp ?(top_level = false) bindings = function
         @ [ Struct_value (Recursive, List.hd_exn bodies, safe_tl bodies) ]
         @ body_defs
       , body_exp )
+  | Exp_fun (pat, pat_list, body) when top_level ->
+    let* defs, body' = ll_exp bindings body in
+    return (defs, Exp_fun (pat, pat_list, body'))
   | Exp_fun (pat, pat_list, body) ->
-    if top_level
-    then
-      let* defs, body' = ll_exp bindings body in
-      return (defs, Exp_fun (pat, pat_list, body'))
-    else
-      let* fresh_name = gen_name in
-      let args = pat :: pat_list in
-      let names = List.concat_map args ~f:pat_bound_names in
-      let bindings = remove_names bindings names in
-      let* defs, body' = ll_exp bindings body in
-      let def =
-        Struct_value
-          ( Nonrecursive
-          , { pat = Pat_var fresh_name; exp = Exp_fun (pat, pat_list, body') }
-          , [] )
-      in
-      return (defs @ [ def ], Exp_ident fresh_name)
+    let* fresh_name = gen_name in
+    let args = pat :: pat_list in
+    let names = List.concat_map args ~f:pat_bound_names in
+    let bindings = remove_names bindings names in
+    let* defs, body' = ll_exp bindings body in
+    let def =
+      Struct_value
+        ( Nonrecursive
+        , { pat = Pat_var fresh_name; exp = Exp_fun (pat, pat_list, body') }
+        , [] )
+    in
+    return (defs @ [ def ], Exp_ident fresh_name)
   | Exp_apply (exp1, exp2) ->
     let* defs1, exp1' = ll_exp bindings exp1 in
     let* defs2, exp2' = ll_exp bindings exp2 in
     return (defs1 @ defs2, Exp_apply (exp1', exp2'))
+  | Exp_function (case, case_list) when top_level ->
+    let* c_defs, c_exp = ll_exp bindings case.right in
+    let* cs_res = state_map (fun c -> ll_exp bindings c.right) case_list in
+    let cs_defs_list, cs_exps = List.unzip cs_res in
+    let cs_defs = List.concat cs_defs_list in
+    let case' = { case with right = c_exp } in
+    let case_list' =
+      List.map2_exn case_list cs_exps ~f:(fun c e -> { c with right = e })
+    in
+    return (c_defs @ cs_defs, Exp_function (case', case_list'))
   | Exp_function (case, case_list) ->
-    if top_level
-    then
-      let* c_defs, c_exp = ll_exp bindings case.right in
-      let* cs_res = state_map (fun c -> ll_exp bindings c.right) case_list in
-      let cs_defs_list, cs_exps = List.unzip cs_res in
-      let cs_defs = List.concat cs_defs_list in
-      let case' = { case with right = c_exp } in
-      let case_list' =
-        List.map2_exn case_list cs_exps ~f:(fun c e -> { c with right = e })
-      in
-      return (c_defs @ cs_defs, Exp_function (case', case_list'))
-    else
-      let* fresh_name = gen_name in
-      let bound1 = pat_bound_names case.left in
-      let bindings_case = remove_names bindings bound1 in
-      let* defs1, body1 = ll_exp bindings_case case.right in
-      let* cs_res =
-        state_map
-          (fun c ->
-             let bound = pat_bound_names c.left in
-             let bindings_c = remove_names bindings bound in
-             ll_exp bindings_c c.right)
-          case_list
-      in
-      let cs_defs_list, cs_exps = List.unzip cs_res in
-      let cs_defs = List.concat cs_defs_list in
-      let case' = { case with right = body1 } in
-      let case_list' =
-        List.map2_exn case_list cs_exps ~f:(fun c e -> { c with right = e })
-      in
-      let def =
-        Struct_value
-          ( Nonrecursive
-          , { pat = Pat_var fresh_name; exp = Exp_function (case', case_list') }
-          , [] )
-      in
-      return (defs1 @ cs_defs @ [ def ], Exp_ident fresh_name)
+    let* fresh_name = gen_name in
+    let bound1 = pat_bound_names case.left in
+    let bindings_case = remove_names bindings bound1 in
+    let* defs1, body1 = ll_exp bindings_case case.right in
+    let* cs_res =
+      state_map
+        (fun c ->
+           let bound = pat_bound_names c.left in
+           let bindings_c = remove_names bindings bound in
+           ll_exp bindings_c c.right)
+        case_list
+    in
+    let cs_defs_list, cs_exps = List.unzip cs_res in
+    let cs_defs = List.concat cs_defs_list in
+    let case' = { case with right = body1 } in
+    let case_list' =
+      List.map2_exn case_list cs_exps ~f:(fun c e -> { c with right = e })
+    in
+    let def =
+      Struct_value
+        ( Nonrecursive
+        , { pat = Pat_var fresh_name; exp = Exp_function (case', case_list') }
+        , [] )
+    in
+    return (defs1 @ cs_defs @ [ def ], Exp_ident fresh_name)
   | Exp_match (exp, case, case_list) ->
     let* e_defs, e_exp = ll_exp bindings exp in
     let* c_defs, c_exp = ll_exp bindings case.right in
@@ -238,10 +234,10 @@ let ll_toplevel = function
       List.fold
         defs
         ~init:(return ([], []))
-        ~f:(fun acc b ->
+        ~f:(fun acc vb ->
           let* acc_defs, acc_bodies = acc in
-          let* defs_body, body' = ll_exp ~top_level:true empty_bindings b.exp in
-          let vb_rec = { pat = b.pat; exp = body' } in
+          let* defs_body, body' = ll_exp ~top_level:true empty_bindings vb.exp in
+          let vb_rec = { vb with exp = body' } in
           return (acc_defs @ defs_body, vb_rec :: acc_bodies))
     in
     let defs_list, bodies = defs_res in
