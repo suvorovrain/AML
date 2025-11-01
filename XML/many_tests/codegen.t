@@ -8,10 +8,10 @@
   .global main
   .type main, @function
   fac:
-    addi sp, sp, -48
-    sd ra, 40(sp)
-    sd s0, 32(sp)
-    addi s0, sp, 32
+    addi sp, sp, -88
+    sd ra, 80(sp)
+    sd s0, 72(sp)
+    addi s0, sp, 72
     mv t0, a0
     li t1, 0
     xor t0, t0, t1
@@ -28,8 +28,8 @@
     sd t0, -16(s0)
     addi sp, sp, -8
     sd a0, 0(sp)
-    addi sp, sp, -8
     ld t0, -16(s0)
+    addi sp, sp, -8
     sd t0, 0(sp)
     ld a0, 0(sp)
     addi sp, sp, 8
@@ -51,12 +51,12 @@
     ld s0, 0(s0)
     ret
   main:
-    addi sp, sp, -32
-    sd ra, 24(sp)
-    sd s0, 16(sp)
-    addi s0, sp, 16
-    addi sp, sp, -8
+    addi sp, sp, -72
+    sd ra, 64(sp)
+    sd s0, 56(sp)
+    addi s0, sp, 56
     li t0, 4
+    addi sp, sp, -8
     sd t0, 0(sp)
     ld a0, 0(sp)
     addi sp, sp, 8
@@ -93,10 +93,10 @@
   .global main
   .type main, @function
   fib:
-    addi sp, sp, -64
-    sd ra, 56(sp)
-    sd s0, 48(sp)
-    addi s0, sp, 48
+    addi sp, sp, -104
+    sd ra, 96(sp)
+    sd s0, 88(sp)
+    addi s0, sp, 88
     mv t0, a0
     li t1, 1
     slt t0, t1, t0
@@ -113,8 +113,8 @@
     sd t0, -16(s0)
     addi sp, sp, -8
     sd a0, 0(sp)
-    addi sp, sp, -8
     ld t0, -16(s0)
+    addi sp, sp, -8
     sd t0, 0(sp)
     ld a0, 0(sp)
     addi sp, sp, 8
@@ -129,8 +129,8 @@
     sd t0, -32(s0)
     addi sp, sp, -8
     sd a0, 0(sp)
-    addi sp, sp, -8
     ld t0, -32(s0)
+    addi sp, sp, -8
     sd t0, 0(sp)
     ld a0, 0(sp)
     addi sp, sp, 8
@@ -152,12 +152,12 @@
     ld s0, 0(s0)
     ret
   main:
-    addi sp, sp, -32
-    sd ra, 24(sp)
-    sd s0, 16(sp)
-    addi s0, sp, 16
-    addi sp, sp, -8
+    addi sp, sp, -72
+    sd ra, 64(sp)
+    sd s0, 56(sp)
+    addi s0, sp, 56
     li t0, 6
+    addi sp, sp, -8
     sd t0, 0(sp)
     ld a0, 0(sp)
     addi sp, sp, 8
@@ -198,10 +198,10 @@
   .global main
   .type main, @function
   large:
-    addi sp, sp, -32
-    sd ra, 24(sp)
-    sd s0, 16(sp)
-    addi s0, sp, 16
+    addi sp, sp, -72
+    sd ra, 64(sp)
+    sd s0, 56(sp)
+    addi s0, sp, 56
     li t0, 0
     mv t1, a0
     xor t2, t0, t1
@@ -235,20 +235,20 @@
     mv t0, a0
     ld a0, 0(sp)
     addi sp, sp, 8
-    sd t0, -24(s0)
-    ld t0, -24(s0)
+    sd t0, -16(s0)
+    ld t0, -16(s0)
   endif_1:
-    sd t0, -32(s0)
-    ld a0, -32(s0)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
     addi sp, s0, 16
     ld ra, 8(s0)
     ld s0, 0(s0)
     ret
   main:
-    addi sp, sp, -64
-    sd ra, 56(sp)
-    sd s0, 48(sp)
-    addi s0, sp, 48
+    addi sp, sp, -104
+    sd ra, 96(sp)
+    sd s0, 88(sp)
+    addi s0, sp, 88
     li t0, 0
     li t1, 1
     xor t0, t0, t1
@@ -271,45 +271,45 @@
     addi sp, sp, 8
     call print_int
     mv t0, a0
-    sd t0, -24(s0)
+    sd t0, -16(s0)
     li t0, 1
     li t1, 1
     xor t0, t0, t1
     seqz t0, t0
+    sd t0, -24(s0)
+    ld t0, -24(s0)
+  endif_3:
     sd t0, -32(s0)
     ld t0, -32(s0)
-  endif_3:
-    sd t0, -40(s0)
-    ld t0, -40(s0)
     beq t0, zero, else_4
     li t0, 0
     j endif_5
   else_4:
     li t0, 1
   endif_5:
-    sd t0, -48(s0)
-    ld t0, -48(s0)
+    sd t0, -40(s0)
+    ld t0, -40(s0)
     li t1, 1
     xor t0, t0, t1
     seqz t0, t0
-    sd t0, -56(s0)
-    ld t0, -56(s0)
+    sd t0, -48(s0)
+    ld t0, -48(s0)
     beq t0, zero, else_6
     li t0, 0
     j endif_7
   else_6:
     li t0, 1
   endif_7:
-    sd t0, -64(s0)
+    sd t0, -56(s0)
+    ld t0, -56(s0)
     addi sp, sp, -8
-    ld t0, -64(s0)
     sd t0, 0(sp)
     ld a0, 0(sp)
     addi sp, sp, 8
     call large
     mv t0, a0
-    sd t0, -72(s0)
-    ld a0, -72(s0)
+    sd t0, -64(s0)
+    ld a0, -64(s0)
     addi sp, s0, 16
     ld ra, 8(s0)
     ld s0, 0(s0)
@@ -332,10 +332,10 @@
   .global main
   .type main, @function
   simplesum:
-    addi sp, sp, -24
-    sd ra, 16(sp)
-    sd s0, 8(sp)
-    addi s0, sp, 8
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 48
     mv t0, a0
     mv t1, a1
     add t0, t0, t1
@@ -346,10 +346,10 @@
     ld s0, 0(s0)
     ret
   partialapp_sum:
-    addi sp, sp, -24
-    sd ra, 16(sp)
-    sd s0, 8(sp)
-    addi s0, sp, 8
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 48
     addi sp, sp, -8
     li t1, 5
     sd t1, 0(sp)
@@ -370,10 +370,10 @@
     ld s0, 0(s0)
     ret
   main:
-    addi sp, sp, -32
-    sd ra, 24(sp)
-    sd s0, 16(sp)
-    addi s0, sp, 16
+    addi sp, sp, -72
+    sd ra, 64(sp)
+    sd s0, 56(sp)
+    addi s0, sp, 56
     call partialapp_sum
     mv t0, a0
     li t1, 5
@@ -412,19 +412,19 @@
   .global main
   .type main, @function
   id:
-    addi sp, sp, -16
-    sd ra, 8(sp)
-    sd s0, 0(sp)
-    addi s0, sp, 0
+    addi sp, sp, -56
+    sd ra, 48(sp)
+    sd s0, 40(sp)
+    addi s0, sp, 40
     addi sp, s0, 16
     ld ra, 8(s0)
     ld s0, 0(s0)
     ret
   fresh_1:
-    addi sp, sp, -32
-    sd ra, 24(sp)
-    sd s0, 16(sp)
-    addi s0, sp, 16
+    addi sp, sp, -72
+    sd ra, 64(sp)
+    sd s0, 56(sp)
+    addi s0, sp, 56
     mv t0, a2
     mv t1, a0
     mul t0, t0, t1
@@ -454,10 +454,10 @@
     ld s0, 0(s0)
     ret
   fac_cps:
-    addi sp, sp, -48
-    sd ra, 40(sp)
-    sd s0, 32(sp)
-    addi s0, sp, 32
+    addi sp, sp, -88
+    sd ra, 80(sp)
+    sd s0, 72(sp)
+    addi s0, sp, 72
     mv t0, a0
     li t1, 1
     xor t0, t0, t1
@@ -486,7 +486,7 @@
     mv t0, a0
     li t1, 1
     sub t0, t0, t1
-    sd t0, -24(s0)
+    sd t0, -16(s0)
     addi sp, sp, -8
     sd a0, 0(sp)
     addi sp, sp, -8
@@ -515,54 +515,52 @@
     addi sp, sp, 8
     ld a0, 0(sp)
     addi sp, sp, 8
-    sd t0, -32(s0)
+    sd t0, -24(s0)
     addi sp, sp, -8
     sd a0, 0(sp)
     addi sp, sp, -8
     sd a1, 0(sp)
+    ld t0, -16(s0)
     addi sp, sp, -8
-    ld t0, -32(s0)
     sd t0, 0(sp)
-    addi sp, sp, -8
     ld t0, -24(s0)
+    addi sp, sp, -8
     sd t0, 0(sp)
-    ld a0, 0(sp)
-    addi sp, sp, 8
+    ld a0, 8(sp)
     ld a1, 0(sp)
-    addi sp, sp, 8
+    addi sp, sp, 16
     call fac_cps
     mv t0, a0
     ld a1, 0(sp)
     addi sp, sp, 8
     ld a0, 0(sp)
     addi sp, sp, 8
-    sd t0, -40(s0)
-    ld t0, -40(s0)
+    sd t0, -32(s0)
+    ld t0, -32(s0)
   endif_1:
-    sd t0, -48(s0)
-    ld a0, -48(s0)
+    sd t0, -40(s0)
+    ld a0, -40(s0)
     addi sp, s0, 16
     ld ra, 8(s0)
     ld s0, 0(s0)
     ret
   main:
-    addi sp, sp, -32
-    sd ra, 24(sp)
-    sd s0, 16(sp)
-    addi s0, sp, 16
+    addi sp, sp, -72
+    sd ra, 64(sp)
+    sd s0, 56(sp)
+    addi s0, sp, 56
+    li t0, 4
     addi sp, sp, -8
+    sd t0, 0(sp)
     la a0, id
     li a1, 1
     call alloc_closure
     mv t0, a0
-    sd t0, 0(sp)
     addi sp, sp, -8
-    li t0, 4
     sd t0, 0(sp)
-    ld a0, 0(sp)
-    addi sp, sp, 8
+    ld a0, 8(sp)
     ld a1, 0(sp)
-    addi sp, sp, 8
+    addi sp, sp, 16
     call fac_cps
     mv t0, a0
     sd t0, -8(s0)
@@ -593,19 +591,19 @@
   .global main
   .type main, @function
   id:
-    addi sp, sp, -16
-    sd ra, 8(sp)
-    sd s0, 0(sp)
-    addi s0, sp, 0
+    addi sp, sp, -56
+    sd ra, 48(sp)
+    sd s0, 40(sp)
+    addi s0, sp, 40
     addi sp, s0, 16
     ld ra, 8(s0)
     ld s0, 0(s0)
     ret
   fresh_2:
-    addi sp, sp, -32
-    sd ra, 24(sp)
-    sd s0, 16(sp)
-    addi s0, sp, 16
+    addi sp, sp, -72
+    sd ra, 64(sp)
+    sd s0, 56(sp)
+    addi s0, sp, 56
     mv t0, a0
     mv t1, a2
     add t0, t0, t1
@@ -635,10 +633,10 @@
     ld s0, 0(s0)
     ret
   fresh_1:
-    addi sp, sp, -40
-    sd ra, 32(sp)
-    sd s0, 24(sp)
-    addi s0, sp, 24
+    addi sp, sp, -80
+    sd ra, 72(sp)
+    sd s0, 64(sp)
+    addi s0, sp, 64
     mv t0, a0
     li t1, 2
     sub t0, t0, t1
@@ -714,10 +712,10 @@
     ld s0, 0(s0)
     ret
   fib:
-    addi sp, sp, -48
-    sd ra, 40(sp)
-    sd s0, 32(sp)
-    addi s0, sp, 32
+    addi sp, sp, -88
+    sd ra, 80(sp)
+    sd s0, 72(sp)
+    addi s0, sp, 72
     mv t0, a0
     li t1, 2
     slt t0, t0, t1
@@ -745,7 +743,7 @@
     mv t0, a0
     li t1, 1
     sub t0, t0, t1
-    sd t0, -24(s0)
+    sd t0, -16(s0)
     addi sp, sp, -8
     sd a0, 0(sp)
     addi sp, sp, -8
@@ -784,54 +782,52 @@
     addi sp, sp, 8
     ld a0, 0(sp)
     addi sp, sp, 8
-    sd t0, -32(s0)
+    sd t0, -24(s0)
     addi sp, sp, -8
     sd a0, 0(sp)
     addi sp, sp, -8
     sd a1, 0(sp)
+    ld t0, -16(s0)
     addi sp, sp, -8
-    ld t0, -32(s0)
     sd t0, 0(sp)
-    addi sp, sp, -8
     ld t0, -24(s0)
+    addi sp, sp, -8
     sd t0, 0(sp)
-    ld a0, 0(sp)
-    addi sp, sp, 8
+    ld a0, 8(sp)
     ld a1, 0(sp)
-    addi sp, sp, 8
+    addi sp, sp, 16
     call fib
     mv t0, a0
     ld a1, 0(sp)
     addi sp, sp, 8
     ld a0, 0(sp)
     addi sp, sp, 8
-    sd t0, -40(s0)
-    ld t0, -40(s0)
+    sd t0, -32(s0)
+    ld t0, -32(s0)
   endif_1:
-    sd t0, -48(s0)
-    ld a0, -48(s0)
+    sd t0, -40(s0)
+    ld a0, -40(s0)
     addi sp, s0, 16
     ld ra, 8(s0)
     ld s0, 0(s0)
     ret
   main:
-    addi sp, sp, -32
-    sd ra, 24(sp)
-    sd s0, 16(sp)
-    addi s0, sp, 16
+    addi sp, sp, -72
+    sd ra, 64(sp)
+    sd s0, 56(sp)
+    addi s0, sp, 56
+    li t0, 6
     addi sp, sp, -8
+    sd t0, 0(sp)
     la a0, id
     li a1, 1
     call alloc_closure
     mv t0, a0
-    sd t0, 0(sp)
     addi sp, sp, -8
-    li t0, 6
     sd t0, 0(sp)
-    ld a0, 0(sp)
-    addi sp, sp, 8
+    ld a0, 8(sp)
     ld a1, 0(sp)
-    addi sp, sp, 8
+    addi sp, sp, 16
     call fib
     mv t0, a0
     sd t0, -8(s0)

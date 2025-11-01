@@ -2,6 +2,6 @@
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
 
-open Anf
+open Common
 
-val cc_program: aprogram -> aprogram
+val cc_program: Ast.program -> Ast.program
