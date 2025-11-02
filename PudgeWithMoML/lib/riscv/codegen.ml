@@ -425,21 +425,22 @@ let gen_astr_item (var_arity : string -> int) : astr_item -> instr list M.t = fu
 ;;
 
 let gen_bss_section (pr : aprogram) : instr list t =
+  let module StringSet = Set.Make (String) in
   (* get list of global variables that are not functions and generate bss section (local variables) *)
-  let get_globals_variables (pr : aprogram) : ident list t =
+  let get_globals_variables (pr : aprogram) =
     let rec helper acc (astrs : astr_item list) =
       (* After lambda lifting we don't have inner functions that make our life mush easy :) *)
       match astrs with
-      | [] -> List.rev acc |> return
+      | [] -> acc |> return
       | (_, (_, ACExpr (CLambda (_, _))), []) :: tl -> helper acc tl
-      | (_, (name, _), []) :: tl -> helper (name :: acc) tl
+      | (_, (name, _), []) :: tl -> helper (StringSet.add name acc) tl
       | (_, (_, _), _ :: _) :: _ ->
         fail "Multiple bindings in astr_item not implemented yet"
     in
-    helper [] pr
+    helper StringSet.empty pr
   in
-  let* vars = get_globals_variables pr in
-  List.map (fun v -> DWord v) vars |> return
+  let+ vars = get_globals_variables pr in
+  StringSet.fold (fun v acc -> DWord v :: acc) vars []
 ;;
 
 let is_function = function

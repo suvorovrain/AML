@@ -653,8 +653,8 @@
     li a7, 94
     ecall
   .data
-  x__0: .dword 0
   x__1: .dword 0
+  x__0: .dword 0
   main__2: .dword 0
 
 (Global variables with partial application)
@@ -754,8 +754,8 @@
     li a7, 94
     ecall
   .data
-  add5__3: .dword 0
   main__4: .dword 0
+  add5__3: .dword 0
 
 (A lot of global variables with partial application)
   $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
@@ -928,11 +928,11 @@
     li a7, 94
     ecall
   .data
-  add5__3: .dword 0
+  main__7: .dword 0
   inc__4: .dword 0
   homka__5: .dword 0
   homka122__6: .dword 0
-  main__7: .dword 0
+  add5__3: .dword 0
 
 ( global and local x )
   $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
@@ -985,8 +985,8 @@
     ecall
   .data
   x__0: .dword 0
-  f__1: .dword 0
   g__3: .dword 0
+  f__1: .dword 0
 
   $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let t = if true then 1 else 2         
@@ -1216,6 +1216,15 @@
   let _ = let anf_t0 = f__0 5 in
     print_int anf_t0 
 
+( many toplevel wildcards )
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
+  > let _ = print_int 3
+  > let _ = print_int 5
+  > EOF
+  $ qemu-riscv64 -L /usr/riscv64-linux-gnu -cpu rv64 ../main.exe  | tee -a results.txt && echo "-----" >> results.txt
+  3
+  5
+
 ( IT MUST BE AT THE END OF THE CRAM TEST )
   $ cat results.txt
   5
@@ -1250,4 +1259,7 @@
   1
   -----
   8
+  -----
+  3
+  5
   -----
