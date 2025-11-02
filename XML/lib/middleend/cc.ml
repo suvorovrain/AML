@@ -9,7 +9,15 @@ open Common.Ast.Structure
 module SSet = Set.Make (String)
 module SMap = Map.Make (String)
 
-(* list of ops that shouldn't be inclosured *)
+(* ---------- error monad ---------- *)
+type cc_error = Empty_toplevel_let
+
+let string_of_cc_error = function
+  | Empty_toplevel_let -> "Cannot have empty let-binding at top level"
+;;
+
+let ( let* ) = Result.bind
+
 let std_lib_names =
   [ "print_int"
   ; "malloc"
@@ -176,17 +184,14 @@ let rec closure_expr toplvl_set env expr =
     let transform_case { first; second } =
       { first; second = closure_expr toplvl_set env second }
     in
-    let all_cases = case :: cases in
-    let new_cases = List.map transform_case all_cases in
-    (match new_cases with
-     | hd :: tl -> Exp_match (e', (hd, tl))
-     | [] -> failwith "Match expression with no cases")
+    let case' = transform_case case in
+    let cases' = List.map transform_case cases in
+    Exp_match (e', (case', cases'))
   | Exp_constant _ -> expr
   | Exp_construct (id, Some e) -> Exp_construct (id, Some (closure_expr toplvl_set env e))
   | Exp_construct (_, None) -> expr
   | Exp_constraint (e, t) -> Exp_constraint (closure_expr toplvl_set env e, t)
 
-(*Recursively converts the list of links. This function is required for correct handling of recursive ('let rec') and non-recursive connections, correctly updating the environment  'env'. *)
 and transform_bindings toplvl_set env rec_flag bindings =
   let transform_one binding env =
     let { pat; expr } = binding in
@@ -261,30 +266,47 @@ and transform_bindings toplvl_set env rec_flag bindings =
     List.rev transformed, final_env)
 ;;
 
-let closure_structure_item toplvl_set = function
+let closure_structure_item_result toplvl_set = function
   | Str_eval e ->
     let e' = closure_expr toplvl_set SMap.empty e in
-    Str_eval e', toplvl_set
+    Ok (Str_eval e', toplvl_set)
   | Str_value (rec_flag, (vb, vbs)) ->
     let bindings = vb :: vbs in
     let new_bindings, _ = transform_bindings toplvl_set SMap.empty rec_flag bindings in
     let new_bound_names = List.concat_map (fun b -> pattern_vars b.pat) new_bindings in
     let new_toplvl_set = SSet.union toplvl_set (SSet.of_list new_bound_names) in
     (match new_bindings with
-     | [] -> failwith "Cannot have empty let-binding at top level"
-     | hd :: tl -> Str_value (rec_flag, (hd, tl)), new_toplvl_set)
-  | Str_adt _ as item -> item, toplvl_set
+     | [] -> Error Empty_toplevel_let
+     | hd :: tl -> Ok (Str_value (rec_flag, (hd, tl)), new_toplvl_set))
+  | Str_adt _ as item -> Ok (item, toplvl_set)
+;;
+
+let closure_structure_item toplvl_set item =
+  match closure_structure_item_result toplvl_set item with
+  | Ok x -> x
+  | Error _e ->
+    (match item with
+     | Str_value (rec_flag, (vb, vbs)) ->
+       let bindings = vb :: vbs in
+       let bound_names = List.concat_map (fun b -> pattern_vars b.pat) bindings in
+       let new_toplvl_set = SSet.union toplvl_set (SSet.of_list bound_names) in
+       Str_value (rec_flag, (vb, vbs)), new_toplvl_set
+     | _ -> item, toplvl_set)
+;;
+
+let cc_program_result (ast : program) : (program, cc_error) result =
+  let toplvl0 = SSet.of_list std_lib_names in
+  let rec go acc current_top = function
+    | [] -> Ok (List.rev acc)
+    | item :: rest ->
+      let* new_item, next_top = closure_structure_item_result current_top item in
+      go (new_item :: acc) next_top rest
+  in
+  go [] toplvl0 ast
 ;;
 
 let cc_program (ast : program) : program =
-  let toplvl_set = SSet.of_list std_lib_names in
-  let transformed_ast, _ =
-    List.fold_left
-      (fun (items_acc, current_toplvl_set) item ->
-         let new_item, next_toplvl_set = closure_structure_item current_toplvl_set item in
-         new_item :: items_acc, next_toplvl_set)
-      ([], toplvl_set)
-      ast
-  in
-  List.rev transformed_ast
+  match cc_program_result ast with
+  | Ok p -> p
+  | Error _e -> ast
 ;;

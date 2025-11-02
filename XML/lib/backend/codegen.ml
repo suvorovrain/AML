@@ -333,12 +333,10 @@ let gen_func
     let num_reg_args = Array.length Target.arg_regs in
     let rec go i env = function
       | [] -> ok env
+      | p :: ps when i < num_reg_args -> go (i + 1) (Env.bind env p (Reg (A i))) ps
       | p :: ps ->
-        if i < num_reg_args
-        then go (i + 1) (Env.bind env p (Reg (A i))) ps
-        else (
-          let stack_offset = (2 + i - num_reg_args) * Target.word_size in
-          go (i + 1) (Env.bind env p (Stack_offset stack_offset)) ps)
+        let stack_offset = (2 + i - num_reg_args) * Target.word_size in
+        go (i + 1) (Env.bind env p (Stack_offset stack_offset)) ps
     in
     go 0 (Env.empty ()) params
   in
