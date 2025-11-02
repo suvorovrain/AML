@@ -1191,6 +1191,31 @@
     li a7, 94
     ecall
 
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
+  > let f = let g x y = x + y in fun t -> g t 3
+  > let _ = print_int (f 5)
+  > EOF
+  $ qemu-riscv64 -L /usr/riscv64-linux-gnu -cpu rv64 ../main.exe  | tee -a results.txt && echo "-----" >> results.txt
+  8
+  $ cat ../main.anf
+  let f_0 = fun x__1 ->
+    fun y__2 ->
+    x__1 + y__2 
+  
+  
+  let f_1 = fun g__3__new ->
+    fun t__4 ->
+    g__3__new t__4 3 
+  
+  
+  let f__0 = let anf_t4 = f_0 in
+    let g__3 = anf_t4 in
+    f_1 g__3 
+  
+  
+  let _ = let anf_t0 = f__0 5 in
+    print_int anf_t0 
+
 ( IT MUST BE AT THE END OF THE CRAM TEST )
   $ cat results.txt
   5
@@ -1223,4 +1248,6 @@
   5
   -----
   1
+  -----
+  8
   -----
