@@ -63,7 +63,6 @@ type cg_error =
   | `Too_many_args of string * int * int
   | `Call_non_function
   | `Tuple_not_impl
-  | `Too_many_reg_params
   ]
 
 type 'a r = ('a, cg_error) result
@@ -170,35 +169,42 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
               apply_chain (T 0) args_imms state
             | Some n when List.length args_imms = n ->
               let num_args = List.length args_imms in
-              (* process every arg and save on stack *)
+              let num_reg_args = Array.length Target.arg_regs in
+
+              (* process all args and save it on the stack *)
               let* () =
                 List.fold_left
                   (fun acc_res arg_imm ->
                      let* () = acc_res in
-                     let* () = gen_im_expr state (T 0) arg_imm in
-                     (* process and save in t0 *)
+                     let* () = gen_im_expr state (T 0) arg_imm in 
                      emit addi SP SP (-Target.word_size);
-                     (* get stack space *)
                      emit sd (T 0) (SP, 0);
-                     (* save result on stack *)
                      ok ())
                   (ok ())
                   args_imms
               in
-              (* load from stack to aN registers *)
+
+              (* load args from stack to the a0-a7 and stack *)
               List.iteri
                 (fun i _ ->
-                   if i < Array.length Target.arg_regs
+                   if i < num_reg_args
                    then (
                      let arg_reg = A i in
                      let stack_offset = (num_args - 1 - i) * Target.word_size in
-                     emit ld arg_reg (SP, stack_offset))
-                   else () (* args on stack are not supported *))
+                     emit ld arg_reg (SP, stack_offset)))
                 args_imms;
-              (* clear the stack *)
-              if num_args > 0 then emit addi SP SP (num_args * Target.word_size);
+              
+              let num_stack_args_to_pass = max 0 (num_args - num_reg_args) in
+              if num_reg_args < num_args then
+                emit addi SP SP (num_reg_args * Target.word_size);
+                
               emit call fname;
               emit mv (T 0) (A 0);
+
+              (* clear the stack *)
+              if num_stack_args_to_pass = 0
+              then emit addi SP SP (num_args * Target.word_size);
+
               ok state
             | Some n when List.length args_imms < n ->
               let m = List.length args_imms in
@@ -330,11 +336,16 @@ let gen_func
   : cg_state r
   =
   let env_params_res =
+    let num_reg_args = Array.length Target.arg_regs in
     let rec go i env = function
       | [] -> ok env
-      | p :: ps when i < Array.length Target.arg_regs ->
-        go (i + 1) (Env.bind env p (Reg (A i))) ps
-      | _ -> err `Too_many_reg_params
+      | p :: ps ->
+        if i < num_reg_args
+        then
+          go (i + 1) (Env.bind env p (Reg (A i))) ps
+        else (
+          let stack_offset = (2 + i - num_reg_args) * Target.word_size in
+          go (i + 1) (Env.bind env p (Stack_offset stack_offset)) ps)
     in
     go 0 (Env.empty ()) params
   in
@@ -443,5 +454,4 @@ let gen_program ppf (program : aprogram) =
          got)
   | Error `Call_non_function -> invalid_arg "Runtime error: attempted to call a number."
   | Error `Tuple_not_impl -> invalid_arg "Tuple values are not yet implemented"
-  | Error `Too_many_reg_params -> invalid_arg "Too many arguments for register passing"
 ;;
