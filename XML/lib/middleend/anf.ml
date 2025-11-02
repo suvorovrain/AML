@@ -139,17 +139,11 @@ let rec norm_comp expr (k : comp_expr -> nstate -> (anf_expr * nstate) r) (st : 
            in
            k ce st))
       st
-  | Exp_apply (_, _) ->
-    let rec collect_args_and_func expr acc =
-      match expr with
-      | Exp_apply (f, arg) -> collect_args_and_func f (arg :: acc)
-      | f -> f, acc
-    in
-    let func_expr, args_exprs = collect_args_and_func expr [] in
-    let flat_args = List.concat_map flatten_arg_expr args_exprs in
+  | Exp_apply (func_expr, arg_expr) ->
     norm_to_imm
       func_expr
       (fun func_imm ->
+         let flat_args = flatten_arg_expr arg_expr in
          norm_list_to_imm flat_args (fun args_imms st ->
            k (Comp_app (func_imm, args_imms)) st))
       st
