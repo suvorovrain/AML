@@ -43,11 +43,10 @@ let%expect_test "fac ll" =
   |};
   [%expect
     {|
-  let ll_2 k n m = k (( * ) m n);;
-  let ll_1 n k = if ( <= ) n 1 then k 1 else ll_0 (( - ) n 1) (ll_2 k n);;
-  let rec ll_0 = ll_1;;
-  let ll_3 x = x;;
-  let fac n = ll_0 n ll_3;;
+  let ll_1 k n m = k (( * ) m n);;
+  let rec ll_0 n k = if ( <= ) n 1 then k 1 else ll_0 (( - ) n 1) (ll_1 k n);;
+  let ll_2 x = x;;
+  let fac n = ll_0 n ll_2;;
   |}]
 ;;
 
@@ -80,9 +79,8 @@ let%expect_test "recursive multiple lets" =
   [%expect
     {|
   let ll_2 x y = ( + ) x y;;
-  let ll_3 c = ( + ) c (ll_0 5);;
   let rec ll_0 = ll_2 x
-  and ll_1 = ll_3;;
+  and ll_1 c = ( + ) c (ll_0 5);;
   let foo x = ( + ) (ll_0 5) (ll_1 6);;
   |}]
 ;;
