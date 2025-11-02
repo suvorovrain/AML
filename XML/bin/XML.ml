@@ -15,6 +15,7 @@ type options =
   ; mutable show_ast : bool
   ; mutable show_anf : bool
   ; mutable show_cc : bool
+  ; mutable show_ll : bool
   }
 
 (* ------------------------------- *)
@@ -24,9 +25,10 @@ type options =
 let to_asm ast : string =
   let cc_program = Middleend.Cc.cc_program ast in
   let anf_ast = Middleend.Anf.anf_program cc_program in
+  let ll_anf = Middleend.Ll.lambda_lift_program anf_ast in
   let buf = Buffer.create 1024 in
   let ppf = formatter_of_buffer buf in
-  Backend.Codegen.gen_program ppf anf_ast;
+  Backend.Codegen.gen_program ppf ll_anf;
   pp_print_flush ppf ();
   Buffer.contents buf
 ;;
@@ -46,6 +48,11 @@ let compile_and_write options source_code =
   if options.show_anf
   then (
     Middleend.Pprinter.print_anf_program std_formatter anf_ast;
+    exit 0);
+  let anf_after_ll = Middleend.Ll.lambda_lift_program anf_ast in
+  if options.show_ll
+  then (
+    Middleend.Pprinter.print_anf_program std_formatter anf_after_ll;
     exit 0);
   let asm_code = to_asm ast in
   match options.output_file_name with
@@ -96,6 +103,7 @@ let () =
     ; show_ast = false
     ; show_anf = false
     ; show_cc = false
+    ; show_ll = false
     }
   in
   let usage_msg =
@@ -120,6 +128,9 @@ let () =
     ; ( "-fromfile"
       , Arg.String (fun fname -> options.from_file_name <- Some fname)
       , " <file>  Read source from file (preferred over positional arg)" )
+    ; ( "--ll"
+      , Arg.Unit (fun () -> options.show_ll <- true)
+      , "         Show ANF after lambda lifting and exit" )
     ]
   in
   let handle_anon_arg filename =

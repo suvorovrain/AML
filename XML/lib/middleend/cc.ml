@@ -261,8 +261,7 @@ and transform_bindings toplvl_set env rec_flag bindings =
     List.rev transformed, final_env)
 ;;
 
-let closure_structure_item toplvl_set item =
-  match item with
+let closure_structure_item toplvl_set = function
   | Str_eval e ->
     let e' = closure_expr toplvl_set SMap.empty e in
     Str_eval e', toplvl_set
