@@ -38,9 +38,9 @@ let compile input_file output_file =
        let alpha_prog = convert_program aprogram in
        (match cc_transform alpha_prog with
         | Ok _aprogram ->
-          (match ll_transform aprogram with
+          (match ll_transform _aprogram with
            | Ok _aprogram ->
-             let asm = Format.asprintf "%a" codegen aprogram in
+             let asm = Format.asprintf "%a" codegen _aprogram in
              write_file output_file asm;
              Printf.printf "Generated: %s\n" output_file
            | Error _ -> failwith "TODO")

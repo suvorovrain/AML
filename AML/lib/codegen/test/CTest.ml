@@ -89,10 +89,10 @@ let%expect_test "some branches" =
       .globl f
       .type f, @function
     f:
-      addi sp, sp, -56
-      sd ra, 48(sp)
-      sd s0, 40(sp)
-      addi s0, sp, 56
+      addi sp, sp, -64
+      sd ra, 56(sp)
+      sd s0, 48(sp)
+      addi s0, sp, 64
       li t0, 5
       sd t0, -24(s0)
       li t0, 2
@@ -114,8 +114,8 @@ let%expect_test "some branches" =
       ld a0, -48(s0)
     .Lendif_1:
     f_end:
-      ld ra, 48(sp)
-      ld s0, 40(sp)
-      addi sp, sp, 56
+      ld ra, 56(sp)
+      ld s0, 48(sp)
+      addi sp, sp, 64
       ret |}]
 ;;
