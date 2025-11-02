@@ -378,6 +378,281 @@
   $ qemu-riscv64 ./fibcps_ll.elf
   8
 
+  $ ../../../bin/AML.exe ./manytests/typed/012faccps.ml faccps.s
+  Generated: faccps.s
+  $ cat faccps.s
+  ;; Codegen error: Codegen: function k not found in arity_map
+  $ riscv64-linux-gnu-as -march=rv64gc faccps.s -o faccps.o
+  faccps.s: Assembler messages:
+  faccps.s:1: Error: unrecognized opcode `codegen error:Codegen:function k not found in arity_map'
+  [1]
+  $ riscv64-linux-gnu-gcc -static faccps.o -L../../../runtime -l:libruntime.a -o faccps.elf -Wl,--no-warnings
+  collect2: error: ld returned 1 exit status
+  [1]
+  $ qemu-riscv64 ./faccps.elf
+  [1]
+
+  $ ../../../bin/AML.exe ./manytests/typed/012fibcps.ml fibcps.s
+  Generated: fibcps.s
+  $ cat fibcps.s
+  ;; Codegen error: Codegen: function k not found in arity_map
+  $ riscv64-linux-gnu-as -march=rv64gc fibcps.s -o fibcps.o
+  fibcps.s: Assembler messages:
+  fibcps.s:1: Error: unrecognized opcode `codegen error:Codegen:function k not found in arity_map'
+  [1]
+  $ riscv64-linux-gnu-gcc -static fibcps.o -L../../../runtime -l:libruntime.a -o fibcps.elf -Wl,--no-warnings
+  collect2: error: ld returned 1 exit status
+  [1]
+  $ qemu-riscv64 ./fibcps.elf
+  [1]
+
+  $ ../../../bin/AML.exe ./manytests/typed/004manyargs.ml many.s
+  Generated: many.s
+  $ cat many.s
+    .text
+    .globl wrap
+    .type wrap, @function
+  wrap:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    li t0, 1
+    li t1, 1
+    sub t2, t0, t1
+    slt t0, x0, t2
+    slt t3, t2, x0
+    add t0, t0, t3
+    xori t0, t0, 1
+    sd t0, -32(s0)
+    ld t0, -32(s0)
+    beq t0, x0, .Lelse_0
+    ld a0, -24(s0)
+    j .Lendif_1
+  .Lelse_0:
+    ld a0, -24(s0)
+  .Lendif_1:
+  wrap_end:
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl test3
+    .type test3, @function
+  test3:
+    addi sp, sp, -88
+    sd ra, 80(sp)
+    sd s0, 72(sp)
+    addi s0, sp, 88
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call print_int
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -48(s0)
+    ld t0, -48(s0)
+    sd t0, -56(s0)
+    addi sp, sp, -8
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call print_int
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -64(s0)
+    ld t0, -64(s0)
+    sd t0, -72(s0)
+    addi sp, sp, -8
+    ld t0, -40(s0)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call print_int
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -80(s0)
+    ld t0, -80(s0)
+    sd t0, -88(s0)
+    li a0, 0
+  test3_end:
+    ld ra, 80(sp)
+    ld s0, 72(sp)
+    addi sp, sp, 88
+    ret
+    
+    .globl test10
+    .type test10, @function
+  test10:
+    addi sp, sp, -160
+    sd ra, 152(sp)
+    sd s0, 144(sp)
+    addi s0, sp, 160
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    ld t0, 64(a1)
+    sd t0, -88(s0)
+    ld t0, 72(a1)
+    sd t0, -96(s0)
+    ld t0, -24(s0)
+    ld t1, -32(s0)
+    add t0, t0, t1
+    sd t0, -104(s0)
+    ld t0, -104(s0)
+    ld t1, -40(s0)
+    add t0, t0, t1
+    sd t0, -112(s0)
+    ld t0, -112(s0)
+    ld t1, -48(s0)
+    add t0, t0, t1
+    sd t0, -120(s0)
+    ld t0, -120(s0)
+    ld t1, -56(s0)
+    add t0, t0, t1
+    sd t0, -128(s0)
+    ld t0, -128(s0)
+    ld t1, -64(s0)
+    add t0, t0, t1
+    sd t0, -136(s0)
+    ld t0, -136(s0)
+    ld t1, -72(s0)
+    add t0, t0, t1
+    sd t0, -144(s0)
+    ld t0, -144(s0)
+    ld t1, -80(s0)
+    add t0, t0, t1
+    sd t0, -152(s0)
+    ld t0, -152(s0)
+    ld t1, -88(s0)
+    add t0, t0, t1
+    sd t0, -160(s0)
+    ld t0, -160(s0)
+    ld t1, -96(s0)
+    add a0, t0, t1
+  test10_end:
+    ld ra, 152(sp)
+    ld s0, 144(sp)
+    addi sp, sp, 160
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
+    addi sp, sp, -88
+    la a0, test10
+    li a1, 10
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    li t0, 1
+    sd t0, 8(sp)
+    li t0, 10
+    sd t0, 16(sp)
+    li t0, 100
+    sd t0, 24(sp)
+    li t0, 1000
+    sd t0, 32(sp)
+    li t0, 10000
+    sd t0, 40(sp)
+    li t0, 100000
+    sd t0, 48(sp)
+    li t0, 1000000
+    sd t0, 56(sp)
+    li t0, 10000000
+    sd t0, 64(sp)
+    li t0, 100000000
+    sd t0, 72(sp)
+    li t0, 1000000000
+    sd t0, 80(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call wrap
+    addi a0, a0, 0
+    li a1, 10
+    addi a2, sp, 8
+    call closure_apply
+    addi sp, sp, 88
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    ld t0, -24(s0)
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call print_int
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    ld t0, -40(s0)
+    sd t0, -48(s0)
+    addi sp, sp, -32
+    la a0, test3
+    li a1, 3
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    li t0, 1
+    sd t0, 8(sp)
+    li t0, 10
+    sd t0, 16(sp)
+    li t0, 100
+    sd t0, 24(sp)
+    li a0, 1
+    addi a1, sp, 0
+    call wrap
+    addi a0, a0, 0
+    li a1, 3
+    addi a2, sp, 8
+    call closure_apply
+    addi sp, sp, 32
+    addi t0, a0, 0
+    sd t0, -56(s0)
+    ld t0, -56(s0)
+    sd t0, -64(s0)
+    li a0, 0
+  main_end:
+    ld ra, 56(sp)
+    ld s0, 48(sp)
+    addi sp, sp, 64
+    li a0, 0
+    li a7, 93
+    ecall
+  $ riscv64-linux-gnu-as -march=rv64gc many.s -o many.o
+  $ riscv64-linux-gnu-gcc -static many.o -L../../../runtime -l:libruntime.a -o many.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./many.elf
+  1111111111110100
 =================== without partial ===================
   $ cat >fib.ml <<EOF
   > let rec fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)
@@ -1147,154 +1422,154 @@
   > EOF
   $ ../../../bin/AML.exe --dump-cc-ll-anf many_args_pa.ml
   let t_14 =
-    fun a4 ->
-      a0 a1 a2 a3 a4
+    fun a4__5 ->
+      a0__1 a1__2 a2__3 a3__4 a4__5
   
   let t_13 =
-    fun a3 ->
+    fun a3__4 ->
       t_14
   
   let t_12 =
-    fun a2 ->
+    fun a2__3 ->
       t_13
   
   let t_11 =
-    fun a1 ->
+    fun a1__2 ->
       t_12
   
   let t_10 =
-    fun a0 ->
+    fun a0__1 ->
       t_11
   
   let t_9 =
-    fun a3 ->
+    fun a3__4 ->
       let f_cc_7 = t_10 in
-      let closure_cc_8 = f_cc_7 a0 a1 a2 a3 in
+      let closure_cc_8 = f_cc_7 a0__1 a1__2 a2__3 a3__4 in
       closure_cc_8
   
   let t_8 =
-    fun a2 ->
+    fun a2__3 ->
       t_9
   
   let t_7 =
-    fun a1 ->
+    fun a1__2 ->
       t_8
   
   let t_6 =
-    fun a0 ->
+    fun a0__1 ->
       t_7
   
   let t_5 =
-    fun a2 ->
+    fun a2__3 ->
       let f_cc_5 = t_6 in
-      let closure_cc_6 = f_cc_5 a0 a1 a2 in
+      let closure_cc_6 = f_cc_5 a0__1 a1__2 a2__3 in
       closure_cc_6
   
   let t_4 =
-    fun a1 ->
+    fun a1__2 ->
       t_5
   
   let t_3 =
-    fun a0 ->
+    fun a0__1 ->
       t_4
   
   let t_2 =
-    fun a1 ->
+    fun a1__2 ->
       let f_cc_3 = t_3 in
-      let closure_cc_4 = f_cc_3 a0 a1 in
+      let closure_cc_4 = f_cc_3 a0__1 a1__2 in
       closure_cc_4
   
   let t_1 =
-    fun a0 ->
+    fun a0__1 ->
       t_2
   
   let t_0 =
-    fun a0 ->
+    fun a0__1 ->
       let f_cc_1 = t_1 in
-      let closure_cc_2 = f_cc_1 a0 in
+      let closure_cc_2 = f_cc_1 a0__1 in
       closure_cc_2
   
   let t_24 =
-    fun a4 ->
-      let t_2 = a1 + a2 in
-      let t_3 = t_2 + a3 in
-      t_3 + a4
+    fun a4__10 ->
+      let t_2__11 = a1__7 + a2__8 in
+      let t_3__12 = t_2__11 + a3__9 in
+      t_3__12 + a4__10
   
   let t_23 =
-    fun a3 ->
+    fun a3__9 ->
       t_24
   
   let t_22 =
-    fun a2 ->
+    fun a2__8 ->
       t_23
   
   let t_21 =
-    fun a1 ->
+    fun a1__7 ->
       t_22
   
   let t_20 =
-    fun a3 ->
+    fun a3__9 ->
       let f_cc_14 = t_21 in
-      let closure_cc_15 = f_cc_14 a1 a2 a3 in
+      let closure_cc_15 = f_cc_14 a1__7 a2__8 a3__9 in
       closure_cc_15
   
   let t_19 =
-    fun a2 ->
+    fun a2__8 ->
       t_20
   
   let t_18 =
-    fun a1 ->
+    fun a1__7 ->
       t_19
   
   let t_17 =
-    fun a2 ->
+    fun a2__8 ->
       let f_cc_12 = t_18 in
-      let closure_cc_13 = f_cc_12 a1 a2 in
+      let closure_cc_13 = f_cc_12 a1__7 a2__8 in
       closure_cc_13
   
   let t_16 =
-    fun a1 ->
+    fun a1__7 ->
       t_17
   
   let t_15 =
-    fun a1 ->
+    fun a1__7 ->
       let f_cc_10 = t_16 in
-      let closure_cc_11 = f_cc_10 a1 in
+      let closure_cc_11 = f_cc_10 a1__7 in
       closure_cc_11
   
   let t_27 =
-    fun a ->
-      f add4 a
+    fun a__14 ->
+      f__0 add4__6 a__14
   
   let t_26 =
-    fun f ->
+    fun f__0 ->
       t_27
   
   let t_25 =
-    fun add4 ->
+    fun add4__6 ->
       t_26
   
-  let f_cc_0 =
+  let f__0_cc_0 =
     t_0
   
-  let f =
-    f_cc_0
+  let f__0 =
+    f__0_cc_0
   
-  let add4_cc_9 =
+  let add4__6_cc_9 =
     t_15
   
-  let add4 =
-    add4_cc_9
+  let add4__6 =
+    add4__6_cc_9
   
-  let g_cc_16 =
+  let g__13_cc_16 =
     t_25
   
-  let g =
-    g_cc_16 add4 f
+  let g__13 =
+    g__13_cc_16 add4__6 f__0
   
-  let main =
-    let t_8 = g 1 1 1 1 in
-    print_int t_8
+  let main__15 =
+    let t_8__16 = g__13 1 1 1 1 in
+    print_int t_8__16
   $ ../../../bin/AML.exe many_args_pa.ml many_args_pa.s
   Generated: many_args_pa.s
   $ cat many_args_pa.s
@@ -1673,16 +1948,4 @@
   $ qemu-riscv64 ./many_args_pam.elf
   10
 
-  $ ../../../bin/AML.exe ./manytests/typed/012faccps.ml faccps.s
-  Generated: faccps.s
-  $ cat faccps.s
-  ;; Codegen error: CFun in ANF position is not lowered: expected lambda-lifting beforehand
-  $ riscv64-linux-gnu-as -march=rv64gc faccps.s -o faccps.o
-  faccps.s: Assembler messages:
-  faccps.s:1: Error: unrecognized opcode `codegen error:CFun in ANF position is not lowered:expected lambda-lifting beforehand'
-  [1]
-  $ riscv64-linux-gnu-gcc -static faccps.o -L../../../runtime -l:libruntime.a -o faccps.elf -Wl,--no-warnings
-  collect2: error: ld returned 1 exit status
-  [1]
-  $ qemu-riscv64 ./faccps.elf
-  [1]
+ 

@@ -136,7 +136,6 @@ and transform_expr expr k =
       let* else_res = transform_expr else_expr k in
       return (ACE (CIte (cond_res, then_res, else_res))))
   | Exp_fun ((pat_hd, pat_tl), exp) ->
-    (* 1. Transform the function body with the identity continuation *)
     let* body_anf = transform_expr exp (fun exp_res -> return @@ ACE (CImm exp_res)) in
     let* func_aexpr =
       fold_right_m
@@ -154,7 +153,7 @@ and transform_expr expr k =
         | ACE (CImm (ImmId id)) when String.equal t id -> return (ACE cfun)
         | _ -> return (ALet (Nonrecursive, t, cfun, rest)))
      | ALet _ ->
-       error "Internal error: ANF of function unexpectedly created a let-binding")
+       error "TODO: remove this shit")
   | _ -> error "unsupported expression in current ANF transformer"
 ;;
 
