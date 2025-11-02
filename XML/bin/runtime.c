@@ -15,7 +15,7 @@
 
 void print_int(int64_t n)
 {
-    printf("%" PRId64, n);
+    printf("%" PRId64 "\n", n);
     fflush(stdout);
 }
 
