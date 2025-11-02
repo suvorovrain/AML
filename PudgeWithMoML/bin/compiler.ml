@@ -23,6 +23,8 @@ type opts =
   ; mutable dump_parsetree : bool
   ; mutable dump_types : bool
   ; mutable dump_anf : bool
+  ; mutable dump_cc : bool
+  ; mutable gen_middleend : bool
   }
 
 let compiler opts =
@@ -35,9 +37,7 @@ let compiler opts =
   | Error e -> eprintf "Parsing error: %s\n" e
   | Ok program ->
     if opts.dump_parsetree
-    then (
-      PudgeWithMoML.Frontend.Ast.pp_program std_formatter program;
-      printf "\n")
+    then fprintf std_formatter "%a\n" PudgeWithMoML.Frontend.Ast.pp_program program
     else (
       match infer program with
       | Error e -> eprintf "Type error: %a\n" pp_error e
@@ -45,17 +45,19 @@ let compiler opts =
       | Ok _ ->
         (match program |> convert_program |> anf_program with
          | Error e -> eprintf "ANF conversion error: %s\n" e
+         | Ok anf when opts.dump_anf -> fprintf std_formatter "%a\n" pp_aprogram anf
          | Ok anf ->
            (match convert_cc_pr anf with
             | Error e -> eprintf "ANF closure conversion error: %s\n" e
-            | Ok anf ->
-              let anf = convert_ll_pr anf in
-              if opts.dump_anf
+            | Ok cc when opts.dump_cc -> fprintf std_formatter "%a\n" pp_aprogram cc
+            | Ok cc ->
+              let ll = convert_ll_pr cc in
+              if opts.gen_middleend
               then
                 Out_channel.with_file "main.anf" ~f:(fun oc ->
-                  pp_aprogram (Format.formatter_of_out_channel oc) anf);
+                  pp_aprogram (Format.formatter_of_out_channel oc) ll);
               Out_channel.with_file opts.output_file ~f:(fun oc ->
-                match gen_aprogram (Format.formatter_of_out_channel oc) anf with
+                match gen_aprogram (Format.formatter_of_out_channel oc) ll with
                 | Error e -> eprintf "Codegen error: %s\n" e
                 | Ok () -> ()))))
 ;;
@@ -67,6 +69,8 @@ let () =
     ; dump_parsetree = false
     ; dump_types = false
     ; dump_anf = false
+    ; dump_cc = false
+    ; gen_middleend = false
     }
   in
   let open Stdlib.Arg in
@@ -79,9 +83,14 @@ let () =
     ; ( "-dtypes"
       , Unit (fun _ -> opts.dump_types <- true)
       , "Dump types, don't codegen anything" )
-    ; ( "-anf"
-      , Unit (fun _ -> opts.dump_anf <- true)
-      , "Generate main.anf file with ANF representation" )
+    ; "-anf", Unit (fun _ -> opts.dump_anf <- true), "Dump ANF, don't codegen anything"
+    ; ( "-cc"
+      , Unit (fun _ -> opts.dump_cc <- true)
+      , "Dump ANF after closure conversion, don't codegen anything" )
+    ; ( "-gen_mid"
+      , Unit (fun _ -> opts.gen_middleend <- true)
+      , "Generate main.anf file with program representation after all middleend \
+         transformations" )
     ]
   in
   let anon_func _ =

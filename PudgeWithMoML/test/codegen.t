@@ -29,7 +29,7 @@
   main__0: .dword 0
 
 ( just add )
-  $ make compile opts=-anf --no-print-directory -C .. << 'EOF'
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let add x y = x + y
   > let main = print_int (add 5 2)
   > EOF
@@ -93,7 +93,7 @@
   main__3: .dword 0
 
 ( a lot of variables )
-  $ make compile opts=-anf --no-print-directory -C .. << 'EOF'
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let homka x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 = x0
   > let main = print_int (homka 122 1 2 3 4 5 6 7 8 9 10 11)
   > EOF
@@ -186,7 +186,7 @@
   main__13: .dword 0
 
 (just id)
-  $ make compile opts=-anf --no-print-directory -C .. << 'EOF'
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let id x1 x2 = x2
   > let main = print_int (id 5 5)
   > EOF
@@ -248,7 +248,7 @@
   main__3: .dword 0
 
 (function as argument)
-  $ make compile opts=-anf --no-print-directory -C .. << 'EOF'
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let app f x = f x
   > let inc x = x + 1
   > let main = print_int (app inc 5)
@@ -391,7 +391,7 @@
   res__0: .dword 0
 
 (simple partial application)
-  $ make compile opts=-anf --no-print-directory -C .. << 'EOF'
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let add x y = x + y
   > let main = let inc = add 1 in print_int (inc 121)
   > EOF
@@ -487,7 +487,7 @@
   main__3: .dword 0
 
 (double partial application)
-  $ make compile opts=-anf --no-print-directory -C .. << 'EOF'
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let add x y = x + y
   > let main = let inc = add 1 in let _ = print_int (inc 121) in print_int (inc 122)
   > EOF
@@ -612,7 +612,7 @@
   main__3: .dword 0
 
 (Global variables and .data section)
-  $ make compile opts=-anf --no-print-directory -C .. << 'EOF'
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let x = 4
   > let x = 5
   > let main = print_int 5
@@ -658,7 +658,7 @@
   main__2: .dword 0
 
 (Global variables with partial application)
-  $ make compile opts=-anf --no-print-directory -C .. << 'EOF'
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let add x y = x + y
   > let add5 = add 5
   > let main = print_int (add5 117)
@@ -758,7 +758,7 @@
   main__4: .dword 0
 
 (A lot of global variables with partial application)
-  $ make compile opts=-anf --no-print-directory -C .. << 'EOF'
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let add x y = x + y
   > let add5 = add 5
   > let inc = add 1
@@ -935,7 +935,7 @@
   main__7: .dword 0
 
 ( global and local x )
-  $ make compile opts=-anf --no-print-directory -C .. << 'EOF'
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let x = 5
   > let f = let x = 2 in print_int x
   > let g = print_int x
@@ -988,7 +988,7 @@
   f__1: .dword 0
   g__3: .dword 0
 
-  $ make compile opts=-anf --no-print-directory -C .. << 'EOF'
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let t = if true then 1 else 2         
   > let _ = print_int t
   > let f x = print_int x
@@ -1051,7 +1051,7 @@
   _: .dword 0
 
 (literals and bin operators)
-  $ make compile opts=-anf --no-print-directory -C .. << 'EOF'
+  $ make compile opts=-gen_mid --no-print-directory -C .. << 'EOF'
   > let homka = fun a -> ()
   > let homka = fun a -> false
   > let homka = fun a -> true

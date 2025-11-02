@@ -2,7 +2,7 @@
   $ rm -f results.txt
   $ touch results.txt
 
-  $ make compile opts=-anf input=test/manytests/typed/012faccps.ml --no-print-directory -C ..
+  $ make compile opts=-gen_mid input=test/manytests/typed/012faccps.ml --no-print-directory -C ..
   $ qemu-riscv64 -L /usr/riscv64-linux-gnu -cpu rv64 ../main.exe  | tee -a results.txt && echo "-----" >> results.txt
   720
   $ cat ../main.anf
@@ -214,7 +214,7 @@
   main__4: .dword 0
 
 
-  $ make compile opts=-anf input=test/manytests/typed/012fibcps.ml --no-print-directory -C ..
+  $ make compile opts=-gen_mid input=test/manytests/typed/012fibcps.ml --no-print-directory -C ..
   $ qemu-riscv64 -L /usr/riscv64-linux-gnu -cpu rv64 ../main.exe  | tee -a results.txt && echo "-----" >> results.txt
   8
   $ cat ../main.anf
@@ -504,7 +504,7 @@
   .data
   main__5: .dword 0
 
-  $ make compile opts=-anf input=test/manytests/typed/004manyargs.ml --no-print-directory -C ..
+  $ make compile opts=-gen_mid input=test/manytests/typed/004manyargs.ml --no-print-directory -C ..
   $ qemu-riscv64 -L /usr/riscv64-linux-gnu -cpu rv64 ../main.exe  | tee -a results.txt && echo "-----" >> results.txt
   1111111111
   1

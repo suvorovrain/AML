@@ -2,7 +2,7 @@
   $ rm -f results.txt
   $ touch results.txt
 
-  $ make compile opts=-anf input=bin/tests/fact --no-print-directory -C ..
+  $ make compile opts=-gen_mid input=bin/tests/fact --no-print-directory -C ..
   $ qemu-riscv64 -L /usr/riscv64-linux-gnu -cpu rv64 ../main.exe  | tee -a results.txt && echo "-----" >> results.txt
   24
   $ cat ../main.anf
@@ -96,7 +96,7 @@
   .data
   main__4: .dword 0
 
-  $ make compile opts=-anf input=bin/tests/fib --no-print-directory -C ..
+  $ make compile opts=-gen_mid input=bin/tests/fib --no-print-directory -C ..
   $ qemu-riscv64 -L /usr/riscv64-linux-gnu -cpu rv64 ../main.exe  | tee -a results.txt && echo "-----" >> results.txt
   55
   $ cat ../main.anf
@@ -202,7 +202,7 @@
   .data
   main__2: .dword 0
 
-  $ make compile opts=-anf input=bin/tests/large_if --no-print-directory -C ..
+  $ make compile opts=-gen_mid input=bin/tests/large_if --no-print-directory -C ..
   $ qemu-riscv64 -L /usr/riscv64-linux-gnu -cpu rv64 ../main.exe  | tee -a results.txt && echo "-----" >> results.txt
   42
   0
