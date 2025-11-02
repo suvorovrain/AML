@@ -74,6 +74,13 @@ let fresh_label prefix =
   return (Printf.sprintf ".L%s_%d" prefix id)
 ;;
 
+let fresh_fun_symbol () =
+  let* st = get_state in
+  let id = st.label_id in
+  let* () = set_state { st with label_id = id + 1 } in
+  return (Printf.sprintf "lam_%d" id)
+;;
+
 let allocate_local_var id =
   let* state = get_state in
   let new_offset = state.frame_offset + 8 in
@@ -135,7 +142,6 @@ let rec push_args_array (args : immexpr list) : int Codegen.t =
        (fun (i, arg) -> a_gen_immexpr t0 arg >> emit sd t0 (ROff (i * 8, sp)))
        (List.mapi args ~f:(fun i a -> i, a))
   >> return (n * 8)
-
 and a_gen_immexpr (dst : reg) (immexpr : immexpr) =
   match immexpr with
   | ImmNum i -> emit li dst i
@@ -149,14 +155,16 @@ and a_gen_immexpr (dst : reg) (immexpr : immexpr) =
      | None ->
        (match Map.find st.arity_map id with
         | Some arity when arity > 0 ->
+ 
           emit la a0 id
           >> emit li a1 arity
           >> emit call "closure_alloc"
           >> if not (equal_reg dst a0) then emit mv dst a0 else return ()
-        | _ -> emit la dst id))
-;;
+        | _ ->
 
-let rec a_gen_expr (dst : reg) (aexpr : aexpr) : unit Codegen.t =
+          emit la dst id))
+
+and a_gen_expr (dst : reg) (aexpr : aexpr) : unit Codegen.t =
   match aexpr with
   | ACE cexpr -> a_gen_cexpr dst cexpr
   | ALet (_rec_flag, id, cexpr, body) ->
@@ -175,6 +183,7 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
     let provided_arity = List.length args in
     (match Map.find st.env fname with
      | Some _ ->
+
        let* _bytes = push_args_array args in
        with_saved_caller_regs (fun lives ->
          let saved_cnt = List.length lives in
@@ -185,53 +194,57 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
          >> emit addi sp sp (8 * provided_arity)
          >> if not (equal_reg dst a0) then emit mv dst a0 else return ())
      | None ->
-       let total_arity = Map.find_exn st.arity_map fname in
-       if provided_arity = total_arity
-       then
-         let* _bytes = push_args_array args in
-         with_saved_caller_regs (fun lives ->
-           let saved_cnt = List.length lives in
-           emit li a0 provided_arity
-           >> emit addi a1 sp (8 * saved_cnt)
-           >> emit call fname
-           >> emit addi sp sp (8 * provided_arity)
-           >> if not (equal_reg dst a0) then emit mv dst a0 else return ())
-       else if provided_arity < total_arity
-       then
-         let* _bytes = push_args_array args in
-         with_saved_caller_regs (fun lives ->
-           let saved_cnt = List.length lives in
-           let need_pad = (provided_arity + saved_cnt) land 1 = 1 in
-           (if need_pad
-            then emit addi sp sp (-8) >> emit sd x0 (ROff (0, sp))
-            else return ())
-           >> emit la a0 fname (* a0 := &fname *)
-           >> emit li a1 total_arity (* a1 := arity(fname) *)
-           >> emit call "closure_alloc" (* a0 := closure_ptr *)
-           >> emit li a1 provided_arity
-           >> emit addi a2 sp (8 * (saved_cnt + if need_pad then 1 else 0))
-           >> emit call "closure_apply"
-           >> (if need_pad then emit addi sp sp 8 else return ())
-           >> emit addi sp sp (8 * provided_arity)
-           >> if not (equal_reg dst a0) then emit mv dst a0 else return ())
-       else
-         let* _bytes = push_args_array args in
-         with_saved_caller_regs (fun lives ->
-           let saved_cnt = List.length lives in
-           let rest = provided_arity - total_arity in
-           emit li a0 total_arity
-           >> emit addi a1 sp (8 * saved_cnt)
-           >> emit call fname
-           >> (if rest > 0
-               then
-                 emit mv a0 a0
-                 >> emit li a1 rest
-                 >> emit addi a2 sp (8 * (saved_cnt + total_arity))
-                 >> emit call "closure_apply"
+
+       (match Map.find st.arity_map fname with
+        | None ->
+          error (Printf.sprintf "Codegen: function %s not found in arity_map" fname)
+        | Some total_arity ->
+          if provided_arity = total_arity
+          then
+            let* _bytes = push_args_array args in
+            with_saved_caller_regs (fun lives ->
+              let saved_cnt = List.length lives in
+              emit li a0 provided_arity
+              >> emit addi a1 sp (8 * saved_cnt)
+              >> emit call fname
+              >> emit addi sp sp (8 * provided_arity)
+              >> if not (equal_reg dst a0) then emit mv dst a0 else return ())
+          else if provided_arity < total_arity
+          then
+            let* _bytes = push_args_array args in
+            with_saved_caller_regs (fun lives ->
+              let saved_cnt = List.length lives in
+              let need_pad = (provided_arity + saved_cnt) land 1 = 1 in
+              (if need_pad
+               then emit addi sp sp (-8) >> emit sd x0 (ROff (0, sp))
                else return ())
-           >> emit addi sp sp (8 * provided_arity)
-           >> if not (equal_reg dst a0) then emit mv dst a0 else return ()))
-  | CApp (ImmNum _, _) -> error "unreachable"
+              >> emit la a0 fname
+              >> emit li a1 total_arity
+              >> emit call "closure_alloc"
+              >> emit li a1 provided_arity
+              >> emit addi a2 sp (8 * (saved_cnt + if need_pad then 1 else 0))
+              >> emit call "closure_apply"
+              >> (if need_pad then emit addi sp sp 8 else return ())
+              >> emit addi sp sp (8 * provided_arity)
+              >> if not (equal_reg dst a0) then emit mv dst a0 else return ())
+          else
+            let* _bytes = push_args_array args in
+            with_saved_caller_regs (fun lives ->
+              let saved_cnt = List.length lives in
+              let rest = provided_arity - total_arity in
+              emit li a0 total_arity
+              >> emit addi a1 sp (8 * saved_cnt)
+              >> emit call fname
+              >> (if rest > 0
+                  then
+                    emit mv a0 a0
+                    >> emit li a1 rest
+                    >> emit addi a2 sp (8 * (saved_cnt + total_arity))
+                    >> emit call "closure_apply"
+                  else return ())
+              >> emit addi sp sp (8 * provided_arity)
+              >> if not (equal_reg dst a0) then emit mv dst a0 else return ())))
+  | CApp (ImmNum _, _) -> error "unreachable: numeric callee"
   | CIte (cond_imm, then_aexpr, else_aexpr) ->
     let* l_else = fresh_label "else" in
     let* l_end = fresh_label "endif" in
@@ -242,36 +255,62 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
     >> emit label l_else
     >> a_gen_expr dst else_aexpr
     >> emit label l_end
-  | CFun (_, _) ->
-    error "CFun in ANF position is not lowered: expected lambda-lifting beforehand"
-;;
+  | CFun (param, body) ->
 
-let rec a_count_local_vars = function
+    let rec collect params = function
+      | ACE (CFun (p, b)) -> collect (Pat_var p :: params) b
+      | a -> (List.rev (Pat_var param :: params), a)
+    in
+    let params, fun_body = collect [] body in
+    let* lam_name = fresh_fun_symbol () in
+
+    a_gen_func lam_name params fun_body
+    >>
+
+    let* st = get_state in
+    let arity_map' = Map.set st.arity_map ~key:lam_name ~data:(List.length params) in
+    set_state { st with arity_map = arity_map' }
+    >>
+    emit la a0 lam_name
+    >> emit li a1 (List.length params)
+    >> emit call "closure_alloc"
+    >> if not (equal_reg dst a0) then emit mv dst a0 else return ()
+
+
+and a_count_local_vars = function
   | ALet (_, _, _, body) -> 1 + a_count_local_vars body
   | ACE cexpr ->
     (match cexpr with
      | CIte (_, then_expr, else_expr) ->
        Int.max (a_count_local_vars then_expr) (a_count_local_vars else_expr)
      | _ -> 0)
-;;
 
-let a_bind_params_from_argv (params : Ast.Pattern.t list) : unit Codegen.t =
+
+and a_bind_params_from_argv (params : Ast.Pattern.t list) : unit Codegen.t =
   map_m
     (fun (i, pat) ->
        match pat with
        | Pat_var id ->
          let* slot = allocate_local_var id in
-         (* ld t0, i*8(a1) ; sd t0, slot *)
+         let* st = get_state in
+         let env' = Map.set st.env ~key:id ~data:(Loc_mem slot) in
+         let* () = set_state { st with env = env' } in
          emit ld t0 (ROff (i * 8, a1)) >> emit sd t0 slot
        | _ -> error "only simple variables are supported in parameters")
     (List.mapi params ~f:(fun i p -> i, p))
-;;
 
-let a_gen_func name args body =
+
+
+
+and a_gen_func name args body =
   let is_main = String.equal name "main" in
   let func_label = name in
   let locals_count = a_count_local_vars body + List.length args in
   let stack_size = 16 + (locals_count * 8) in
+  let* st0 = get_state in
+  let arity_map' = Map.set st0.arity_map ~key:name ~data:(List.length args) in
+  set_state { st0 with arity_map = arity_map' }
+  >>
   emit directive (Printf.sprintf ".globl %s" func_label)
   >> emit directive (Printf.sprintf ".type %s, @function" func_label)
   >> emit label func_label
@@ -293,6 +332,7 @@ let a_gen_func name args body =
     { global_state with
       label_id = final_state.label_id
     ; instructions = final_state.instructions
+    ; arity_map = final_state.arity_map
     }
   >> emit label (name ^ "_end")
   >> emit ld ra (ROff (stack_size - 8, sp))
@@ -301,50 +341,50 @@ let a_gen_func name args body =
   >> if is_main then emit li a0 0 >> emit li (A 7) 93 >> emit ecall else emit ret
 ;;
 
+let rec extract_fun_params_body (aexp : aexpr) =
+  match aexp with
+  | ACE (CFun (param, body)) ->
+    let params, final_body = extract_fun_params_body body in
+    Ast.Pattern.Pat_var param :: params, final_body
+  | _ -> [], aexp
+;;
+
 let codegen ppf (s : aprogram) =
-  let arity_map =
+
+  let initial_arity_map =
     List.fold
       s
       ~init:(Map.empty (module String))
       ~f:(fun acc -> function
         | AStr_value (_, name, expr) ->
-          let rec extract_fun_params_body (aexp : aexpr) =
-            match aexp with
-            | ACE (CFun (param, body)) ->
-              let params, final_body = extract_fun_params_body body in
-              Ast.Pattern.Pat_var param :: params, final_body
-            | _ -> [], aexp
-          in
           let params, _ = extract_fun_params_body expr in
           Map.set acc ~key:name ~data:(List.length params)
         | _ -> acc)
   in
-  let arity_map = Map.set arity_map ~key:"print_int" ~data:1 in
+  let initial_arity_map = Map.set initial_arity_map ~key:"print_int" ~data:1 in
+
   let initial_state =
     { env = Map.empty (module String)
     ; frame_offset = 0
     ; label_id = 0
     ; instructions = []
-    ; arity_map
+    ; arity_map = initial_arity_map
     }
   in
+
+  
   let program_gen =
     emit directive ".text"
     >> map_m
          (function
            | AStr_value (_rec_flag, name, expr) ->
-             let rec extract_fun_params_body (aexp : aexpr) =
-               match aexp with
-               | ACE (CFun (param, body)) ->
-                 let params, final_body = extract_fun_params_body body in
-                 Ast.Pattern.Pat_var param :: params, final_body
-               | _ -> [], aexp
-             in
              let params, body = extract_fun_params_body expr in
              a_gen_func name params body
-           | AStr_eval expr -> a_gen_func "main" [] expr)
+           | AStr_eval expr ->
+             a_gen_func "main" [] expr)
          s
   in
+
   let result, final_state = Codegen.run initial_state program_gen in
   match result with
   | Ok () -> pp_instrs ppf final_state.instructions

@@ -10,6 +10,7 @@ open Middle.Anf
 open Middle.Anf_pp
 open Middle.CC
 open Middle.LL
+open Middle.Alpha
 
 let usage_msg = "Usage: AML.exe <input file> <output file>"
 
@@ -34,7 +35,8 @@ let compile input_file output_file =
   | Ok (_, _) ->
     (match anf_transform program with
      | Ok aprogram ->
-       (match cc_transform aprogram with
+       let alpha_prog = convert_program aprogram in
+       (match cc_transform alpha_prog with
         | Ok _aprogram ->
           (match ll_transform aprogram with
            | Ok _aprogram ->
@@ -68,7 +70,8 @@ let dump_cc_anf input_file =
     let res = anf_transform program in
     (match res with
      | Ok aprogram ->
-       (match cc_transform aprogram with
+       let alpha_prog = convert_program aprogram in
+       (match cc_transform alpha_prog with
         | Ok aprogram ->
           pp_anf std_formatter aprogram;
           pp_print_flush std_formatter ()
@@ -85,7 +88,8 @@ let dump_cc_ll_anf input_file =
     let res = anf_transform program in
     (match res with
      | Ok aprogram ->
-       (match cc_transform aprogram with
+       let alpha_prog = convert_program aprogram in
+       (match cc_transform alpha_prog with
         | Ok aprogram ->
           (match ll_transform aprogram with
            | Ok aprogram ->
