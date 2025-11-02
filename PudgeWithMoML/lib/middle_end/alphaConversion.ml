@@ -236,7 +236,8 @@ let%expect_test "test_expr" =
       let result = run result 0 |> snd in
       printf "%a\n" pp_expr result)
     all_exprs;
-  [%expect {|
+  [%expect
+    {|
     1
     ((1), (2), (3))
     [1; 2]
