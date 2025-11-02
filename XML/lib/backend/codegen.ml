@@ -170,20 +170,18 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
             | Some n when List.length args_imms = n ->
               let num_args = List.length args_imms in
               let num_reg_args = Array.length Target.arg_regs in
-
               (* process all args and save it on the stack *)
               let* () =
                 List.fold_left
                   (fun acc_res arg_imm ->
                      let* () = acc_res in
-                     let* () = gen_im_expr state (T 0) arg_imm in 
+                     let* () = gen_im_expr state (T 0) arg_imm in
                      emit addi SP SP (-Target.word_size);
                      emit sd (T 0) (SP, 0);
                      ok ())
                   (ok ())
                   args_imms
               in
-
               (* load args from stack to the a0-a7 and stack *)
               List.iteri
                 (fun i _ ->
@@ -193,18 +191,14 @@ and gen_comp_expr (state : cg_state) (dst : reg) (cexpr : comp_expr) : cg_state 
                      let stack_offset = (num_args - 1 - i) * Target.word_size in
                      emit ld arg_reg (SP, stack_offset)))
                 args_imms;
-              
               let num_stack_args_to_pass = max 0 (num_args - num_reg_args) in
-              if num_reg_args < num_args then
-                emit addi SP SP (num_reg_args * Target.word_size);
-                
+              if num_reg_args < num_args
+              then emit addi SP SP (num_reg_args * Target.word_size);
               emit call fname;
               emit mv (T 0) (A 0);
-
               (* clear the stack *)
               if num_stack_args_to_pass = 0
               then emit addi SP SP (num_args * Target.word_size);
-
               ok state
             | Some n when List.length args_imms < n ->
               let m = List.length args_imms in
@@ -341,8 +335,7 @@ let gen_func
       | [] -> ok env
       | p :: ps ->
         if i < num_reg_args
-        then
-          go (i + 1) (Env.bind env p (Reg (A i))) ps
+        then go (i + 1) (Env.bind env p (Reg (A i))) ps
         else (
           let stack_offset = (2 + i - num_reg_args) * Target.word_size in
           go (i + 1) (Env.bind env p (Stack_offset stack_offset)) ps)

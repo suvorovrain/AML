@@ -52,3 +52,49 @@
                                     let t_10 = (1 = 1) in t_10
                          in let x = if t_11 then 0 else 1
                               in let t_12 = large x in t_12;;
+
+  $ cat manytests/typed/010fibcps_ll.ml
+  let id x = x
+  let fresh_2 p1 k p2 =
+    k (p1 + p2)
+  
+  let fresh_1 n k fib p1 =
+    fib (n-2) (fresh_2 p1 k)
+  
+  let rec fib n k =
+    if n < 2
+    then k n
+    else fib (n - 1) (fresh_1 n k fib)
+  
+  let main =
+    let z = print_int (fib 6 id)  in
+    0
+
+  $ ../bin/XML.exe --anf -fromfile manytests/typed/010fibcps_ll.ml
+  let id = let t_0 = fun x -> x in t_0;;
+  let fresh_2 = let t_3 = fun p1 k
+                            p2 -> let t_1 = (p1 + p2) in let t_2 = k t_1 in t_2
+                  in t_3;;
+  let fresh_1 = let t_9 = fun n k fib
+                            p1 -> let t_4 = (n - 2)
+                                    in let t_5 = fib t_4
+                                         in let t_6 = fresh_2 p1
+                                              in let t_7 = t_6 k
+                                                   in let t_8 = t_5 t_7 in t_8
+                  in t_9;;
+  let rec fib = let t_19 = fun n
+                             k -> let t_10 = (n < 2)
+                                    in let t_18 = if t_10 then let t_11 = k n
+                                                                 in t_11 else 
+                                                    let t_12 = (n - 1)
+                                                      in let t_13 = fib t_12
+                                                           in let t_14 = fresh_1 n
+                                                                in let t_15 = t_14 k
+                                                                     in 
+                                                                     let t_16 = t_15 fib
+                                                                      in 
+                                                                      let t_17 = t_13 t_16
+                                                                      in t_17
+                                         in t_18 in t_19;;
+  let main = let t_20 = fib 6
+               in let t_21 = t_20 id in let z = print_int t_21 in 0;;
