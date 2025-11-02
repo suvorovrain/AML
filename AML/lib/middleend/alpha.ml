@@ -19,9 +19,9 @@ module M = struct
   let bind m f st =
     let x, st' = m st in
     f x st'
+  ;;
 
   let ( let* ) = bind
-
   let get st = st, st
   let put st _ = (), st
 end
@@ -44,26 +44,26 @@ let convert_imm env = function
 ;;
 
 let rec convert_aexpr env = function
-  | ACE c ->
-    let* c' = convert_cexpr env c in
-    return (ACE c')
-  | ALet (flag, name, c, body) ->
-    let* c' = convert_cexpr env c in
+  | ACE exp ->
+    let* exp_res = convert_cexpr env exp in
+    return (ACE exp_res )
+  | ALet (flag, name, exp, body) ->
+    let* exp_res = convert_cexpr env exp in
     let* fresh_name = fresh name in
     let env' = Map.set env ~key:name ~data:fresh_name in
     let* body' = convert_aexpr env' body in
-    return (ALet (flag, fresh_name, c', body'))
+    return (ALet (flag, fresh_name, exp_res, body'))
 
 and convert_cexpr env = function
   | CImm imm ->
-    let* imm' = convert_imm env imm in
-    return (CImm imm')
-  | CBinop (op, a, b) ->
-    let* a' = convert_imm env a in
-    let* b' = convert_imm env b in
-    return (CBinop (op, a', b'))
+    let* imm_res = convert_imm env imm in
+    return (CImm imm_res)
+  | CBinop (op, exp1, exp2) ->
+    let* exp1_res = convert_imm env exp1 in
+    let* exp2_res = convert_imm env exp2 in
+    return (CBinop (op, exp1_res, exp2_res))
   | CApp (fn, args) ->
-    let* fn' = convert_imm env fn in
+    let* fn_res = convert_imm env fn in
     let* args' =
       let rec loop acc = function
         | [] -> return (List.rev acc)
@@ -73,28 +73,28 @@ and convert_cexpr env = function
       in
       loop [] args
     in
-    return (CApp (fn', args'))
-  | CIte (cond, t, e) ->
-    let* cond' = convert_imm env cond in
-    let* t' = convert_aexpr env t in
-    let* e' = convert_aexpr env e in
-    return (CIte (cond', t', e'))
+    return (CApp (fn_res, args'))
+  | CIte (cond, thenb, elseb) ->
+    let* cond_res = convert_imm env cond in
+    let* thenb_res = convert_aexpr env thenb in
+    let* elseb_res = convert_aexpr env elseb in
+    return (CIte (cond_res, thenb_res, elseb_res))
   | CFun (param, body) ->
     let* fresh_name = fresh param in
-    let env' = Map.set env ~key:param ~data:fresh_name in
-    let* body' = convert_aexpr env' body in
-    return (CFun (fresh_name, body'))
+    let new_env = Map.set env ~key:param ~data:fresh_name in
+    let* body_res = convert_aexpr new_env body in
+    return (CFun (fresh_name, body_res))
 ;;
 
 let convert_item env = function
   | AStr_value (flag, name, body) ->
     let* fresh_name = fresh name in
-    let env' = Map.set env ~key:name ~data:fresh_name in
-    let* body' = convert_aexpr env' body in
-    return (AStr_value (flag, fresh_name, body'), env')
-  | AStr_eval e ->
-    let* e' = convert_aexpr env e in
-    return (AStr_eval e', env)
+    let new_env = Map.set env ~key:name ~data:fresh_name in
+    let* body_res = convert_aexpr new_env body in
+    return (AStr_value (flag, fresh_name, body_res), new_env)
+  | AStr_eval exp->
+    let* exp_res = convert_aexpr env exp in
+    return (AStr_eval exp_res, env)
 ;;
 
 let rec convert_program_aux env = function
