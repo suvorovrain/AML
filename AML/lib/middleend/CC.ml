@@ -6,8 +6,6 @@ open Anf_types
 module SS = Set.Make (String)
 module SM = Map.Make (String)
 
-(* ---------------- State/monad ---------------- *)
-
 type cc_state =
   { temps : int
   ; bound : SS.t
@@ -82,7 +80,6 @@ let with_new_scope (new_bound : SS.t) (new_subst : immexpr SM.t) (comp : 'a CCSt
   let* () = put { old_st with bound = new_bound; subst = new_subst } in
   let* res = comp in
   let* new_st = get in
-  (* вернуть temps, чтобы счётчик не терялся *)
   let* () = put { old_st with temps = new_st.temps } in
   return res
 ;;
