@@ -57,3 +57,29 @@ $ cat ite.s
   $ qemu-riscv64 ./ite.elf
   420
 
+==== other ====
+=== without partial ===
+  $ cat >fib.ml <<EOF
+  > let rec fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)
+  > let main = let () = print_int (fib 4) in 0
+  > EOF
+  $ ../../../bin/AML.exe fib.ml fib.s
+  Generated: fib.s
+$ cat fib.s
+  $ riscv64-linux-gnu-as -march=rv64gc fib.s -o fib.o
+  $ riscv64-linux-gnu-gcc -static fib.o -L../../../runtime -l:libruntime.a -o fib.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./fib.elf
+  3
+
+=== partial application 11 ===
+  $ cat >many_args.ml <<EOF
+  > let f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 = a0+a1+a2+a3+a4+a5+a6+a7+a8+a9+a10
+  > let main = print_int (f 0 1 2 3 4 5 6 7 8 9 10)
+  > EOF
+  $ ../../../bin/AML.exe many_args.ml many_args.s
+  Generated: many_args.s
+$ cat many_args.s
+  $ riscv64-linux-gnu-as -march=rv64gc many_args.s -o many_args.o
+  $ riscv64-linux-gnu-gcc -static many_args.o -L../../../runtime -l:libruntime.a -o many_args.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./many_args.elf
+  55
