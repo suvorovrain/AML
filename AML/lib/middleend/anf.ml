@@ -152,7 +152,7 @@ and transform_expr expr k =
        (match rest with
         | ACE (CImm (ImmId id)) when String.equal t id -> return (ACE cfun)
         | _ -> return (ALet (Nonrecursive, t, cfun, rest)))
-     | ALet _ -> error "TODO: remove this shit")
+     | ALet _ -> error "unreachable")
   | _ -> error "unsupported expression in current ANF transformer"
 ;;
 

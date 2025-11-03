@@ -90,10 +90,11 @@ let with_binding (name : string) (comp : 'a CCState.t) =
   with_new_scope new_bound st.subst comp
 ;;
 
-let rec mk_fun (params : string list) (body : aexpr) : aexpr =
+let rec mk_fun_cexpr (params : string list) (body : aexpr) : cexpr =
   match params with
-  | [] -> body
-  | p :: ps -> ACE (CFun (p, mk_fun ps body))
+  | [ p ] -> CFun (p, body)
+  | p :: ps -> CFun (p, ACE (mk_fun_cexpr ps body))
+  | _ -> raise (Invalid_argument "unreachable")
 ;;
 
 let rec cc_aexpr = function
@@ -125,12 +126,7 @@ let rec cc_aexpr = function
            List.fold_left (fun acc p -> SS.add p acc) st.bound helper_params
          in
          let* new_body = with_new_scope inner_bound st.subst (cc_aexpr f_body) in
-         let helper_fun = mk_fun helper_params new_body in
-         let helper_cexpr =
-           match helper_fun with
-           | ACE c -> c
-           | _ -> assert false
-         in
+         let helper_cexpr = mk_fun_cexpr helper_params new_body in
          let clos_args =
            match rec_flag with
            | Recursive -> ImmId name :: List.map (fun x -> ImmId x) captured
@@ -161,16 +157,12 @@ and cc_cexpr_to_aexpr = function
       return (ACE (CFun (arg, body'))))
     else
       let* helper = fresh_name "f" in
+      let helper_params = captured @ [ arg ] in
       let inner =
         List.fold_left (fun acc p -> SS.add p acc) st.bound (captured @ [ arg ])
       in
       let* body' = with_new_scope inner st.subst (cc_aexpr body) in
-      let helper_fun = mk_fun (captured @ [ arg ]) body' in
-      let helper_cexpr =
-        match helper_fun with
-        | ACE c -> c
-        | _ -> assert false
-      in
+      let helper_cexpr = mk_fun_cexpr helper_params body' in
       let closure = CApp (ImmId helper, List.map (fun x -> ImmId x) captured) in
       return (ALet (Nonrecursive, helper, helper_cexpr, ACE closure))
   | CApp (ImmId id, args) ->
@@ -237,12 +229,8 @@ let cc_str_item = function
       in
       let inner = List.fold_left (fun acc p -> SS.add p acc) st.bound helper_params in
       let* body' = with_new_scope inner st.subst (cc_aexpr f_body) in
-      let helper_fun = mk_fun helper_params body' in
-      let helper_item =
-        match helper_fun with
-        | ACE c -> AStr_value (Nonrecursive, helper, ACE c)
-        | _ -> assert false
-      in
+      let helper_cexpr = mk_fun_cexpr helper_params body' in
+      let helper_item = AStr_value (Nonrecursive, helper, ACE helper_cexpr) in
       let closure_item =
         match rec_flag with
         | Nonrecursive ->
