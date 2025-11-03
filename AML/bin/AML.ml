@@ -35,12 +35,11 @@ let compile input_file output_file =
   | Ok (_, _) ->
     (match anf_transform program with
      | Ok aprogram ->
-       let alpha_prog = convert_program aprogram in
-       (match cc_transform alpha_prog with
-        | Ok _aprogram ->
-          (match ll_transform _aprogram with
-           | Ok _aprogram ->
-             let asm = Format.asprintf "%a" codegen _aprogram in
+       (match cc_transform aprogram with
+        | Ok _ccaprogram ->
+          (match ll_transform _ccaprogram with
+           | Ok _llaprogram ->
+             let asm = Format.asprintf "%a" codegen _llaprogram in
              write_file output_file asm;
              Printf.printf "Generated: %s\n" output_file
            | Error _ -> failwith "TODO")
@@ -88,8 +87,7 @@ let dump_cc_ll_anf input_file =
     let res = anf_transform program in
     (match res with
      | Ok aprogram ->
-       let alpha_prog = convert_program aprogram in
-       (match cc_transform alpha_prog with
+       (match cc_transform aprogram with
         | Ok aprogram ->
           (match ll_transform aprogram with
            | Ok aprogram ->
