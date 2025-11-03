@@ -67,6 +67,8 @@ end
 
 open Codegen
 
+let align16 n = if n land 15 = 0 then n else n + (16 - (n land 15))
+
 let fresh_label prefix =
   let* state = get_state in
   let id = state.label_id in
@@ -128,41 +130,55 @@ let restore_regs (rs : reg list) : unit Codegen.t =
   >> return ()
 ;;
 
-let with_saved_caller_regs (body : reg list -> unit Codegen.t) : unit Codegen.t =
-  let* lives = live_caller_regs_excluding_abi in
-  let* lives = save_regs lives in
-  let* () = body lives in
-  restore_regs lives
-;;
+type argv_slot =
+  | ArgvA1
+  | ArgvA2
 
-let rec push_args_array (args : immexpr list) : int Codegen.t =
-  let n = List.length args in
-  emit addi sp sp (-(8 * n))
+let rec with_call_frame (argv : argv_slot) (args : immexpr list) (k : unit Codegen.t)
+  : unit Codegen.t
+  =
+  let argc = List.length args in
+  let* lives = live_caller_regs_excluding_abi in
+  let saved_cnt = List.length lives in
+  let need_pad = (saved_cnt + argc) land 1 = 1 in
+  let* _ = save_regs lives in
+  (if need_pad then emit addi sp sp (-8) >> emit sd x0 (ROff (0, sp)) else return ())
+  >> emit addi sp sp (-(8 * argc))
   >> map_m
        (fun (i, arg) -> a_gen_immexpr t0 arg >> emit sd t0 (ROff (i * 8, sp)))
        (List.mapi args ~f:(fun i a -> i, a))
-  >> return (n * 8)
-and a_gen_immexpr (dst : reg) (immexpr : immexpr) =
-  match immexpr with
+  >> (match argv with
+    | ArgvA1 -> emit addi a1 sp 0
+    | ArgvA2 -> emit addi a2 sp 0)
+  >> k
+  >> emit addi sp sp (8 * argc)
+  >> (if need_pad then emit addi sp sp 8 else return ())
+  >> restore_regs lives
+
+and with_aligned_call_noargs (k : unit Codegen.t) : unit Codegen.t =
+  let* lives = live_caller_regs_excluding_abi in
+  let saved_cnt = List.length lives in
+  let need_pad = saved_cnt land 1 = 1 in
+  let* _ = save_regs lives in
+  (if need_pad then emit addi sp sp (-8) >> emit sd x0 (ROff (0, sp)) else return ())
+  >> k
+  >> (if need_pad then emit addi sp sp 8 else return ())
+  >> restore_regs lives
+
+and a_gen_immexpr dst = function
   | ImmNum i -> emit li dst i
   | ImmId id ->
     let* st = get_state in
     (match Map.find st.env id with
-     | Some loc ->
-       (match loc with
-        | Loc_reg r -> emit mv dst r
-        | Loc_mem m -> emit ld dst m)
+     | Some (Loc_reg r) -> emit mv dst r
+     | Some (Loc_mem m) -> emit ld dst m
      | None ->
        (match Map.find st.arity_map id with
-        | Some arity when arity > 0 ->
- 
-          emit la a0 id
-          >> emit li a1 arity
-          >> emit call "closure_alloc"
+        | Some arity ->
+          with_aligned_call_noargs
+            (emit la a0 id >> emit li a1 arity >> emit call "closure_alloc")
           >> if not (equal_reg dst a0) then emit mv dst a0 else return ()
-        | _ ->
-
-          emit la dst id))
+        | None -> emit la dst id))
 
 and a_gen_expr (dst : reg) (aexpr : aexpr) : unit Codegen.t =
   match aexpr with
@@ -179,71 +195,48 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
   | CBinop (bop, imm1, imm2) ->
     a_gen_immexpr t0 imm1 >> a_gen_immexpr t1 imm2 >> a_gen_bin_op bop dst t0 t1
   | CApp (ImmId fname, args) ->
+    let argc = List.length args in
     let* st = get_state in
-    let provided_arity = List.length args in
     (match Map.find st.env fname with
-     | Some _ ->
-
-       let* _bytes = push_args_array args in
-       with_saved_caller_regs (fun lives ->
-         let saved_cnt = List.length lives in
-         a_gen_immexpr a0 (ImmId fname)
-         >> emit li a1 provided_arity
-         >> emit addi a2 sp (8 * saved_cnt)
-         >> emit call "closure_apply"
-         >> emit addi sp sp (8 * provided_arity)
-         >> if not (equal_reg dst a0) then emit mv dst a0 else return ())
+     | Some _loc ->
+       with_call_frame
+         ArgvA2
+         args
+         (a_gen_immexpr a0 (ImmId fname) >> emit li a1 argc >> emit call "closure_apply")
+       >> if not (equal_reg dst a0) then emit mv dst a0 else return ()
      | None ->
-
        (match Map.find st.arity_map fname with
         | None ->
           error (Printf.sprintf "Codegen: function %s not found in arity_map" fname)
         | Some total_arity ->
-          if provided_arity = total_arity
+          if argc = total_arity
           then
-            let* _bytes = push_args_array args in
-            with_saved_caller_regs (fun lives ->
-              let saved_cnt = List.length lives in
-              emit li a0 provided_arity
-              >> emit addi a1 sp (8 * saved_cnt)
-              >> emit call fname
-              >> emit addi sp sp (8 * provided_arity)
-              >> if not (equal_reg dst a0) then emit mv dst a0 else return ())
-          else if provided_arity < total_arity
+            with_call_frame ArgvA1 args (emit li a0 argc >> emit call fname)
+            >> if not (equal_reg dst a0) then emit mv dst a0 else return ()
+          else if argc < total_arity
           then
-            let* _bytes = push_args_array args in
-            with_saved_caller_regs (fun lives ->
-              let saved_cnt = List.length lives in
-              let need_pad = (provided_arity + saved_cnt) land 1 = 1 in
-              (if need_pad
-               then emit addi sp sp (-8) >> emit sd x0 (ROff (0, sp))
-               else return ())
-              >> emit la a0 fname
-              >> emit li a1 total_arity
-              >> emit call "closure_alloc"
-              >> emit li a1 provided_arity
-              >> emit addi a2 sp (8 * (saved_cnt + if need_pad then 1 else 0))
-              >> emit call "closure_apply"
-              >> (if need_pad then emit addi sp sp 8 else return ())
-              >> emit addi sp sp (8 * provided_arity)
-              >> if not (equal_reg dst a0) then emit mv dst a0 else return ())
-          else
-            let* _bytes = push_args_array args in
-            with_saved_caller_regs (fun lives ->
-              let saved_cnt = List.length lives in
-              let rest = provided_arity - total_arity in
-              emit li a0 total_arity
-              >> emit addi a1 sp (8 * saved_cnt)
-              >> emit call fname
-              >> (if rest > 0
-                  then
-                    emit mv a0 a0
-                    >> emit li a1 rest
-                    >> emit addi a2 sp (8 * (saved_cnt + total_arity))
-                    >> emit call "closure_apply"
-                  else return ())
-              >> emit addi sp sp (8 * provided_arity)
-              >> if not (equal_reg dst a0) then emit mv dst a0 else return ())))
+            with_call_frame
+              ArgvA2
+              args
+              (emit la a0 fname
+               >> emit li a1 total_arity
+               >> emit call "closure_alloc"
+               >> emit li a1 argc
+               >> emit call "closure_apply")
+            >> if not (equal_reg dst a0) then emit mv dst a0 else return ()
+          else (
+            let prefix, rest = List.split_n args total_arity in
+            let restc = List.length rest in
+            with_call_frame ArgvA1 prefix (emit li a0 total_arity >> emit call fname)
+            >> (if restc = 0
+                then return ()
+                else
+                  emit mv t3 a0
+                  >> with_call_frame
+                       ArgvA2
+                       rest
+                       (emit mv a0 t3 >> emit li a1 restc >> emit call "closure_apply"))
+            >> if not (equal_reg dst a0) then emit mv dst a0 else return ())))
   | CApp (ImmNum _, _) -> error "unreachable: numeric callee"
   | CIte (cond_imm, then_aexpr, else_aexpr) ->
     let* l_else = fresh_label "else" in
@@ -256,26 +249,22 @@ and a_gen_cexpr (dst : reg) (cexpr : cexpr) : unit Codegen.t =
     >> a_gen_expr dst else_aexpr
     >> emit label l_end
   | CFun (param, body) ->
-
     let rec collect params = function
       | ACE (CFun (p, b)) -> collect (Pat_var p :: params) b
-      | a -> (List.rev (Pat_var param :: params), a)
+      | a -> List.rev (Pat_var param :: params), a
     in
     let params, fun_body = collect [] body in
     let* lam_name = fresh_fun_symbol () in
-
     a_gen_func lam_name params fun_body
     >>
-
     let* st = get_state in
     let arity_map' = Map.set st.arity_map ~key:lam_name ~data:(List.length params) in
     set_state { st with arity_map = arity_map' }
-    >>
-    emit la a0 lam_name
-    >> emit li a1 (List.length params)
-    >> emit call "closure_alloc"
+    >> with_aligned_call_noargs
+         (emit la a0 lam_name
+          >> emit li a1 (List.length params)
+          >> emit call "closure_alloc")
     >> if not (equal_reg dst a0) then emit mv dst a0 else return ()
-
 
 and a_count_local_vars = function
   | ALet (_, _, _, body) -> 1 + a_count_local_vars body
@@ -284,7 +273,6 @@ and a_count_local_vars = function
      | CIte (_, then_expr, else_expr) ->
        Int.max (a_count_local_vars then_expr) (a_count_local_vars else_expr)
      | _ -> 0)
-
 
 and a_bind_params_from_argv (params : Ast.Pattern.t list) : unit Codegen.t =
   map_m
@@ -299,19 +287,15 @@ and a_bind_params_from_argv (params : Ast.Pattern.t list) : unit Codegen.t =
        | _ -> error "only simple variables are supported in parameters")
     (List.mapi params ~f:(fun i p -> i, p))
 
-
-
-
 and a_gen_func name args body =
   let is_main = String.equal name "main" in
   let func_label = name in
   let locals_count = a_count_local_vars body + List.length args in
-  let stack_size = 16 + (locals_count * 8) in
+  let stack_size = align16 (16 + (locals_count * 8)) in
   let* st0 = get_state in
   let arity_map' = Map.set st0.arity_map ~key:name ~data:(List.length args) in
   set_state { st0 with arity_map = arity_map' }
-  >>
-  emit directive (Printf.sprintf ".globl %s" func_label)
+  >> emit directive (Printf.sprintf ".globl %s" func_label)
   >> emit directive (Printf.sprintf ".type %s, @function" func_label)
   >> emit label func_label
   >> emit addi sp sp (-stack_size)
@@ -350,7 +334,6 @@ let rec extract_fun_params_body (aexp : aexpr) =
 ;;
 
 let codegen ppf (s : aprogram) =
-
   let initial_arity_map =
     List.fold
       s
@@ -362,7 +345,6 @@ let codegen ppf (s : aprogram) =
         | _ -> acc)
   in
   let initial_arity_map = Map.set initial_arity_map ~key:"print_int" ~data:1 in
-
   let initial_state =
     { env = Map.empty (module String)
     ; frame_offset = 0
@@ -371,8 +353,6 @@ let codegen ppf (s : aprogram) =
     ; arity_map = initial_arity_map
     }
   in
-
-  
   let program_gen =
     emit directive ".text"
     >> map_m
@@ -380,11 +360,9 @@ let codegen ppf (s : aprogram) =
            | AStr_value (_rec_flag, name, expr) ->
              let params, body = extract_fun_params_body expr in
              a_gen_func name params body
-           | AStr_eval expr ->
-             a_gen_func "main" [] expr)
+           | AStr_eval expr -> a_gen_func "main" [] expr)
          s
   in
-
   let result, final_state = Codegen.run initial_state program_gen in
   match result with
   | Ok () -> pp_instrs ppf final_state.instructions
