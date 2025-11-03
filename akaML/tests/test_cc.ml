@@ -27,7 +27,18 @@ let%expect_test "simple cc" =
   |};
   [%expect
     {|
-  let foo a = let fn = (fun a b -> ( + ) a b) a in fn 3;;
+  let foo a = let fn a b = ( + ) a b in fn a 3;;
+  |}]
+;;
+
+let%expect_test "let in cc" =
+  run
+    {|
+  let test1 x y = let test2 i = (x, y, z) in test2
+  |};
+  [%expect
+    {|
+  let test1 z x y = let test2 x y z i = x, y, z in test2 x y z;;
   |}]
 ;;
 
@@ -61,14 +72,30 @@ let%expect_test "nonrecursive multiple lets" =
   |};
   [%expect
     {|
+  let foo x = let bar x y = ( + ) x y
+              and baz = 2 in ( + ) (bar x 2) baz;;
+  |}]
+;;
+
+let%expect_test "recursive multiple lets 1" =
+  run
+    {|
   let foo x =
-    let bar = (fun x y -> ( + ) x y) x
-    and baz = 2 in ( + ) (bar 2) baz
+    let rec bar y = x + y
+    and baz c = c + 5 in
+    bar 5 + baz 6
+  ;;
+  |};
+  [%expect
+    {|
+  let foo x =
+    let rec bar x y = ( + ) x y
+    and baz c = ( + ) c 5 in ( + ) (bar x 5) (baz 6)
   ;;
   |}]
 ;;
 
-let%expect_test "recursive multiple lets" =
+let%expect_test "recursive multiple lets 2" =
   run
     {|
   let foo x =
@@ -80,9 +107,9 @@ let%expect_test "recursive multiple lets" =
   [%expect
     {|
   let foo x =
-    let rec bar = (fun x y -> ( + ) x y) x
-    and baz c = ( + ) c (bar 5) in
-    ( + ) (bar 5) (baz 6)
+    let rec bar x y = ( + ) x y
+    and baz c = ( + ) c (bar x 5) in
+    ( + ) (bar x 5) (baz 6)
   ;;
   |}]
 ;;
@@ -101,10 +128,8 @@ let%expect_test "nested cc" =
   [%expect
     {|
   let outer x =
-    let mid =
-    (fun x y ->
-       (let inner = (fun x y z -> ( + ) (( + ) x y) z) x y in inner 3)) x in
-    mid 4
+    let mid x y = let inner x y z = ( + ) (( + ) x y) z in inner x y 3 in
+    mid x 4
   ;;
   |}]
 ;;
@@ -152,7 +177,7 @@ let%expect_test "sequence with cc" =
   |};
   [%expect
     {|
-  let g x = print_int x; (let h = (fun x y -> ( + ) x y) x in h 10);;
+  let g x = print_int x; (let h x y = ( + ) x y in h x 10);;
   |}]
 ;;
 
@@ -167,8 +192,7 @@ let%expect_test "tuple cc" =
   [%expect
     {|
   let pair_sum a b =
-    let f = (fun a b ( x, y ) -> ( + ) (( + ) (( + ) a b) x) y) a b in
-    f ( 1, 2 )
+    let f a b ( x, y ) = ( + ) (( + ) (( + ) a b) x) y in f a b ( 1, 2 )
   ;;
   |}]
 ;;

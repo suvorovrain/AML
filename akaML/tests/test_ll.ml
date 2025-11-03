@@ -31,6 +31,18 @@ let%expect_test "simple ll" =
   |}]
 ;;
 
+let%expect_test "let in ll" =
+  run
+    {|
+  let test1 ( x, y ) = let test2 x y i = x, y, i in test2 x y;;
+  |};
+  [%expect
+    {|
+  let ll_0 x y i = x, y, i;;
+  let test1 ( x, y ) = let test2 = ll_0 in test2 x y;;
+  |}]
+;;
+
 let%expect_test "fac ll" =
   run
     {|
@@ -53,17 +65,14 @@ let%expect_test "fac ll" =
 let%expect_test "nonrecursive multiple lets" =
   run
     {|
-  let foo x =
-    let bar = (fun x y -> x + y) x
-    and baz = 2 in
-    bar 2 + baz
-  ;;
+  let foo x = let bar x y = ( + ) x y
+              and baz = 2 in ( + ) (bar x 2) baz;;
   |};
   [%expect
     {|
   let ll_0 x y = ( + ) x y;;
-  let foo x = let bar = ll_0 x
-              and baz = 2 in ( + ) (bar 2) baz;;
+  let foo x = let bar = ll_0
+              and baz = 2 in ( + ) (bar x 2) baz;;
   |}]
 ;;
 
@@ -71,17 +80,16 @@ let%expect_test "recursive multiple lets" =
   run
     {|
   let foo x =
-    let rec bar = (fun x y -> x + y) x
-    and baz c = c + bar 5 in
-    bar 5 + baz 6
+    let rec bar x y = ( + ) x y
+    and baz c = ( + ) c (bar x 5) in
+    ( + ) (bar x 5) (baz 6)
   ;;
   |};
   [%expect
     {|
-  let ll_2 x y = ( + ) x y;;
-  let rec ll_0 = ll_2 x
-  and ll_1 c = ( + ) c (ll_0 5);;
-  let foo x = ( + ) (ll_0 5) (ll_1 6);;
+  let rec ll_0 x y = ( + ) x y
+  and ll_1 c = ( + ) c (ll_0 x 5);;
+  let foo x = ( + ) (ll_0 x 5) (ll_1 6);;
   |}]
 ;;
 
@@ -89,20 +97,15 @@ let%expect_test "nested ll" =
   run
     {|
   let outer x =
-    let mid =
-      (fun x y ->
-        let inner = (fun x y z -> x + y + z) x y in
-        inner 3)
-        x
-    in
-    mid 4
+    let mid x y = let inner x y z = ( + ) (( + ) x y) z in inner x y 3 in
+    mid x 4
   ;;
   |};
   [%expect
     {|
   let ll_1 x y z = ( + ) (( + ) x y) z;;
-  let ll_0 x y = let inner = ll_1 x y in inner 3;;
-  let outer x = let mid = ll_0 x in mid 4;;
+  let ll_0 x y = let inner = ll_1 in inner x y 3;;
+  let outer x = let mid = ll_0 in mid x 4;;
   |}]
 ;;
 
@@ -166,16 +169,12 @@ let%expect_test "match exp ll" =
 let%expect_test "sequence with ll" =
   run
     {|
-  let g x =
-    print_int x;
-    let h = (fun x y -> x + y) x in
-    h 10
-  ;;
+  let g x = print_int x; (let h x y = ( + ) x y in h x 10);;
   |};
   [%expect
     {|
   let ll_0 x y = ( + ) x y;;
-  let g x = print_int x; (let h = ll_0 x in h 10);;
+  let g x = print_int x; (let h = ll_0 in h x 10);;
   |}]
 ;;
 
@@ -183,13 +182,12 @@ let%expect_test "tuple ll" =
   run
     {|
   let pair_sum a b =
-    let f = (fun a b (x, y) -> a + b + x + y) a b in
-    f (1, 2)
+    let f a b ( x, y ) = ( + ) (( + ) (( + ) a b) x) y in f a b ( 1, 2 )
   ;;
   |};
   [%expect
     {|
   let ll_0 a b ( x, y ) = ( + ) (( + ) (( + ) a b) x) y;;
-  let pair_sum a b = let f = ll_0 a b in f ( 1, 2 );;
+  let pair_sum a b = let f = ll_0 in f a b ( 1, 2 );;
   |}]
 ;;
