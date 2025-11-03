@@ -65,7 +65,6 @@ let%expect_test "binary operations" =
       ld t0, -72(s0)
       sd t0, -80(s0)
       ld a0, -32(s0)
-    f_end:
       ld ra, 72(sp)
       ld s0, 64(sp)
       addi sp, sp, 80
@@ -113,7 +112,6 @@ let%expect_test "some branches" =
     .Lelse_0:
       ld a0, -48(s0)
     .Lendif_1:
-    f_end:
       ld ra, 56(sp)
       ld s0, 48(sp)
       addi sp, sp, 64
