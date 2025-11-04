@@ -36,7 +36,7 @@ module CCState = struct
       return (y :: ys)
   ;;
 
-  let run m st = m st
+  let run m = m { temps = 0; bound = SS.empty }
 end
 
 open CCState
@@ -281,8 +281,7 @@ let cc_program (prog : aprogram) : aprogram CCState.t =
 ;;
 
 let cc_transform (prog : aprogram) : (aprogram, string) result =
-  let initial_state = { temps = 0; bound = SS.empty } in
-  match CCState.run (cc_program prog) initial_state with
+  match CCState.run (cc_program prog) with
   | Ok converted_program, _ -> Ok converted_program
   | Error error_message, _ -> Error error_message
 ;;
