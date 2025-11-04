@@ -108,49 +108,49 @@ let rec cc_aexpr = function
        let* st = get in
        let fvs = free_vars_cexpr (CFun (arg, f_body)) in
        let captured = SS.elements (SS.inter fvs st.bound) in
-       if captured = []
-       then (
-         (* closed function case *)
-         let inner_bound =
-           match rec_flag with
-           | Recursive -> SS.add arg (SS.add name st.bound)
-           | Nonrecursive -> SS.add arg st.bound
-         in
-         let* converted_fun_body = with_new_scope inner_bound (cc_aexpr f_body) in
-         let* converted_let_body = with_binding name (cc_aexpr body) in
-         return
-           (ALet (rec_flag, name, CFun (arg, converted_fun_body), converted_let_body)))
-       else
-         (* transform current let into let for the helper function, followed by a let for the closure *)
-         let* helper_name = fresh_name name in
-         let helper_params =
-           match rec_flag with
-           | Recursive -> name :: (captured @ [ arg ])
-           | Nonrecursive -> captured @ [ arg ]
-         in
-         let inner_bound =
-           List.fold_left (fun acc p -> SS.add p acc) st.bound helper_params
-         in
-         let* converted_helper_body = with_new_scope inner_bound (cc_aexpr f_body) in
-         let lifted_helper_fun = mk_fun_cexpr helper_params converted_helper_body in
-         let closure_args =
-           match rec_flag with
-           | Recursive -> ImmId name :: List.map (fun x -> ImmId x) captured
-           | Nonrecursive -> List.map (fun x -> ImmId x) captured
-         in
-         let closure = CApp (ImmId helper_name, closure_args) in
-         let* converted_let_body = with_binding name (cc_aexpr body) in
-         (* return new structure:
+       (match captured with
+        | [] ->
+          (* closed function case *)
+          let inner_bound =
+            match rec_flag with
+            | Recursive -> SS.add arg (SS.add name st.bound)
+            | Nonrecursive -> SS.add arg st.bound
+          in
+          let* converted_fun_body = with_new_scope inner_bound (cc_aexpr f_body) in
+          let* converted_let_body = with_binding name (cc_aexpr body) in
+          return
+            (ALet (rec_flag, name, CFun (arg, converted_fun_body), converted_let_body))
+        | _ ->
+          (* transform current let into let for the helper function, followed by a let for the closure *)
+          let* helper_name = fresh_name name in
+          let helper_params =
+            match rec_flag with
+            | Recursive -> name :: (captured @ [ arg ])
+            | Nonrecursive -> captured @ [ arg ]
+          in
+          let inner_bound =
+            List.fold_left (fun acc p -> SS.add p acc) st.bound helper_params
+          in
+          let* converted_helper_body = with_new_scope inner_bound (cc_aexpr f_body) in
+          let lifted_helper_fun = mk_fun_cexpr helper_params converted_helper_body in
+          let closure_args =
+            match rec_flag with
+            | Recursive -> ImmId name :: List.map (fun x -> ImmId x) captured
+            | Nonrecursive -> List.map (fun x -> ImmId x) captured
+          in
+          let closure = CApp (ImmId helper_name, closure_args) in
+          let* converted_let_body = with_binding name (cc_aexpr body) in
+          (* return new structure:
           * let helper = ... in
           * let [rec] name = closure in
           * ... body ...
-         *)
-         return
-           (ALet
-              ( Nonrecursive
-              , helper_name
-              , lifted_helper_fun
-              , ALet (rec_flag, name, closure, converted_let_body) ))
+          *)
+          return
+            (ALet
+               ( Nonrecursive
+               , helper_name
+               , lifted_helper_fun
+               , ALet (rec_flag, name, closure, converted_let_body) )))
      | _ ->
        (* non-function let. e.g., let x = 5 *)
        let* converted_rhs = cc_cexpr rhs in
@@ -164,28 +164,28 @@ and cc_cexpr_to_aexpr = function
     let* st = get in
     let fvs = free_vars_cexpr (CFun (arg, body)) in
     let captured = SS.elements (SS.inter fvs st.bound) in
-    if captured = []
-    then (
-      let inner_bound = SS.add arg st.bound in
-      let* converted_body = with_new_scope inner_bound (cc_aexpr body) in
-      return (ACE (CFun (arg, converted_body))))
-    else
-      (* (fun x -> ...)
+    (match captured with
+     | [] ->
+       let inner_bound = SS.add arg st.bound in
+       let* converted_body = with_new_scope inner_bound (cc_aexpr body) in
+       return (ACE (CFun (arg, converted_body)))
+     | _ ->
+       (* (fun x -> ...)
        * becomes:
        * let helper_f = fun cap1 cap2 ... x -> ... in
        * helper_f (cap1_val, cap2_val, ...)
-      *)
-      let* helper_name = fresh_name "f" in
-      let helper_params = captured @ [ arg ] in
-      let inner_bound =
-        List.fold_left (fun acc p -> SS.add p acc) st.bound (captured @ [ arg ])
-      in
-      let* converted_helper_body = with_new_scope inner_bound (cc_aexpr body) in
-      let lifted_helper_fun = mk_fun_cexpr helper_params converted_helper_body in
-      let closure_creation =
-        CApp (ImmId helper_name, List.map (fun x -> ImmId x) captured)
-      in
-      return (ALet (Nonrecursive, helper_name, lifted_helper_fun, ACE closure_creation))
+       *)
+       let* helper_name = fresh_name "f" in
+       let helper_params = captured @ [ arg ] in
+       let inner_bound =
+         List.fold_left (fun acc p -> SS.add p acc) st.bound (captured @ [ arg ])
+       in
+       let* converted_helper_body = with_new_scope inner_bound (cc_aexpr body) in
+       let lifted_helper_fun = mk_fun_cexpr helper_params converted_helper_body in
+       let closure_creation =
+         CApp (ImmId helper_name, List.map (fun x -> ImmId x) captured)
+       in
+       return (ALet (Nonrecursive, helper_name, lifted_helper_fun, ACE closure_creation)))
   | CApp (f, args) -> return (ACE (CApp (f, args)))
   | CImm imm -> return (ACE (CImm imm))
   | CBinop (op, i1, i2) -> return (ACE (CBinop (op, i1, i2)))
@@ -214,53 +214,53 @@ let cc_str_item = function
     let* st = get in
     let fvs = free_vars_aexpr func in
     let captured = SS.elements (SS.inter fvs st.bound) in
-    if captured = []
-    then (
-      let inner_bound =
-        match rec_flag with
-        | Recursive -> SS.add arg (SS.add name st.bound)
-        | Nonrecursive -> SS.add arg st.bound
-      in
-      let* converted_body = with_new_scope inner_bound (cc_aexpr f_body) in
-      let* state_after_body = get in
-      let new_toplevel_bound = SS.add name st.bound in
-      let* () = put { state_after_body with bound = new_toplevel_bound } in
-      return [ AStr_value (rec_flag, name, ACE (CFun (arg, converted_body))) ])
-    else
-      let* helper_name = fresh_name name in
-      let helper_params =
-        match rec_flag with
-        | Recursive -> name :: (captured @ [ arg ])
-        | Nonrecursive -> captured @ [ arg ]
-      in
-      let inner_bound =
-        List.fold_left (fun acc p -> SS.add p acc) st.bound helper_params
-      in
-      let* converted_helper_body = with_new_scope inner_bound (cc_aexpr f_body) in
-      let lifted_helper_fun = mk_fun_cexpr helper_params converted_helper_body in
-      let helper_item = AStr_value (Nonrecursive, helper_name, ACE lifted_helper_fun) in
-      let closure_item =
-        match rec_flag with
-        | Nonrecursive ->
-          let clos = CApp (ImmId helper_name, List.map (fun x -> ImmId x) captured) in
-          AStr_value (Nonrecursive, name, ACE clos)
-        | Recursive ->
-          (*
-             * recursive 'name' is now a wrapper that calls helper with the captured environment and original argument
+    (match captured with
+     | [] ->
+       let inner_bound =
+         match rec_flag with
+         | Recursive -> SS.add arg (SS.add name st.bound)
+         | Nonrecursive -> SS.add arg st.bound
+       in
+       let* converted_body = with_new_scope inner_bound (cc_aexpr f_body) in
+       let* state_after_body = get in
+       let new_toplevel_bound = SS.add name st.bound in
+       let* () = put { state_after_body with bound = new_toplevel_bound } in
+       return [ AStr_value (rec_flag, name, ACE (CFun (arg, converted_body))) ]
+     | _ ->
+       let* helper_name = fresh_name name in
+       let helper_params =
+         match rec_flag with
+         | Recursive -> name :: (captured @ [ arg ])
+         | Nonrecursive -> captured @ [ arg ]
+       in
+       let inner_bound =
+         List.fold_left (fun acc p -> SS.add p acc) st.bound helper_params
+       in
+       let* converted_helper_body = with_new_scope inner_bound (cc_aexpr f_body) in
+       let lifted_helper_fun = mk_fun_cexpr helper_params converted_helper_body in
+       let helper_item = AStr_value (Nonrecursive, helper_name, ACE lifted_helper_fun) in
+       let closure_item =
+         match rec_flag with
+         | Nonrecursive ->
+           let clos = CApp (ImmId helper_name, List.map (fun x -> ImmId x) captured) in
+           AStr_value (Nonrecursive, name, ACE clos)
+         | Recursive ->
+           (*
+              * recursive 'name' is now a wrapper that calls helper with the captured environment and original argument
            *
            * let rec name = fun arg ->
            * helper_name (name, cap1, cap2, ..., arg)
-          *)
-          let clos_args = ImmId name :: List.map (fun x -> ImmId x) captured in
-          let wrapper =
-            ACE (CFun (arg, ACE (CApp (ImmId helper_name, clos_args @ [ ImmId arg ]))))
-          in
-          AStr_value (Recursive, name, wrapper)
-      in
-      let* state_after_body = get in
-      let new_toplevel_bound = SS.add helper_name (SS.add name st.bound) in
-      let* () = put { state_after_body with bound = new_toplevel_bound } in
-      return [ helper_item; closure_item ]
+           *)
+           let clos_args = ImmId name :: List.map (fun x -> ImmId x) captured in
+           let wrapper =
+             ACE (CFun (arg, ACE (CApp (ImmId helper_name, clos_args @ [ ImmId arg ]))))
+           in
+           AStr_value (Recursive, name, wrapper)
+       in
+       let* state_after_body = get in
+       let new_toplevel_bound = SS.add helper_name (SS.add name st.bound) in
+       let* () = put { state_after_body with bound = new_toplevel_bound } in
+       return [ helper_item; closure_item ])
   | AStr_value (rec_flag, name, aexpr) ->
     let* st = get in
     let inner_bound =

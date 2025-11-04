@@ -4,9 +4,9 @@ use std::process::abort;
 #[repr(C)]
 pub struct Closure {
     pub code: *const (),
-    pub arity: i64,     
-    pub applied: i64,   
-    pub args: Vec<i64>, 
+    pub arity: i64,
+    pub applied: i64,
+    pub args: Vec<i64>,
 }
 
 /// helper function to call a function with custom calling convention
@@ -59,7 +59,7 @@ pub unsafe extern "C" fn closure_apply(clos_raw: i64, argc: i64, argv: *const i6
 
     let src = &*clos_ptr;
     let total = src.arity as usize;
-    let have  = src.applied as usize;
+    let have = src.applied as usize;
 
     let mut args = Vec::with_capacity(have + argc as usize);
     args.extend_from_slice(&src.args);

@@ -4,4 +4,4 @@
 
 open Anf_types
 
-val ll_transform :  aprogram -> (aprogram, string) result
+val ll_transform : aprogram -> (aprogram, string) result
