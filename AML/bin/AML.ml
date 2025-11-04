@@ -38,13 +38,13 @@ let compile input_file output_file =
         | Ok _ccaprogram ->
           (match ll_transform _ccaprogram with
            | Ok _llaprogram ->
-             let asm = Format.asprintf "%a" codegen _llaprogram in
+             let asm = asprintf "%a" codegen _llaprogram in
              write_file output_file asm;
-             Printf.printf "Generated: %s\n" output_file
-           | Error _ -> failwith "TODO")
-        | Error _ -> failwith "TODO")
-     | Error msg -> Printf.eprintf "ANF transform error: %s\n" msg)
-  | Error err -> printf "%a" pp_inf_err err
+             printf "Generated: %s\n" output_file
+           | Error msg -> Format.eprintf "LL transform error: %s\n" msg)
+        | Error msg -> Format.eprintf "CC transform error: %s\n" msg)
+     | Error msg -> Format.eprintf "ANF transform error: %s\n" msg)
+  | Error err -> Format.printf "%a" pp_inf_err err
 ;;
 
 let dump_anf input_file =
@@ -56,8 +56,8 @@ let dump_anf input_file =
      | Ok aprogram ->
        pp_anf std_formatter aprogram;
        pp_print_flush std_formatter ()
-     | Error msg -> Printf.eprintf "ANF transform error: %s\n" msg)
-  | Error err -> printf "%a" pp_inf_err err
+     | Error msg -> Format.eprintf "ANF transform error: %s\n" msg)
+  | Error err -> Format.printf "%a" pp_inf_err err
 ;;
 
 let dump_cc_anf input_file =
@@ -72,9 +72,9 @@ let dump_cc_anf input_file =
         | Ok aprogram ->
           pp_anf std_formatter aprogram;
           pp_print_flush std_formatter ()
-        | Error _ -> failwith "TODO")
-     | Error msg -> Printf.eprintf "ANF transform error: %s\n" msg)
-  | Error err -> printf "%a" pp_inf_err err
+        | Error msg -> Format.eprintf "CC transform error: %s\n" msg)
+     | Error msg -> Format.eprintf "ANF transform error: %s\n" msg)
+  | Error err -> Format.printf "%a" pp_inf_err err
 ;;
 
 let dump_cc_ll_anf input_file =
@@ -91,10 +91,10 @@ let dump_cc_ll_anf input_file =
            | Ok aprogram ->
              pp_anf std_formatter aprogram;
              pp_print_flush std_formatter ()
-           | Error _ -> failwith "TODO")
-        | Error _ -> failwith "TODO")
-     | Error msg -> Printf.eprintf "ANF transform error: %s\n" msg)
-  | Error err -> printf "%a" pp_inf_err err
+           | Error msg -> Format.eprintf "LL transform error: %s\n" msg)
+        | Error msg -> Format.eprintf "CC transform error: %s\n" msg)
+     | Error msg -> Format.eprintf "ANF transform error: %s\n" msg)
+  | Error err -> Format.printf "%a" pp_inf_err err
 ;;
 
 let () =
