@@ -18,26 +18,27 @@ fn call_with_i64_args(code: *const (), args: &[i64]) -> i64 {
     }
 }
 
+/// Prints a single integer to stdout.
+///
+/// # Safety
+///
+/// Caller must ensure:
+/// - `argv` points to a valid memory region containing at least `argc` elements of type `i64`.
+/// - `argc` must be exactly 1; otherwise the function will abort.
 #[no_mangle]
-pub extern "C" fn print_int(argc: i64, argv: *const i64) -> i64 {
+pub unsafe extern "C" fn print_int(argc: i64, argv: *const i64) -> i64 {
     if argc != 1 {
         eprintln!("fatal: print_int expects 1 arg, got {}", argc);
         abort();
     }
-    unsafe {
-        let n = *argv.add(0);
-        print!("{}", n);
-        io::stdout().flush().unwrap();
-        n
-    }
+    let n = unsafe { *argv.add(0) };
+    print!("{}", n);
+    io::stdout().flush().unwrap();
+    n
 }
 
 #[no_mangle]
 pub extern "C" fn closure_alloc(func: *const (), arity: i64) -> i64 {
-    if arity < 0 || arity > 1_000_000 {
-        eprintln!("fatal: closure_alloc: insane arity {}", arity);
-        abort();
-    }
     let clos = Closure {
         code: func,
         arity,
@@ -47,8 +48,16 @@ pub extern "C" fn closure_alloc(func: *const (), arity: i64) -> i64 {
     Box::into_raw(Box::new(clos)) as i64
 }
 
-/// applies new arguments to a closure. leaks original closure and allocates new closure on partial application
-/// caller must ensure `clos_raw` and `argv` are valid pointers
+/// Applies new arguments to a closure. Performs partial application if argument count is insufficient,
+/// and invokes the underlying function when enough arguments are provided.
+/// The original closure is leaked intentionally (the caller is responsible for memory management).
+///
+/// # Safety
+///
+/// Caller must ensure:
+/// - `clos_raw` is a valid pointer (non-null) to a previously allocated `Closure` object created by [`closure_alloc`].
+/// - `argv` points to a contiguous memory region containing at least `argc` `i64` values.
+/// - `argc` must be non-negative.
 #[no_mangle]
 pub unsafe extern "C" fn closure_apply(clos_raw: i64, argc: i64, argv: *const i64) -> i64 {
     let clos_ptr = clos_raw as *mut Closure;
