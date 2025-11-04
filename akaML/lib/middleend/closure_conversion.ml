@@ -47,30 +47,18 @@ let rec free_vars_exp = function
     diff (free_vars_exp exp) bound_vars
   | Exp_apply (exp1, exp2) -> union (free_vars_exp exp1) (free_vars_exp exp2)
   | Exp_function (case, case_list) ->
-    let fvs_case { left; right } = union (get_vars_pat left) (free_vars_exp right) in
+    let fvs_case { left; right } = diff (free_vars_exp right) (get_vars_pat left) in
     let all_free =
       List.fold_left ~f:union ~init:(fvs_case case) (List.map case_list ~f:fvs_case)
     in
-    let bound =
-      List.fold_left
-        ~f:union
-        ~init:(get_vars_pat case.left)
-        (List.map case_list ~f:(fun c -> get_vars_pat c.left))
-    in
-    diff all_free bound
+    all_free
   | Exp_match (exp, case, case_list) ->
     let exp_free_vars = free_vars_exp exp in
-    let fvs_case { left; right } = diff (get_vars_pat left) (free_vars_exp right) in
+    let fvs_case { left; right } = diff (free_vars_exp right) (get_vars_pat left) in
     let all_free =
       List.fold_left ~f:union ~init:(fvs_case case) (List.map case_list ~f:fvs_case)
     in
-    let bound =
-      List.fold_left
-        ~f:union
-        ~init:(get_vars_pat case.left)
-        (List.map case_list ~f:(fun c -> get_vars_pat c.left))
-    in
-    union exp_free_vars (diff all_free bound)
+    union exp_free_vars all_free
   | Exp_ifthenelse (cond, then_exp, else_exp) ->
     let else_exp = Option.value_map else_exp ~f:free_vars_exp ~default:empty in
     union (free_vars_exp cond) (union (free_vars_exp then_exp) else_exp)
@@ -87,7 +75,22 @@ let safe_tl = function
   | _ :: tail -> tail
 ;;
 
-let rec cc_exp globals env ?(apply = true) = function
+let rec close_lambda ?(apply = false) globals env params body fvs =
+  let body' = cc_exp globals env body in
+  if Set.is_empty fvs
+  then Exp_fun (List.hd_exn params, safe_tl params, body')
+  else (
+    let env_vars = Set.to_list fvs in
+    let env_pats = List.map env_vars ~f:(fun x -> Pat_var x) in
+    let all_pats = env_pats @ params in
+    let base_fun = Exp_fun (List.hd_exn all_pats, safe_tl all_pats, body') in
+    if apply
+    then
+      List.fold_left env_vars ~init:base_fun ~f:(fun acc v ->
+        Exp_apply (acc, Exp_ident v))
+    else base_fun)
+
+and cc_exp globals env = function
   | Exp_ident id ->
     (match Map.find env id with
      | None -> Exp_ident id
@@ -101,19 +104,7 @@ let rec cc_exp globals env ?(apply = true) = function
   | Exp_fun (pat, pat_list, body) as lam ->
     let all_params = pat :: pat_list in
     let fvs = diff (free_vars_exp lam) globals in
-    let body' = cc_exp globals env body in
-    if is_empty fvs
-    then Exp_fun (pat, pat_list, body')
-    else (
-      let env_vars = to_list fvs in
-      let env_pats = List.map env_vars ~f:(fun x -> Pat_var x) in
-      let new_params = env_pats @ all_params in
-      let new_fun = Exp_fun (List.hd_exn new_params, safe_tl new_params, body') in
-      if apply
-      then
-        List.fold_left env_vars ~init:new_fun ~f:(fun acc fv ->
-          Exp_apply (acc, Exp_ident fv))
-      else new_fun)
+    close_lambda globals env all_params body fvs ~apply:true
   | Exp_apply (f, arg) -> Exp_apply (cc_exp globals env f, cc_exp globals env arg)
   | Exp_function (case, case_list) ->
     let case' = { case with right = cc_exp globals env case.right } in
@@ -159,27 +150,47 @@ and process_bindings globals env flag vb vb_list =
       ~init:(get_vars_pat vb.pat)
       (List.map vb_list ~f:(fun vb -> get_vars_pat vb.pat))
   in
-  let globals_for_defs =
-    match flag with
-    | Recursive -> union globals bound
-    | Nonrecursive -> globals
-  in
-  let env =
-    List.fold_left (vb :: vb_list) ~init:env ~f:(fun acc vb ->
-      match vb.exp with
-      | Exp_fun _ ->
-        let fvs = diff (free_vars_exp vb.exp) globals_for_defs in
-        add_pat_to_env acc vb.pat fvs
-      | _ -> acc)
-  in
-  let vb_list' =
-    List.map (vb :: vb_list) ~f:(fun vb ->
-      match vb with
-      | { pat = _; exp = Exp_fun _ } ->
-        { vb with exp = cc_exp globals_for_defs env ~apply:false vb.exp }
-      | _ -> { vb with exp = cc_exp globals_for_defs env vb.exp })
-  in
-  List.hd_exn vb_list', safe_tl vb_list', globals, env
+  match flag with
+  | Recursive ->
+    let globals = union globals bound in
+    let all_fvs =
+      vb :: vb_list
+      |> List.map ~f:(fun vb -> diff (free_vars_exp vb.exp) globals)
+      |> union_list
+    in
+    let env =
+      List.fold_left (vb :: vb_list) ~init:env ~f:(fun acc vb ->
+        add_pat_to_env acc vb.pat all_fvs)
+    in
+    let vb_list' =
+      List.map (vb :: vb_list) ~f:(fun vb ->
+        let fvs = diff all_fvs (get_vars_pat vb.pat) in
+        let new_fun' =
+          match vb.exp with
+          | Exp_fun (pat, pat_list, body) ->
+            let new_fun = close_lambda globals env (pat :: pat_list) body fvs in
+            new_fun
+          | _ -> cc_exp globals env vb.exp
+        in
+        { vb with exp = new_fun' })
+    in
+    List.hd_exn vb_list', safe_tl vb_list', globals, env
+  | Nonrecursive ->
+    let env, vb_list_rev =
+      List.fold_left (vb :: vb_list) ~init:(env, []) ~f:(fun acc vb ->
+        let env, funs = acc in
+        let fvs = diff (free_vars_exp vb.exp) globals in
+        let env, new_fun' =
+          match vb.exp with
+          | Exp_fun (pat, pat_list, body) ->
+            let new_fun = close_lambda globals env (pat :: pat_list) body fvs in
+            add_pat_to_env env vb.pat fvs, new_fun
+          | _ -> env, cc_exp globals env vb.exp
+        in
+        env, { vb with exp = new_fun' } :: funs)
+    in
+    let vb_list' = List.rev vb_list_rev in
+    List.hd_exn vb_list', safe_tl vb_list', globals, env
 ;;
 
 let cc_structure_item globals env = function

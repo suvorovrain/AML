@@ -34,12 +34,12 @@ let%expect_test "simple ll" =
 let%expect_test "let in ll" =
   run
     {|
-  let test1 ( x, y ) = let test2 x y i = x, y, i in test2 x y;;
+  let test1 x y = let test2 x y z = x, y, z in test2 x y;;
   |};
   [%expect
     {|
-  let ll_0 x y i = x, y, i;;
-  let test1 ( x, y ) = let test2 = ll_0 in test2 x y;;
+  let ll_0 x y z = x, y, z;;
+  let test1 x y = let test2 = ll_0 in test2 x y;;
   |}]
 ;;
 
@@ -62,7 +62,7 @@ let%expect_test "fac ll" =
   |}]
 ;;
 
-let%expect_test "nonrecursive multiple lets" =
+let%expect_test "nonrecursive multiple lets 1" =
   run
     {|
   let foo x = let bar x y = ( + ) x y
@@ -76,20 +76,58 @@ let%expect_test "nonrecursive multiple lets" =
   |}]
 ;;
 
-let%expect_test "recursive multiple lets" =
+let%expect_test "nonrecursive multiple lets 2" =
+  run
+    {|
+  let foo x = let bar y = y
+              and baz x c = ( + ) x c in ( + ) (bar 2) (baz x 5);;
+  ;;
+  |};
+  [%expect
+    {|
+  let ll_0 y = y;;
+  let ll_1 x c = ( + ) x c;;
+  let foo x = let bar = ll_0
+              and baz = ll_1 in ( + ) (bar 2) (baz x 5);;
+  |}]
+;;
+
+let%expect_test "recursive multiple lets 1" =
+  run
+    {|
+  let foo =
+    let count = 10 in
+    (let rec is_small count n =
+     if ( <= ) n count then true else is_big count (( - ) n 1)
+     and is_big count n =
+     if ( > ) n count then false else is_small count (( - ) n 1) in
+     is_small count 13)
+  ;;
+  |};
+  [%expect
+    {|
+  let rec ll_0 count n =
+    if ( <= ) n count then true else ll_1 count (( - ) n 1)
+  and ll_1 count n = if ( > ) n count then false else ll_0 count (( - ) n 1);;
+  let foo =
+    let count = 10 in ll_0 count 13;;
+  |}]
+;;
+
+let%expect_test "recursive multiple lets 2" =
   run
     {|
   let foo x =
     let rec bar x y = ( + ) x y
-    and baz c = ( + ) c (bar x 5) in
-    ( + ) (bar x 5) (baz 6)
+    and baz x c = ( + ) c (bar x 5) in
+    ( + ) (bar x 5) (baz x 6)
   ;;
   |};
   [%expect
     {|
   let rec ll_0 x y = ( + ) x y
-  and ll_1 c = ( + ) c (ll_0 x 5);;
-  let foo x = ( + ) (ll_0 x 5) (ll_1 6);;
+  and ll_1 x c = ( + ) c (ll_0 x 5);;
+  let foo x = ( + ) (ll_0 x 5) (ll_1 x 6);;
   |}]
 ;;
 

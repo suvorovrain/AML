@@ -34,11 +34,11 @@ let%expect_test "simple cc" =
 let%expect_test "let in cc" =
   run
     {|
-  let test1 x y = let test2 i = (x, y, z) in test2
+  let test1 x y = let test2 z = (x, y, z) in test2
   |};
   [%expect
     {|
-  let test1 z x y = let test2 x y z i = x, y, z in test2 x y z;;
+  let test1 x y = let test2 x y z = x, y, z in test2 x y;;
   |}]
 ;;
 
@@ -61,7 +61,7 @@ let%expect_test "fac cc" =
   |}]
 ;;
 
-let%expect_test "nonrecursive multiple lets" =
+let%expect_test "nonrecursive multiple lets 1" =
   run
     {|
   let foo x =
@@ -77,20 +77,41 @@ let%expect_test "nonrecursive multiple lets" =
   |}]
 ;;
 
-let%expect_test "recursive multiple lets 1" =
+let%expect_test "nonrecursive multiple lets 2" =
   run
     {|
   let foo x =
-    let rec bar y = x + y
-    and baz c = c + 5 in
-    bar 5 + baz 6
+    let bar y = y
+    and baz c = x + c in
+    bar 2 + baz 5
   ;;
   |};
   [%expect
     {|
-  let foo x =
-    let rec bar x y = ( + ) x y
-    and baz c = ( + ) c 5 in ( + ) (bar x 5) (baz 6)
+  let foo x = let bar y = y
+              and baz x c = ( + ) x c in ( + ) (bar 2) (baz x 5);;
+  |}]
+;;
+
+let%expect_test "recursive multiple lets 1" =
+  run
+    {|
+  let foo =
+    let count = 10 in
+    let rec is_small n = if n <= count then true else is_big (n - 1)
+    and is_big n = if n > count then false else is_small (n - 1) in
+    is_small 13
+  ;;
+  |};
+  [%expect
+    {|
+  let foo =
+    let count = 10 in
+    (let rec is_small count n =
+     if ( <= ) n count then true else is_big count (( - ) n 1)
+     and is_big count n =
+     if ( > ) n count then false else is_small count (( - ) n 1) in
+     is_small count 13)
   ;;
   |}]
 ;;
@@ -108,8 +129,8 @@ let%expect_test "recursive multiple lets 2" =
     {|
   let foo x =
     let rec bar x y = ( + ) x y
-    and baz c = ( + ) c (bar x 5) in
-    ( + ) (bar x 5) (baz 6)
+    and baz x c = ( + ) c (bar x 5) in
+    ( + ) (bar x 5) (baz x 6)
   ;;
   |}]
 ;;
