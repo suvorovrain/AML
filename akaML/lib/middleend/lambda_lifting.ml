@@ -101,30 +101,23 @@ let rec ll_exp ?(top_level = false) bindings = function
         ~init:(return ([], []))
         ~f:(fun acc b ->
           let* defs_acc, bodies_acc = acc in
-          match b.exp with
-          | Exp_fun (pat, pat_list, body_inner) ->
-            let name = Map.find_exn bindings (List.hd_exn (pat_bound_names b.pat)) in
-            let* defs_inner, body' = ll_exp bindings body_inner in
-            let vb_rec = { pat = Pat_var name; exp = Exp_fun (pat, pat_list, body') } in
-            return (defs_acc @ defs_inner, vb_rec :: bodies_acc)
-          | _ ->
-            let* defs_body, body' = ll_exp bindings b.exp in
-            let new_pat =
-              let rec rename_pat = function
-                | Pat_var s ->
-                  (match Map.find bindings s with
-                   | Some new_s -> Pat_var new_s
-                   | None -> Pat_var s)
-                | Pat_tuple (p1, p2, ps) ->
-                  Pat_tuple (rename_pat p1, rename_pat p2, List.map ps ~f:rename_pat)
-                | Pat_construct (id, p_opt) ->
-                  Pat_construct (id, Option.map p_opt ~f:rename_pat)
-                | Pat_constraint (p, t) -> Pat_constraint (rename_pat p, t)
-                | p -> p
-              in
-              rename_pat b.pat
+          let* defs_body, body' = ll_exp ~top_level:true bindings b.exp in
+          let new_pat =
+            let rec rename_pat = function
+              | Pat_var s ->
+                (match Map.find bindings s with
+                 | Some new_s -> Pat_var new_s
+                 | None -> Pat_var s)
+              | Pat_tuple (p1, p2, ps) ->
+                Pat_tuple (rename_pat p1, rename_pat p2, List.map ps ~f:rename_pat)
+              | Pat_construct (id, p_opt) ->
+                Pat_construct (id, Option.map p_opt ~f:rename_pat)
+              | Pat_constraint (p, t) -> Pat_constraint (rename_pat p, t)
+              | p -> p
             in
-            return (defs_acc @ defs_body, { pat = new_pat; exp = body' } :: bodies_acc))
+            rename_pat b.pat
+          in
+          return (defs_acc @ defs_body, { pat = new_pat; exp = body' } :: bodies_acc))
     in
     let decl_bodies, bodies = defs_res in
     let bodies = List.rev bodies in

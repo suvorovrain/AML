@@ -175,10 +175,9 @@ let%expect_test "function ll" =
   |};
   [%expect
     {|
-  let ll_1 = function
-             | 1 -> 1
-             | a -> ll_0 (( - ) a 1);;
-  let rec ll_0 = ll_1;;
+  let rec ll_0 = function
+                 | 1 -> 1
+                 | a -> ll_0 (( - ) a 1);;
   let foo = function
             | 0 -> 0
             | _ -> ll_0 3;;
