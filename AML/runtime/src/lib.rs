@@ -1,4 +1,3 @@
-// runtime.rs
 use std::io::{self, Write};
 use std::process::abort;
 
@@ -10,6 +9,7 @@ pub struct Closure {
     pub args: Vec<i64>, 
 }
 
+/// helper function to call a function with custom calling convention
 #[inline(always)]
 fn call_with_i64_args(code: *const (), args: &[i64]) -> i64 {
     unsafe {
@@ -47,6 +47,8 @@ pub extern "C" fn closure_alloc(func: *const (), arity: i64) -> i64 {
     Box::into_raw(Box::new(clos)) as i64
 }
 
+/// applies new arguments to a closure. leaks original closure and allocates new closure on partial application
+/// caller must ensure `clos_raw` and `argv` are valid pointers
 #[no_mangle]
 pub unsafe extern "C" fn closure_apply(clos_raw: i64, argc: i64, argv: *const i64) -> i64 {
     let clos_ptr = clos_raw as *mut Closure;
@@ -88,16 +90,4 @@ pub unsafe extern "C" fn closure_apply(clos_raw: i64, argc: i64, argv: *const i6
         let next_clos_raw = res;
         closure_apply(next_clos_raw, rest.len() as i64, rest.as_ptr())
     }
-}
-
-#[no_mangle]
-pub extern "C" fn make_closure(code: *const (), arity: i64, applied: i64, argv: *const i64) -> i64 {
-    let mut args = Vec::with_capacity(applied as usize);
-    unsafe {
-        for i in 0..(applied as usize) {
-            args.push(*argv.add(i));
-        }
-    }
-    let clos = Closure { code, arity, applied, args };
-    Box::into_raw(Box::new(clos)) as i64
 }

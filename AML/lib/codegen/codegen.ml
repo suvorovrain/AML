@@ -347,10 +347,7 @@ module Gen = struct
 
   (* generate code for a top-level function *)
   and gen_func name args body =
-    let is_main = String.equal name "main" in
-    let func_label = name in
-    (*
-       * Stack Layout:
+    (* Stack Layout:
      * [ ...           ]
      * [ local_N       ] -N*8(fp)
      * [ ...           ]
@@ -366,9 +363,9 @@ module Gen = struct
     let arity_map' = Map.set st0.arity_map ~key:name ~data:(List.length args) in
     set_state { st0 with arity_map = arity_map' }
     (* function prologue *)
-    >> emit directive (Printf.sprintf ".globl %s" func_label)
-    >> emit directive (Printf.sprintf ".type %s, @function" func_label)
-    >> emit label func_label
+    >> emit directive (Printf.sprintf ".globl %s" name)
+    >> emit directive (Printf.sprintf ".type %s, @function" name)
+    >> emit label name
     >> emit addi sp sp (-stack_size)
     >> emit sd ra (ROff (stack_size - 8, sp))
     >> emit sd fp (ROff (stack_size - 16, sp))
@@ -399,7 +396,10 @@ module Gen = struct
     >> emit ld ra (ROff (stack_size - 8, sp))
     >> emit ld fp (ROff (stack_size - 16, sp))
     >> emit addi sp sp stack_size
-    >> if is_main then emit li a0 0 >> emit li (A 7) 93 >> emit ecall else emit ret
+    >>
+    if String.equal name "main"
+    then emit li a0 0 >> emit li (A 7) 93 >> emit ecall
+    else emit ret
   ;;
 
   (* generate code for each top-level function (whole program) *)
