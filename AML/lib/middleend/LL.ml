@@ -17,8 +17,8 @@ module LLState = struct
 
   let bind m f st =
     match m st with
-    | Error e, st' -> Error e, st'
-    | Ok a, st' -> f a st'
+    | Error e, new_state -> Error e, new_state
+    | Ok a, new_state -> f a new_state
   ;;
 
   let ( let* ) = bind
@@ -59,57 +59,55 @@ let rec build_curried params body =
 let rec ll_cexpr = function
   | CImm i -> return (CImm i)
   | CBinop (op, a, b) -> return (CBinop (op, a, b))
-  | CApp (f, args) ->
-    let* args' = map_m (fun x -> return x) args in
-    let* f' = return f in
-    return (CApp (f', args'))
+  | CApp (f, args) -> return (CApp (f, args))
   | CIte (c, th, el) ->
-    let* th' = ll_aexpr th in
-    let* el' = ll_aexpr el in
-    return (CIte (c, th', el'))
-  | CFun (p, body0) ->
-    let params, core = collect_cfun [ p ] body0 in
-    let* core' = ll_aexpr core in
-    let* name = fresh_lam_name in
-    let lifted = build_curried params core' in
+    let* lifted_then = ll_aexpr th in
+    let* lifted_else = ll_aexpr el in
+    return (CIte (c, lifted_then, lifted_else))
+  | CFun (p, original_body) ->
+    let params, unwrapped_body = collect_cfun [ p ] original_body in
+    let* lifted_body = ll_aexpr unwrapped_body in
+    let* lifted_fun_name = fresh_lam_name in
+    let new_top_level_fun = build_curried params lifted_body in
     let* st = get in
-    let* () =
-      put { st with lifted = st.lifted @ [ AStr_value (Nonrecursive, name, lifted) ] }
-    in
-    return (CImm (ImmId name))
+    let new_lifted_item = AStr_value (Nonrecursive, lifted_fun_name, new_top_level_fun) in
+    let* () = put { st with lifted = new_lifted_item :: st.lifted } in
+    return (CImm (ImmId lifted_fun_name))
 
 and ll_aexpr = function
+  (* (let x = y in x) ==> y *)
   | ALet (Nonrecursive, x, CImm (ImmId y), ACE (CImm (ImmId x'))) when String.equal x x'
     -> return (ACE (CImm (ImmId y)))
+  (* (let x = f in x(args)) ==> f(args) *)
   | ALet (Nonrecursive, x, CImm (ImmId f), ACE (CApp (ImmId callee, args)))
     when String.equal x callee -> return (ACE (CApp (ImmId f, args)))
   | ACE c ->
-    let* c' = ll_cexpr c in
-    return (ACE c')
+    let* lifted_cexpr = ll_cexpr c in
+    return (ACE lifted_cexpr)
   | ALet (rf, name, rhs, body) ->
-    let* rhs' = ll_cexpr rhs in
-    let* body' = ll_aexpr body in
-    return (ALet (rf, name, rhs', body'))
+    let* lifted_rhs = ll_cexpr rhs in
+    let* lifted_body = ll_aexpr body in
+    return (ALet (rf, name, lifted_rhs, lifted_body))
 ;;
 
 let ll_program (prog : aprogram) : aprogram LLState.t =
-  let* items =
+  let* processed_items =
     map_m
       (function
         | AStr_value (rf, name, a) ->
-          let* a' = ll_aexpr a in
-          return (AStr_value (rf, name, a'))
+          let* lifted_aexpr = ll_aexpr a in
+          return (AStr_value (rf, name, lifted_aexpr))
         | AStr_eval a ->
-          let* a' = ll_aexpr a in
-          return (AStr_eval a'))
+          let* lifted_aexpr = ll_aexpr a in
+          return (AStr_eval lifted_aexpr))
       prog
   in
   let* st = get in
-  return (st.lifted @ items)
+  return (List.rev st.lifted @ processed_items)
 ;;
 
-let ll_transform (p : aprogram) : (aprogram, string) Result.t =
-  match LLState.run (ll_program p) with
-  | Ok out, _ -> Ok out
-  | Error e, _ -> Error e
+let ll_transform (program : aprogram) : (aprogram, string) Result.t =
+  match LLState.run (ll_program program) with
+  | Ok lifted_program, _ -> Ok lifted_program
+  | Error error_message, _ -> Error error_message
 ;;

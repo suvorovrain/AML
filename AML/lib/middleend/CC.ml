@@ -9,7 +9,6 @@ module SM = Map.Make (String)
 type cc_state =
   { temps : int
   ; bound : SS.t
-  ; subst : immexpr SM.t
   }
 
 module CCState = struct
@@ -21,8 +20,8 @@ module CCState = struct
   let bind (m : 'a t) (f : 'a -> 'b t) : 'b t =
     fun st ->
     match m st with
-    | Error msg, st' -> Error msg, st'
-    | Ok a, st' -> f a st'
+    | Error msg, new_state -> Error msg, new_state
+    | Ok a, new_state -> f a new_state
   ;;
 
   let ( let* ) = bind
@@ -44,9 +43,9 @@ open CCState
 
 let fresh_name (base : string) : string CCState.t =
   let* st = get in
-  let id = st.temps in
-  let* () = put { st with temps = id + 1 } in
-  return (Printf.sprintf "%s_cc_%d" base id)
+  let new_id = st.temps in
+  let* () = put { st with temps = new_id + 1 } in
+  return (Printf.sprintf "%s_cc_%d" base new_id)
 ;;
 
 let free_vars_imm = function
@@ -75,26 +74,30 @@ and free_vars_aexpr = function
     SS.union rhs_fvs body_fvs
 ;;
 
-let with_new_scope (new_bound : SS.t) (new_subst : immexpr SM.t) (comp : 'a CCState.t) =
+(* helper to run a computation `comp` in a new lexical scope *)
+let with_new_scope (new_bound : SS.t) (comp : 'a CCState.t) =
   let* old_st = get in
-  let* () = put { old_st with bound = new_bound; subst = new_subst } in
-  let* res = comp in
-  let* new_st = get in
-  let* () = put { old_st with temps = new_st.temps } in
-  return res
+  let* () = put { old_st with bound = new_bound } in
+  let* result = comp in
+  (* restore the old bound set, keep updated temps counter *)
+  let* state_after_comp = get in
+  let* () = put { old_st with temps = state_after_comp.temps } in
+  return result
 ;;
 
+(* helper for `with_new_scope` to add new name to the bound set *)
 let with_binding (name : string) (comp : 'a CCState.t) =
   let* st = get in
   let new_bound = SS.add name st.bound in
-  with_new_scope new_bound st.subst comp
+  with_new_scope new_bound comp
 ;;
 
+(* build a curried function from a list of parameters. e.g., [p1; p2] body -> CFun(p1, ACE(CFun(p2, body))) *)
 let rec mk_fun_cexpr (params : string list) (body : aexpr) : cexpr =
   match params with
   | [ p ] -> CFun (p, body)
   | p :: ps -> CFun (p, ACE (mk_fun_cexpr ps body))
-  | _ -> raise (Invalid_argument "unreachable")
+  | _ -> raise (Invalid_argument "unreachable: mk_fun_cexpr with empty params")
 ;;
 
 let rec cc_aexpr = function
@@ -107,16 +110,19 @@ let rec cc_aexpr = function
        let captured = SS.elements (SS.inter fvs st.bound) in
        if captured = []
        then (
+         (* closed function case *)
          let inner_bound =
            match rec_flag with
            | Recursive -> SS.add arg (SS.add name st.bound)
            | Nonrecursive -> SS.add arg st.bound
          in
-         let* new_body = with_new_scope inner_bound st.subst (cc_aexpr f_body) in
-         let* new_body' = with_binding name (cc_aexpr body) in
-         return (ALet (rec_flag, name, CFun (arg, new_body), new_body')))
+         let* converted_fun_body = with_new_scope inner_bound (cc_aexpr f_body) in
+         let* converted_let_body = with_binding name (cc_aexpr body) in
+         return
+           (ALet (rec_flag, name, CFun (arg, converted_fun_body), converted_let_body)))
        else
-         let* helper = fresh_name name in
+         (* transform current let into let for the helper function, followed by a let for the closure *)
+         let* helper_name = fresh_name name in
          let helper_params =
            match rec_flag with
            | Recursive -> name :: (captured @ [ arg ])
@@ -125,150 +131,158 @@ let rec cc_aexpr = function
          let inner_bound =
            List.fold_left (fun acc p -> SS.add p acc) st.bound helper_params
          in
-         let* new_body = with_new_scope inner_bound st.subst (cc_aexpr f_body) in
-         let helper_cexpr = mk_fun_cexpr helper_params new_body in
-         let clos_args =
+         let* converted_helper_body = with_new_scope inner_bound (cc_aexpr f_body) in
+         let lifted_helper_fun = mk_fun_cexpr helper_params converted_helper_body in
+         let closure_args =
            match rec_flag with
            | Recursive -> ImmId name :: List.map (fun x -> ImmId x) captured
            | Nonrecursive -> List.map (fun x -> ImmId x) captured
          in
-         let closure = CApp (ImmId helper, clos_args) in
-         let* new_body' = with_binding name (cc_aexpr body) in
+         let closure = CApp (ImmId helper_name, closure_args) in
+         let* converted_let_body = with_binding name (cc_aexpr body) in
+         (* return new structure:
+          * let helper = ... in
+          * let [rec] name = closure in
+          * ... body ...
+         *)
          return
            (ALet
               ( Nonrecursive
-              , helper
-              , helper_cexpr
-              , ALet (rec_flag, name, closure, new_body') ))
+              , helper_name
+              , lifted_helper_fun
+              , ALet (rec_flag, name, closure, converted_let_body) ))
      | _ ->
-       let* rhs' = cc_cexpr rhs in
-       let* body' = with_binding name (cc_aexpr body) in
-       return (ALet (rec_flag, name, rhs', body')))
+       (* non-function let. e.g., let x = 5 *)
+       let* converted_rhs = cc_cexpr rhs in
+       let* converted_body = with_binding name (cc_aexpr body) in
+       return (ALet (rec_flag, name, converted_rhs, converted_body)))
 
+(* cc for cexpr in tail position *)
 and cc_cexpr_to_aexpr = function
   | CFun (arg, body) ->
+    (* (fun x -> ...) *)
     let* st = get in
     let fvs = free_vars_cexpr (CFun (arg, body)) in
     let captured = SS.elements (SS.inter fvs st.bound) in
     if captured = []
     then (
-      let inner = SS.add arg st.bound in
-      let* body' = with_new_scope inner st.subst (cc_aexpr body) in
-      return (ACE (CFun (arg, body'))))
+      let inner_bound = SS.add arg st.bound in
+      let* converted_body = with_new_scope inner_bound (cc_aexpr body) in
+      return (ACE (CFun (arg, converted_body))))
     else
-      let* helper = fresh_name "f" in
+      (* (fun x -> ...)
+       * becomes:
+       * let helper_f = fun cap1 cap2 ... x -> ... in
+       * helper_f (cap1_val, cap2_val, ...)
+      *)
+      let* helper_name = fresh_name "f" in
       let helper_params = captured @ [ arg ] in
-      let inner =
+      let inner_bound =
         List.fold_left (fun acc p -> SS.add p acc) st.bound (captured @ [ arg ])
       in
-      let* body' = with_new_scope inner st.subst (cc_aexpr body) in
-      let helper_cexpr = mk_fun_cexpr helper_params body' in
-      let closure = CApp (ImmId helper, List.map (fun x -> ImmId x) captured) in
-      return (ALet (Nonrecursive, helper, helper_cexpr, ACE closure))
-  | CApp (ImmId id, args) ->
-    let* st = get in
-    let f' =
-      match SM.find_opt id st.subst with
-      | Some v -> v
-      | None -> ImmId id
-    in
-    return (ACE (CApp (f', args)))
+      let* converted_helper_body = with_new_scope inner_bound (cc_aexpr body) in
+      let lifted_helper_fun = mk_fun_cexpr helper_params converted_helper_body in
+      let closure_creation =
+        CApp (ImmId helper_name, List.map (fun x -> ImmId x) captured)
+      in
+      return (ALet (Nonrecursive, helper_name, lifted_helper_fun, ACE closure_creation))
   | CApp (f, args) -> return (ACE (CApp (f, args)))
   | CImm imm -> return (ACE (CImm imm))
   | CBinop (op, i1, i2) -> return (ACE (CBinop (op, i1, i2)))
   | CIte (i, thn, els) ->
-    let* thn' = cc_aexpr thn in
-    let* els' = cc_aexpr els in
-    return (ACE (CIte (i, thn', els')))
+    let* converted_thn = cc_aexpr thn in
+    let* converted_els = cc_aexpr els in
+    return (ACE (CIte (i, converted_thn, converted_els)))
 
+(* cc for cexpr in non-tail position *)
 and cc_cexpr = function
-  | CApp (ImmId id, args) ->
-    let* st = get in
-    let f' =
-      match SM.find_opt id st.subst with
-      | Some v -> v
-      | None -> ImmId id
-    in
-    return (CApp (f', args))
   | CApp (f, args) -> return (CApp (f, args))
   | CImm imm -> return (CImm imm)
   | CBinop (op, i1, i2) -> return (CBinop (op, i1, i2))
   | CIte (i, thn, els) ->
-    let* thn' = cc_aexpr thn in
-    let* els' = cc_aexpr els in
-    return (CIte (i, thn', els'))
+    let* converted_thn = cc_aexpr thn in
+    let* converted_els = cc_aexpr els in
+    return (CIte (i, converted_thn, converted_els))
   | CFun _ -> error "unreachable: cc_cexpr should not encounter CFun"
 ;;
 
 let cc_str_item = function
   | AStr_eval aexpr ->
-    let* a' = cc_aexpr aexpr in
-    return [ AStr_eval a' ]
+    let* converted_aexpr = cc_aexpr aexpr in
+    return [ AStr_eval converted_aexpr ]
   | AStr_value (rec_flag, name, (ACE (CFun (arg, f_body)) as func)) ->
     let* st = get in
     let fvs = free_vars_aexpr func in
     let captured = SS.elements (SS.inter fvs st.bound) in
     if captured = []
     then (
-      let inner =
+      let inner_bound =
         match rec_flag with
         | Recursive -> SS.add arg (SS.add name st.bound)
         | Nonrecursive -> SS.add arg st.bound
       in
-      let* body' = with_new_scope inner st.subst (cc_aexpr f_body) in
-      let* st' = get in
-      let new_top = SS.add name st.bound in
-      let* () = put { temps = st'.temps; bound = new_top; subst = st.subst } in
-      return [ AStr_value (rec_flag, name, ACE (CFun (arg, body'))) ])
+      let* converted_body = with_new_scope inner_bound (cc_aexpr f_body) in
+      let* state_after_body = get in
+      let new_toplevel_bound = SS.add name st.bound in
+      let* () = put { state_after_body with bound = new_toplevel_bound } in
+      return [ AStr_value (rec_flag, name, ACE (CFun (arg, converted_body))) ])
     else
-      let* helper = fresh_name name in
+      let* helper_name = fresh_name name in
       let helper_params =
         match rec_flag with
         | Recursive -> name :: (captured @ [ arg ])
         | Nonrecursive -> captured @ [ arg ]
       in
-      let inner = List.fold_left (fun acc p -> SS.add p acc) st.bound helper_params in
-      let* body' = with_new_scope inner st.subst (cc_aexpr f_body) in
-      let helper_cexpr = mk_fun_cexpr helper_params body' in
-      let helper_item = AStr_value (Nonrecursive, helper, ACE helper_cexpr) in
+      let inner_bound =
+        List.fold_left (fun acc p -> SS.add p acc) st.bound helper_params
+      in
+      let* converted_helper_body = with_new_scope inner_bound (cc_aexpr f_body) in
+      let lifted_helper_fun = mk_fun_cexpr helper_params converted_helper_body in
+      let helper_item = AStr_value (Nonrecursive, helper_name, ACE lifted_helper_fun) in
       let closure_item =
         match rec_flag with
         | Nonrecursive ->
-          let clos = CApp (ImmId helper, List.map (fun x -> ImmId x) captured) in
+          let clos = CApp (ImmId helper_name, List.map (fun x -> ImmId x) captured) in
           AStr_value (Nonrecursive, name, ACE clos)
         | Recursive ->
+          (*
+             * recursive 'name' is now a wrapper that calls helper with the captured environment and original argument
+           *
+           * let rec name = fun arg ->
+           * helper_name (name, cap1, cap2, ..., arg)
+          *)
           let clos_args = ImmId name :: List.map (fun x -> ImmId x) captured in
           let wrapper =
-            ACE (CFun (arg, ACE (CApp (ImmId helper, clos_args @ [ ImmId arg ]))))
+            ACE (CFun (arg, ACE (CApp (ImmId helper_name, clos_args @ [ ImmId arg ]))))
           in
           AStr_value (Recursive, name, wrapper)
       in
-      let* st' = get in
-      let new_top = SS.add helper (SS.add name st.bound) in
-      let* () = put { temps = st'.temps; bound = new_top; subst = st.subst } in
+      let* state_after_body = get in
+      let new_toplevel_bound = SS.add helper_name (SS.add name st.bound) in
+      let* () = put { state_after_body with bound = new_toplevel_bound } in
       return [ helper_item; closure_item ]
   | AStr_value (rec_flag, name, aexpr) ->
     let* st = get in
-    let inner =
+    let inner_bound =
       match rec_flag with
       | Recursive -> SS.add name st.bound
       | Nonrecursive -> st.bound
     in
-    let* a' = with_new_scope inner st.subst (cc_aexpr aexpr) in
-    let* st' = get in
-    let new_top = SS.add name st.bound in
-    let* () = put { temps = st'.temps; bound = new_top; subst = st.subst } in
-    return [ AStr_value (rec_flag, name, a') ]
+    let* converted_aexpr = with_new_scope inner_bound (cc_aexpr aexpr) in
+    let* state_after_body = get in
+    let new_toplevel_bound = SS.add name st.bound in
+    let* () = put { state_after_body with bound = new_toplevel_bound } in
+    return [ AStr_value (rec_flag, name, converted_aexpr) ]
 ;;
 
 let cc_program (prog : aprogram) : aprogram CCState.t =
-  let* lists = CCState.map_m cc_str_item prog in
-  return (List.concat lists)
+  let* list_of_converted_items = CCState.map_m cc_str_item prog in
+  return (List.concat list_of_converted_items)
 ;;
 
 let cc_transform (prog : aprogram) : (aprogram, string) result =
-  let initial = { temps = 0; bound = SS.empty; subst = SM.empty } in
-  match CCState.run (cc_program prog) initial with
-  | Ok p, _ -> Ok p
-  | Error e, _ -> Error e
+  let initial_state = { temps = 0; bound = SS.empty } in
+  match CCState.run (cc_program prog) initial_state with
+  | Ok converted_program, _ -> Ok converted_program
+  | Error error_message, _ -> Error error_message
 ;;
