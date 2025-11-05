@@ -46,7 +46,7 @@
 (cram
  (applies_to anf)
  (deps
-  ../Makefile
+  ../bin/compiler.exe
   (glob_files ../lib/runtime/*)))
 
 (cram
