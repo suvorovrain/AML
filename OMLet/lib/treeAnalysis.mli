@@ -6,6 +6,8 @@ open Anf
 
 val lambda_arity_of_aexpr : aexpr -> int * aexpr
 val is_function : aexpr -> bool
+
+(* currently performs only the calculating of sufficient stack size, but can be used later for implementing other pre-codegen analysis *)
 val analyze_aconstr : int -> aconstruction -> int
 val analyze_astatement : int -> 'a * aexpr -> int
 val analyze_aexpr : int -> aexpr -> int
