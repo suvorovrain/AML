@@ -1,158 +1,1429 @@
-(** Copyright 2025-2026, Rodion Suvorov, Dmitriy Chirkov*)
-
-(** SPDX-License-Identifier: LGPL-3.0-or-later *)
-=================== manytests ===================
-  $ ../../../bin/AML.exe ./manytests/typed/010faccps_ll.ml faccps.s
-  Generated: faccps.s
-  $ cat faccps.s
+=== task 4 ===
+  $ ../../../bin/AML.exe ./manytests/typed/012fibcps.ml fibcps.s
+  Generated: fibcps.s
+  $ cat fibcps.s
     .text
-    .globl id
-    .type id, @function
-  id:
-    addi sp, sp, -24
-    sd ra, 16(sp)
-    sd s0, 8(sp)
-    addi s0, sp, 24
-    sd a0, -24(s0)
-    ld a0, -24(s0)
-  id_end:
-    ld ra, 16(sp)
-    ld s0, 8(sp)
-    addi sp, sp, 24
-    ret
-    
-    .globl fresh_1
-    .type fresh_1, @function
-  fresh_1:
+    .globl llf_0
+    .type llf_0, @function
+  llf_0:
     addi sp, sp, -48
     sd ra, 40(sp)
     sd s0, 32(sp)
     addi s0, sp, 48
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    sd a2, -40(s0)
-    ld t0, -40(s0)
-    ld t1, -24(s0)
-    mul t0, t0, t1
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, -24(s0)
+    ld t1, -40(s0)
+    add t0, t0, t1
     sd t0, -48(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
     addi sp, sp, -8
     ld t0, -48(s0)
     sd t0, 0(sp)
+    addi a2, sp, 0
     ld a0, -32(s0)
     li a1, 1
-    addi a2, sp, 0
     call closure_apply
     addi sp, sp, 8
-  fresh_1_end:
+    addi sp, sp, 8
     ld ra, 40(sp)
     ld s0, 32(sp)
     addi sp, sp, 48
     ret
     
-    .globl fac_cps
-    .type fac_cps, @function
-  fac_cps:
-    addi sp, sp, -56
-    sd ra, 48(sp)
-    sd s0, 40(sp)
-    addi s0, sp, 56
-    sd a0, -24(s0)
-    sd a1, -32(s0)
+    .globl llf_1
+    .type llf_1, @function
+  llf_1:
+    addi sp, sp, -80
+    sd ra, 72(sp)
+    sd s0, 64(sp)
+    addi s0, sp, 80
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, -40(s0)
+    li t1, 2
+    sub t0, t0, t1
+    sd t0, -56(s0)
+    la a0, llf_0
+    li a1, 3
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -64(s0)
+    addi sp, sp, -16
+    ld t0, -48(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    ld a0, -64(s0)
+    li a1, 2
+    call closure_apply
+    addi sp, sp, 16
+    addi t0, a0, 0
+    sd t0, -72(s0)
+    addi sp, sp, -16
+    ld t0, -56(s0)
+    sd t0, 0(sp)
+    ld t0, -72(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    ld a0, -24(s0)
+    li a1, 2
+    call closure_apply
+    addi sp, sp, 16
+    ld ra, 72(sp)
+    ld s0, 64(sp)
+    addi sp, sp, 80
+    ret
+    
+    .globl llf_2
+    .type llf_2, @function
+  llf_2:
+    addi sp, sp, -80
+    sd ra, 72(sp)
+    sd s0, 64(sp)
+    addi s0, sp, 80
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, -32(s0)
+    li t1, 2
+    slt t0, t0, t1
+    sd t0, -48(s0)
+    ld t0, -48(s0)
+    beq t0, x0, .Lelse_0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -40(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    j .Lendif_1
+  .Lelse_0:
+    ld t0, -32(s0)
+    li t1, 1
+    sub t0, t0, t1
+    sd t0, -56(s0)
+    la a0, llf_1
+    li a1, 4
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -64(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -24
     ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -40(s0)
+    sd t0, 8(sp)
+    ld t0, -32(s0)
+    sd t0, 16(sp)
+    addi a2, sp, 0
+    ld a0, -64(s0)
+    li a1, 3
+    call closure_apply
+    addi sp, sp, 24
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -72(s0)
+    addi sp, sp, -16
+    ld t0, -56(s0)
+    sd t0, 0(sp)
+    ld t0, -72(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    ld a0, -24(s0)
+    li a1, 2
+    call closure_apply
+    addi sp, sp, 16
+  .Lendif_1:
+    ld ra, 72(sp)
+    ld s0, 64(sp)
+    addi sp, sp, 80
+    ret
+    
+    .globl llf_3
+    .type llf_3, @function
+  llf_3:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    la a0, llf_2
+    li a1, 3
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    addi sp, sp, -16
+    la a0, fib
+    li a1, 0
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    ld t0, -24(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 2
+    call closure_apply
+    addi sp, sp, 16
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_4
+    .type llf_4, @function
+  llf_4:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl fib
+    .type fib, @function
+  fib:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_3
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    la a0, llf_4
+    li a1, 1
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call fib
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -16
+    li t0, 6
+    sd t0, 0(sp)
+    ld t0, -24(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 2
+    call closure_apply
+    addi sp, sp, 16
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_int
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    li a0, 0
+    li a7, 93
+    ecall
+  $ riscv64-linux-gnu-as -march=rv64gc fibcps.s -o fibcps.o
+  $ riscv64-linux-gnu-gcc -static fibcps.o -L../../../runtime -l:libruntime.a -o fibcps.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./fibcps.elf
+  8
+ 
+  $ ../../../bin/AML.exe ./manytests/typed/012faccps.ml faccps.s
+  Generated: faccps.s
+$ cat faccps.s
+  $ riscv64-linux-gnu-as -march=rv64gc faccps.s -o faccps.o
+  $ riscv64-linux-gnu-gcc -static faccps.o -L../../../runtime -l:libruntime.a -o faccps.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./faccps.elf
+  720
+
+  $ ../../../bin/AML.exe ./manytests/typed/004manyargs.ml many.s
+  Generated: many.s
+  $ cat many.s
+    .text
+    .globl llf_0
+    .type llf_0, @function
+  llf_0:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    li t0, 1
     li t1, 1
     sub t2, t0, t1
     slt t0, x0, t2
     slt t3, t2, x0
     add t0, t0, t3
     xori t0, t0, 1
-    sd t0, -40(s0)
-    ld t0, -40(s0)
+    sd t0, -32(s0)
+    ld t0, -32(s0)
     beq t0, x0, .Lelse_0
-    addi sp, sp, -8
-    li t0, 1
-    sd t0, 0(sp)
-    ld a0, -32(s0)
-    li a1, 1
-    addi a2, sp, 0
-    call closure_apply
-    addi sp, sp, 8
+    ld a0, -24(s0)
     j .Lendif_1
   .Lelse_0:
+    ld a0, -24(s0)
+  .Lendif_1:
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_1
+    .type llf_1, @function
+  llf_1:
+    addi sp, sp, -96
+    sd ra, 88(sp)
+    sd s0, 80(sp)
+    addi s0, sp, 96
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
     ld t0, -24(s0)
-    li t1, 1
-    sub t0, t0, t1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_int
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
     sd t0, -48(s0)
+    ld t0, -48(s0)
+    sd t0, -56(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_int
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -64(s0)
+    ld t0, -64(s0)
+    sd t0, -72(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -40(s0)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_int
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -80(s0)
+    ld t0, -80(s0)
+    sd t0, -88(s0)
+    li a0, 0
+    ld ra, 88(sp)
+    ld s0, 80(sp)
+    addi sp, sp, 96
+    ret
+    
+    .globl llf_2
+    .type llf_2, @function
+  llf_2:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    la a0, llf_1
+    li a1, 3
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -40(s0)
     addi sp, sp, -16
     ld t0, -24(s0)
     sd t0, 0(sp)
     ld t0, -32(s0)
     sd t0, 8(sp)
-    la a0, fresh_1
-    li a1, 3
-    call closure_alloc
-    li a1, 2
     addi a2, sp, 0
+    ld a0, -40(s0)
+    li a1, 2
     call closure_apply
     addi sp, sp, 16
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl llf_3
+    .type llf_3, @function
+  llf_3:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    la a0, llf_2
+    li a1, 2
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_4
+    .type llf_4, @function
+  llf_4:
+    addi sp, sp, -160
+    sd ra, 152(sp)
+    sd s0, 144(sp)
+    addi s0, sp, 160
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    ld t0, 64(a1)
+    sd t0, -88(s0)
+    ld t0, 72(a1)
+    sd t0, -96(s0)
+    ld t0, -24(s0)
+    ld t1, -32(s0)
+    add t0, t0, t1
+    sd t0, -104(s0)
+    ld t0, -104(s0)
+    ld t1, -40(s0)
+    add t0, t0, t1
+    sd t0, -112(s0)
+    ld t0, -112(s0)
+    ld t1, -48(s0)
+    add t0, t0, t1
+    sd t0, -120(s0)
+    ld t0, -120(s0)
+    ld t1, -56(s0)
+    add t0, t0, t1
+    sd t0, -128(s0)
+    ld t0, -128(s0)
+    ld t1, -64(s0)
+    add t0, t0, t1
+    sd t0, -136(s0)
+    ld t0, -136(s0)
+    ld t1, -72(s0)
+    add t0, t0, t1
+    sd t0, -144(s0)
+    ld t0, -144(s0)
+    ld t1, -80(s0)
+    add t0, t0, t1
+    sd t0, -152(s0)
+    ld t0, -152(s0)
+    ld t1, -88(s0)
+    add t0, t0, t1
+    sd t0, -160(s0)
+    ld t0, -160(s0)
+    ld t1, -96(s0)
+    add a0, t0, t1
+    ld ra, 152(sp)
+    ld s0, 144(sp)
+    addi sp, sp, 160
+    ret
+    
+    .globl llf_5
+    .type llf_5, @function
+  llf_5:
+    addi sp, sp, -96
+    sd ra, 88(sp)
+    sd s0, 80(sp)
+    addi s0, sp, 96
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    ld t0, 64(a1)
+    sd t0, -88(s0)
+    la a0, llf_4
+    li a1, 10
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -96(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -72
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    ld t0, -48(s0)
+    sd t0, 24(sp)
+    ld t0, -56(s0)
+    sd t0, 32(sp)
+    ld t0, -64(s0)
+    sd t0, 40(sp)
+    ld t0, -72(s0)
+    sd t0, 48(sp)
+    ld t0, -80(s0)
+    sd t0, 56(sp)
+    ld t0, -88(s0)
+    sd t0, 64(sp)
+    addi a2, sp, 0
+    ld a0, -96(s0)
+    li a1, 9
+    call closure_apply
+    addi sp, sp, 72
+    addi sp, sp, 8
+    ld ra, 88(sp)
+    ld s0, 80(sp)
+    addi sp, sp, 96
+    ret
+    
+    .globl llf_6
+    .type llf_6, @function
+  llf_6:
+    addi sp, sp, -96
+    sd ra, 88(sp)
+    sd s0, 80(sp)
+    addi s0, sp, 96
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    la a0, llf_5
+    li a1, 9
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -88(s0)
+    addi sp, sp, -64
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    ld t0, -48(s0)
+    sd t0, 24(sp)
+    ld t0, -56(s0)
+    sd t0, 32(sp)
+    ld t0, -64(s0)
+    sd t0, 40(sp)
+    ld t0, -72(s0)
+    sd t0, 48(sp)
+    ld t0, -80(s0)
+    sd t0, 56(sp)
+    addi a2, sp, 0
+    ld a0, -88(s0)
+    li a1, 8
+    call closure_apply
+    addi sp, sp, 64
+    ld ra, 88(sp)
+    ld s0, 80(sp)
+    addi sp, sp, 96
+    ret
+    
+    .globl llf_7
+    .type llf_7, @function
+  llf_7:
+    addi sp, sp, -80
+    sd ra, 72(sp)
+    sd s0, 64(sp)
+    addi s0, sp, 80
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    la a0, llf_6
+    li a1, 8
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -80(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -56
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    ld t0, -48(s0)
+    sd t0, 24(sp)
+    ld t0, -56(s0)
+    sd t0, 32(sp)
+    ld t0, -64(s0)
+    sd t0, 40(sp)
+    ld t0, -72(s0)
+    sd t0, 48(sp)
+    addi a2, sp, 0
+    ld a0, -80(s0)
+    li a1, 7
+    call closure_apply
+    addi sp, sp, 56
+    addi sp, sp, 8
+    ld ra, 72(sp)
+    ld s0, 64(sp)
+    addi sp, sp, 80
+    ret
+    
+    .globl llf_8
+    .type llf_8, @function
+  llf_8:
+    addi sp, sp, -80
+    sd ra, 72(sp)
+    sd s0, 64(sp)
+    addi s0, sp, 80
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    la a0, llf_7
+    li a1, 7
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -72(s0)
+    addi sp, sp, -48
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    ld t0, -48(s0)
+    sd t0, 24(sp)
+    ld t0, -56(s0)
+    sd t0, 32(sp)
+    ld t0, -64(s0)
+    sd t0, 40(sp)
+    addi a2, sp, 0
+    ld a0, -72(s0)
+    li a1, 6
+    call closure_apply
+    addi sp, sp, 48
+    ld ra, 72(sp)
+    ld s0, 64(sp)
+    addi sp, sp, 80
+    ret
+    
+    .globl llf_9
+    .type llf_9, @function
+  llf_9:
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    la a0, llf_8
+    li a1, 6
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -64(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -40
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    ld t0, -48(s0)
+    sd t0, 24(sp)
+    ld t0, -56(s0)
+    sd t0, 32(sp)
+    addi a2, sp, 0
+    ld a0, -64(s0)
+    li a1, 5
+    call closure_apply
+    addi sp, sp, 40
+    addi sp, sp, 8
+    ld ra, 56(sp)
+    ld s0, 48(sp)
+    addi sp, sp, 64
+    ret
+    
+    .globl llf_10
+    .type llf_10, @function
+  llf_10:
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    la a0, llf_9
+    li a1, 5
+    call closure_alloc
     addi t0, a0, 0
     sd t0, -56(s0)
-    addi sp, sp, -16
-    addi t3, sp, 0
+    addi sp, sp, -32
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
     ld t0, -48(s0)
-    sd t0, 0(t3)
-    ld t0, -56(s0)
-    sd t0, 8(t3)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
-    call fac_cps
+    sd t0, 24(sp)
+    addi a2, sp, 0
+    ld a0, -56(s0)
+    li a1, 4
+    call closure_apply
+    addi sp, sp, 32
+    ld ra, 56(sp)
+    ld s0, 48(sp)
+    addi sp, sp, 64
+    ret
+    
+    .globl llf_11
+    .type llf_11, @function
+  llf_11:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    la a0, llf_10
+    li a1, 4
+    call closure_alloc
     addi t0, a0, 0
-    addi a0, t0, 0
+    sd t0, -48(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -24
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    addi a2, sp, 0
+    ld a0, -48(s0)
+    li a1, 3
+    call closure_apply
+    addi sp, sp, 24
+    addi sp, sp, 8
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl llf_12
+    .type llf_12, @function
+  llf_12:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    la a0, llf_11
+    li a1, 3
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    addi sp, sp, -16
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    ld a0, -40(s0)
+    li a1, 2
+    call closure_apply
     addi sp, sp, 16
-  .Lendif_1:
-  fac_cps_end:
-    ld ra, 48(sp)
-    ld s0, 40(sp)
-    addi sp, sp, 56
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl llf_13
+    .type llf_13, @function
+  llf_13:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    la a0, llf_12
+    li a1, 2
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl wrap
+    .type wrap, @function
+  wrap:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_0
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl test3
+    .type test3, @function
+  test3:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_3
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl test10
+    .type test10, @function
+  test10:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_13
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
     ret
     
     .globl main
     .type main, @function
   main:
-    addi sp, sp, -40
-    sd ra, 32(sp)
-    sd s0, 24(sp)
-    addi s0, sp, 40
-    addi sp, sp, -16
-    addi t3, sp, 0
-    li t0, 4
-    sd t0, 0(t3)
-    la a0, id
-    li a1, 1
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call wrap
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -88
+    la a0, test10
+    li a1, 0
     call closure_alloc
     addi t0, a0, 0
-    sd t0, 8(t3)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
-    call fac_cps
+    sd t0, 0(sp)
+    li t0, 1
+    sd t0, 8(sp)
+    li t0, 10
+    sd t0, 16(sp)
+    li t0, 100
+    sd t0, 24(sp)
+    li t0, 1000
+    sd t0, 32(sp)
+    li t0, 10000
+    sd t0, 40(sp)
+    li t0, 100000
+    sd t0, 48(sp)
+    li t0, 1000000
+    sd t0, 56(sp)
+    li t0, 10000000
+    sd t0, 64(sp)
+    li t0, 100000000
+    sd t0, 72(sp)
+    li t0, 1000000000
+    sd t0, 80(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 11
+    call closure_apply
+    addi sp, sp, 88
+    addi sp, sp, 8
     addi t0, a0, 0
+    sd t0, -24(s0)
+    ld t0, -24(s0)
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_int
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    ld t0, -40(s0)
+    sd t0, -48(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call wrap
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -32
+    la a0, test3
+    li a1, 0
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    li t0, 1
+    sd t0, 8(sp)
+    li t0, 10
+    sd t0, 16(sp)
+    li t0, 100
+    sd t0, 24(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 4
+    call closure_apply
+    addi sp, sp, 32
+    addi t0, a0, 0
+    sd t0, -56(s0)
+    ld t0, -56(s0)
+    sd t0, -64(s0)
+    li a0, 0
+    ld ra, 56(sp)
+    ld s0, 48(sp)
+    addi sp, sp, 64
+    li a0, 0
+    li a7, 93
+    ecall
+  $ riscv64-linux-gnu-as -march=rv64gc many.s -o many.o
+  $ riscv64-linux-gnu-gcc -static many.o -L../../../runtime -l:libruntime.a -o many.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./many.elf
+  1111111111110100
+
+== task 3 ==
+  $ ../../../bin/AML.exe ./manytests/typed/010faccps_ll.ml faccps.s
+  Generated: faccps.s
+  $ cat faccps.s
+    .text
+    .globl llf_0
+    .type llf_0, @function
+  llf_0:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_1
+    .type llf_1, @function
+  llf_1:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, -40(s0)
+    ld t1, -32(s0)
+    mul t0, t0, t1
+    sd t0, -48(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -48(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -24(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl llf_2
+    .type llf_2, @function
+  llf_2:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    la a0, llf_1
+    li a1, 3
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    addi sp, sp, -16
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    ld t0, -24(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    ld a0, -40(s0)
+    li a1, 2
+    call closure_apply
     addi sp, sp, 16
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl llf_3
+    .type llf_3, @function
+  llf_3:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    la a0, llf_2
+    li a1, 2
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_4
+    .type llf_4, @function
+  llf_4:
+    addi sp, sp, -80
+    sd ra, 72(sp)
+    sd s0, 64(sp)
+    addi s0, sp, 80
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, -40(s0)
+    li t1, 1
+    sub t2, t0, t1
+    slt t0, x0, t2
+    slt t3, t2, x0
+    add t0, t0, t3
+    xori t0, t0, 1
+    sd t0, -56(s0)
+    ld t0, -56(s0)
+    beq t0, x0, .Lelse_0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -48(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    j .Lendif_1
+  .Lelse_0:
+    ld t0, -40(s0)
+    li t1, 1
+    sub t0, t0, t1
+    sd t0, -64(s0)
+    addi sp, sp, -16
+    ld t0, -40(s0)
+    sd t0, 0(sp)
+    ld t0, -48(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 2
+    call closure_apply
+    addi sp, sp, 16
+    addi t0, a0, 0
+    sd t0, -72(s0)
+    addi sp, sp, -16
+    ld t0, -64(s0)
+    sd t0, 0(sp)
+    ld t0, -72(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    ld a0, -24(s0)
+    li a1, 2
+    call closure_apply
+    addi sp, sp, 16
+  .Lendif_1:
+    ld ra, 72(sp)
+    ld s0, 64(sp)
+    addi sp, sp, 80
+    ret
+    
+    .globl llf_5
+    .type llf_5, @function
+  llf_5:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    la a0, llf_4
+    li a1, 4
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -48(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -24
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    addi a2, sp, 0
+    ld a0, -48(s0)
+    li a1, 3
+    call closure_apply
+    addi sp, sp, 24
+    addi sp, sp, 8
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl llf_6
+    .type llf_6, @function
+  llf_6:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call fac_cps_cc_2
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -24
+    la a0, fac_cps
+    li a1, 0
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    la a0, fresh_1
+    li a1, 0
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 8(sp)
+    ld t0, -24(s0)
+    sd t0, 16(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 3
+    call closure_apply
+    addi sp, sp, 24
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl id
+    .type id, @function
+  id:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_0
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl fresh_1
+    .type fresh_1, @function
+  fresh_1:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_3
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl fac_cps_cc_2
+    .type fac_cps_cc_2, @function
+  fac_cps_cc_2:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_5
+    li a1, 3
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl fac_cps
+    .type fac_cps, @function
+  fac_cps:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_6
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call fac_cps
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -16
+    li t0, 4
+    sd t0, 0(sp)
+    la a0, id
+    li a1, 0
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 2
+    call closure_apply
+    addi sp, sp, 16
+    addi t0, a0, 0
     sd t0, -24(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
+    sd x0, 0(sp)
+    addi sp, sp, -8
     ld t0, -24(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
     call print_int
-    addi t0, a0, 0
     addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
     sd t0, -32(s0)
     ld t0, -32(s0)
     sd t0, -40(s0)
     li a0, 0
-  main_end:
-    ld ra, 32(sp)
-    ld s0, 24(sp)
-    addi sp, sp, 40
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
     li a0, 0
     li a7, 93
     ecall
@@ -165,202 +1436,574 @@
   Generated: fibcps_ll.s
   $ cat fibcps_ll.s
     .text
-    .globl id
-    .type id, @function
-  id:
-    addi sp, sp, -24
-    sd ra, 16(sp)
-    sd s0, 8(sp)
-    addi s0, sp, 24
-    sd a0, -24(s0)
+    .globl llf_0
+    .type llf_0, @function
+  llf_0:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
     ld a0, -24(s0)
-  id_end:
-    ld ra, 16(sp)
-    ld s0, 8(sp)
-    addi sp, sp, 24
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
     ret
     
-    .globl fresh_2
-    .type fresh_2, @function
-  fresh_2:
+    .globl llf_1
+    .type llf_1, @function
+  llf_1:
     addi sp, sp, -48
     sd ra, 40(sp)
     sd s0, 32(sp)
     addi s0, sp, 48
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    sd a2, -40(s0)
-    ld t0, -24(s0)
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, -32(s0)
     ld t1, -40(s0)
     add t0, t0, t1
     sd t0, -48(s0)
     addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
     ld t0, -48(s0)
     sd t0, 0(sp)
-    ld a0, -32(s0)
-    li a1, 1
     addi a2, sp, 0
+    ld a0, -24(s0)
+    li a1, 1
     call closure_apply
     addi sp, sp, 8
-  fresh_2_end:
+    addi sp, sp, 8
     ld ra, 40(sp)
     ld s0, 32(sp)
     addi sp, sp, 48
     ret
     
-    .globl fresh_1
-    .type fresh_1, @function
-  fresh_1:
-    addi sp, sp, -64
-    sd ra, 56(sp)
-    sd s0, 48(sp)
-    addi s0, sp, 64
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    sd a2, -40(s0)
-    sd a3, -48(s0)
-    ld t0, -24(s0)
-    li t1, 2
-    sub t0, t0, t1
-    sd t0, -56(s0)
-    addi sp, sp, -16
-    ld t0, -48(s0)
-    sd t0, 0(sp)
-    ld t0, -32(s0)
-    sd t0, 8(sp)
-    la a0, fresh_2
+    .globl llf_2
+    .type llf_2, @function
+  llf_2:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    la a0, llf_1
     li a1, 3
     call closure_alloc
-    li a1, 2
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    addi sp, sp, -16
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    ld t0, -24(s0)
+    sd t0, 8(sp)
     addi a2, sp, 0
+    ld a0, -40(s0)
+    li a1, 2
     call closure_apply
     addi sp, sp, 16
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl llf_3
+    .type llf_3, @function
+  llf_3:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    la a0, llf_2
+    li a1, 2
+    call closure_alloc
     addi t0, a0, 0
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_4
+    .type llf_4, @function
+  llf_4:
+    addi sp, sp, -80
+    sd ra, 72(sp)
+    sd s0, 64(sp)
+    addi s0, sp, 80
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, -48(s0)
+    li t1, 2
+    sub t0, t0, t1
     sd t0, -64(s0)
     addi sp, sp, -16
     ld t0, -56(s0)
     sd t0, 0(sp)
-    ld t0, -64(s0)
+    ld t0, -40(s0)
     sd t0, 8(sp)
-    ld a0, -40(s0)
-    li a1, 2
     addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 2
     call closure_apply
     addi sp, sp, 16
-  fresh_1_end:
+    addi t0, a0, 0
+    sd t0, -72(s0)
+    addi sp, sp, -16
+    ld t0, -64(s0)
+    sd t0, 0(sp)
+    ld t0, -72(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    ld a0, -24(s0)
+    li a1, 2
+    call closure_apply
+    addi sp, sp, 16
+    ld ra, 72(sp)
+    ld s0, 64(sp)
+    addi sp, sp, 80
+    ret
+    
+    .globl llf_5
+    .type llf_5, @function
+  llf_5:
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    la a0, llf_4
+    li a1, 5
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -56(s0)
+    addi sp, sp, -32
+    ld t0, -48(s0)
+    sd t0, 0(sp)
+    ld t0, -24(s0)
+    sd t0, 8(sp)
+    ld t0, -32(s0)
+    sd t0, 16(sp)
+    ld t0, -40(s0)
+    sd t0, 24(sp)
+    addi a2, sp, 0
+    ld a0, -56(s0)
+    li a1, 4
+    call closure_apply
+    addi sp, sp, 32
     ld ra, 56(sp)
     ld s0, 48(sp)
     addi sp, sp, 64
     ret
     
-    .globl fib
-    .type fib, @function
-  fib:
-    addi sp, sp, -56
-    sd ra, 48(sp)
-    sd s0, 40(sp)
-    addi s0, sp, 56
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    ld t0, -24(s0)
-    li t1, 2
-    slt t0, t0, t1
+    .globl llf_6
+    .type llf_6, @function
+  llf_6:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
     sd t0, -40(s0)
-    ld t0, -40(s0)
-    beq t0, x0, .Lelse_0
+    la a0, llf_5
+    li a1, 4
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -48(s0)
     addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -24
     ld t0, -24(s0)
     sd t0, 0(sp)
-    ld a0, -32(s0)
-    li a1, 1
+    ld t0, -40(s0)
+    sd t0, 8(sp)
+    ld t0, -32(s0)
+    sd t0, 16(sp)
     addi a2, sp, 0
+    ld a0, -48(s0)
+    li a1, 3
     call closure_apply
+    addi sp, sp, 24
+    addi sp, sp, 8
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl llf_7
+    .type llf_7, @function
+  llf_7:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    la a0, llf_6
+    li a1, 3
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    addi sp, sp, -16
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    ld a0, -40(s0)
+    li a1, 2
+    call closure_apply
+    addi sp, sp, 16
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl llf_8
+    .type llf_8, @function
+  llf_8:
+    addi sp, sp, -80
+    sd ra, 72(sp)
+    sd s0, 64(sp)
+    addi s0, sp, 80
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, -40(s0)
+    li t1, 2
+    slt t0, t0, t1
+    sd t0, -56(s0)
+    ld t0, -56(s0)
+    beq t0, x0, .Lelse_0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -40(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -48(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
     addi sp, sp, 8
     j .Lendif_1
   .Lelse_0:
-    ld t0, -24(s0)
+    ld t0, -40(s0)
     li t1, 1
     sub t0, t0, t1
+    sd t0, -64(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -24
+    ld t0, -40(s0)
+    sd t0, 0(sp)
+    ld t0, -48(s0)
+    sd t0, 8(sp)
+    ld t0, -24(s0)
+    sd t0, 16(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 3
+    call closure_apply
+    addi sp, sp, 24
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -72(s0)
+    addi sp, sp, -16
+    ld t0, -64(s0)
+    sd t0, 0(sp)
+    ld t0, -72(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    ld a0, -24(s0)
+    li a1, 2
+    call closure_apply
+    addi sp, sp, 16
+  .Lendif_1:
+    ld ra, 72(sp)
+    ld s0, 64(sp)
+    addi sp, sp, 80
+    ret
+    
+    .globl llf_9
+    .type llf_9, @function
+  llf_9:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    la a0, llf_8
+    li a1, 4
+    call closure_alloc
+    addi t0, a0, 0
     sd t0, -48(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
     addi sp, sp, -24
     ld t0, -24(s0)
     sd t0, 0(sp)
     ld t0, -32(s0)
     sd t0, 8(sp)
-    la a0, fib
-    li a1, 2
-    call closure_alloc
-    addi t0, a0, 0
+    ld t0, -40(s0)
     sd t0, 16(sp)
+    addi a2, sp, 0
+    ld a0, -48(s0)
+    li a1, 3
+    call closure_apply
+    addi sp, sp, 24
+    addi sp, sp, 8
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl llf_10
+    .type llf_10, @function
+  llf_10:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call fib_cc_6
+    addi sp, sp, 0
+    addi t3, a0, 0
     addi sp, sp, -8
     sd x0, 0(sp)
-    la a0, fresh_1
-    li a1, 4
+    addi sp, sp, -24
+    la a0, fib
+    li a1, 0
     call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    la a0, fresh_1
+    li a1, 0
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 8(sp)
+    ld t0, -24(s0)
+    sd t0, 16(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
     li a1, 3
-    addi a2, sp, 8
+    call closure_apply
+    addi sp, sp, 24
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl id
+    .type id, @function
+  id:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_0
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl fresh_2
+    .type fresh_2, @function
+  fresh_2:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_3
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl fresh_1_cc_2
+    .type fresh_1_cc_2, @function
+  fresh_1_cc_2:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_7
+    li a1, 2
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl fresh_1
+    .type fresh_1, @function
+  fresh_1:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call fresh_1_cc_2
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    la a0, fresh_2
+    li a1, 0
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
     call closure_apply
     addi sp, sp, 8
-    addi sp, sp, 24
-    addi t0, a0, 0
-    sd t0, -56(s0)
-    addi sp, sp, -16
-    addi t3, sp, 0
-    ld t0, -48(s0)
-    sd t0, 0(t3)
-    ld t0, -56(s0)
-    sd t0, 8(t3)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
-    call fib
-    addi t0, a0, 0
-    addi a0, t0, 0
+    addi sp, sp, 8
+    ld ra, 8(sp)
+    ld s0, 0(sp)
     addi sp, sp, 16
-  .Lendif_1:
-  fib_end:
-    ld ra, 48(sp)
-    ld s0, 40(sp)
-    addi sp, sp, 56
+    ret
+    
+    .globl fib_cc_6
+    .type fib_cc_6, @function
+  fib_cc_6:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_9
+    li a1, 3
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl fib
+    .type fib, @function
+  fib:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_10
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
     ret
     
     .globl main
     .type main, @function
   main:
-    addi sp, sp, -40
-    sd ra, 32(sp)
-    sd s0, 24(sp)
-    addi s0, sp, 40
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call fib
+    addi sp, sp, 0
+    addi t3, a0, 0
     addi sp, sp, -16
-    addi t3, sp, 0
     li t0, 6
-    sd t0, 0(t3)
+    sd t0, 0(sp)
     la a0, id
-    li a1, 1
+    li a1, 0
     call closure_alloc
     addi t0, a0, 0
-    sd t0, 8(t3)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
-    call fib
-    addi t0, a0, 0
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 2
+    call closure_apply
     addi sp, sp, 16
+    addi t0, a0, 0
     sd t0, -24(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
+    sd x0, 0(sp)
+    addi sp, sp, -8
     ld t0, -24(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
     call print_int
-    addi t0, a0, 0
     addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
     sd t0, -32(s0)
     ld t0, -32(s0)
     sd t0, -40(s0)
     li a0, 0
-  main_end:
-    ld ra, 32(sp)
-    ld s0, 24(sp)
-    addi sp, sp, 40
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
     li a0, 0
     li a7, 93
     ecall
@@ -368,109 +2011,7 @@
   $ riscv64-linux-gnu-gcc -static fibcps_ll.o -L../../../runtime -l:libruntime.a -o fibcps_ll.elf -Wl,--no-warnings
   $ qemu-riscv64 ./fibcps_ll.elf
   8
-
-=================== without partial ===================
-  $ cat >fib.ml <<EOF
-  > let rec fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)
-  > let main = let () = print_int (fib 4) in 0
-  > EOF
-  $ ../../../bin/AML.exe fib.ml fib.s
-  Generated: fib.s
-  $ cat fib.s
-    .text
-    .globl fib
-    .type fib, @function
-  fib:
-    addi sp, sp, -64
-    sd ra, 56(sp)
-    sd s0, 48(sp)
-    addi s0, sp, 64
-    sd a0, -24(s0)
-    ld t0, -24(s0)
-    li t1, 2
-    slt t0, t0, t1
-    sd t0, -32(s0)
-    ld t0, -32(s0)
-    beq t0, x0, .Lelse_0
-    ld a0, -24(s0)
-    j .Lendif_1
-  .Lelse_0:
-    ld t0, -24(s0)
-    li t1, 1
-    sub t0, t0, t1
-    sd t0, -40(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -40(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
-    call fib
-    addi t0, a0, 0
-    addi sp, sp, 8
-    sd t0, -48(s0)
-    ld t0, -24(s0)
-    li t1, 2
-    sub t0, t0, t1
-    sd t0, -56(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -56(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
-    call fib
-    addi t0, a0, 0
-    addi sp, sp, 8
-    sd t0, -64(s0)
-    ld t0, -48(s0)
-    ld t1, -64(s0)
-    add a0, t0, t1
-  .Lendif_1:
-  fib_end:
-    ld ra, 56(sp)
-    ld s0, 48(sp)
-    addi sp, sp, 64
-    ret
-    
-    .globl main
-    .type main, @function
-  main:
-    addi sp, sp, -40
-    sd ra, 32(sp)
-    sd s0, 24(sp)
-    addi s0, sp, 40
-    addi sp, sp, -8
-    addi t3, sp, 0
-    li t0, 4
-    sd t0, 0(t3)
-    ld a0, 0(t3)
-    call fib
-    addi t0, a0, 0
-    addi sp, sp, 8
-    sd t0, -24(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -24(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
-    call print_int
-    addi t0, a0, 0
-    addi sp, sp, 8
-    sd t0, -32(s0)
-    ld t0, -32(s0)
-    sd t0, -40(s0)
-    li a0, 0
-  main_end:
-    ld ra, 32(sp)
-    ld s0, 24(sp)
-    addi sp, sp, 40
-    li a0, 0
-    li a7, 93
-    ecall
-  $ riscv64-linux-gnu-as -march=rv64gc fib.s -o fib.o
-  $ riscv64-linux-gnu-gcc -static fib.o -L../../../runtime -l:libruntime.a -o fib.elf -Wl,--no-warnings
-  $ qemu-riscv64 ./fib.elf
-  3
-
+=== task 2 ===
   $ cat >ite.ml <<EOF
   > let large x = if 0<>x then print_int 0 else print_int 1
   >   let main =
@@ -484,14 +2025,15 @@
   Generated: ite.s
   $ cat ite.s
     .text
-    .globl large
-    .type large, @function
-  large:
+    .globl llf_0
+    .type llf_0, @function
+  llf_0:
     addi sp, sp, -32
     sd ra, 24(sp)
     sd s0, 16(sp)
     addi s0, sp, 32
-    sd a0, -24(s0)
+    ld t0, 0(a1)
+    sd t0, -24(s0)
     li t0, 0
     ld t1, -24(s0)
     sub t2, t0, t1
@@ -502,30 +2044,46 @@
     ld t0, -32(s0)
     beq t0, x0, .Lelse_0
     addi sp, sp, -8
-    addi t3, sp, 0
+    sd x0, 0(sp)
+    addi sp, sp, -8
     li t0, 0
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
     call print_int
-    addi t0, a0, 0
-    addi a0, t0, 0
+    addi sp, sp, 8
     addi sp, sp, 8
     j .Lendif_1
   .Lelse_0:
     addi sp, sp, -8
-    addi t3, sp, 0
+    sd x0, 0(sp)
+    addi sp, sp, -8
     li t0, 1
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
     call print_int
-    addi t0, a0, 0
-    addi a0, t0, 0
+    addi sp, sp, 8
     addi sp, sp, 8
   .Lendif_1:
-  large_end:
     ld ra, 24(sp)
     ld s0, 16(sp)
     addi sp, sp, 32
+    ret
+    
+    .globl large
+    .type large, @function
+  large:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_0
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
     ret
     
     .globl main
@@ -567,27 +2125,43 @@
     beq t0, x0, .Lelse_6
     li t0, 0
     sd t0, -48(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -48(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -48(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
     addi sp, sp, 8
     j .Lendif_7
   .Lelse_6:
     li t0, 1
     sd t0, -56(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -56(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -56(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
     addi sp, sp, 8
   .Lendif_7:
     j .Lendif_5
@@ -604,40 +2178,59 @@
     beq t0, x0, .Lelse_8
     li t0, 0
     sd t0, -72(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -72(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -72(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
     addi sp, sp, 8
     j .Lendif_9
   .Lelse_8:
     li t0, 1
     sd t0, -80(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -80(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -80(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
     addi sp, sp, 8
   .Lendif_9:
   .Lendif_5:
     j .Lendif_3
   .Lelse_2:
     addi sp, sp, -8
-    addi t3, sp, 0
+    sd x0, 0(sp)
+    addi sp, sp, -8
     li t0, 42
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
     call print_int
-    addi t0, a0, 0
     addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
     sd t0, -88(s0)
     ld t0, -88(s0)
     sd t0, -96(s0)
@@ -663,27 +2256,43 @@
     beq t0, x0, .Lelse_12
     li t0, 0
     sd t0, -120(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -120(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -120(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
     addi sp, sp, 8
     j .Lendif_13
   .Lelse_12:
     li t0, 1
     sd t0, -128(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -128(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -128(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
     addi sp, sp, 8
   .Lendif_13:
     j .Lendif_11
@@ -700,32 +2309,47 @@
     beq t0, x0, .Lelse_14
     li t0, 0
     sd t0, -144(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -144(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -144(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
     addi sp, sp, 8
     j .Lendif_15
   .Lelse_14:
     li t0, 1
     sd t0, -152(s0)
-    addi sp, sp, -8
-    addi t3, sp, 0
-    ld t0, -152(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
     call large
-    addi t0, a0, 0
-    addi a0, t0, 0
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -152(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
     addi sp, sp, 8
   .Lendif_15:
   .Lendif_11:
   .Lendif_3:
-  main_end:
     ld ra, 56(sp)
     ld s0, 48(sp)
     addi sp, sp, 64
@@ -737,7 +2361,157 @@
   $ qemu-riscv64 ./ite.elf
   420
 
-=================== custom ===================
+==== other ====
+=== without partial ===
+  $ cat >fib.ml <<EOF
+  > let rec fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)
+  > let main = let () = print_int (fib 4) in 0
+  > EOF
+  $ ../../../bin/AML.exe fib.ml fib.s
+  Generated: fib.s
+  $ cat fib.s
+    .text
+    .globl llf_0
+    .type llf_0, @function
+  llf_0:
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, -24(s0)
+    li t1, 2
+    slt t0, t0, t1
+    sd t0, -32(s0)
+    ld t0, -32(s0)
+    beq t0, x0, .Lelse_0
+    ld a0, -24(s0)
+    j .Lendif_1
+  .Lelse_0:
+    ld t0, -24(s0)
+    li t1, 1
+    sub t0, t0, t1
+    sd t0, -40(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call fib
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -40(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -48(s0)
+    ld t0, -24(s0)
+    li t1, 2
+    sub t0, t0, t1
+    sd t0, -56(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call fib
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -56(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -64(s0)
+    ld t0, -48(s0)
+    ld t1, -64(s0)
+    add a0, t0, t1
+  .Lendif_1:
+    ld ra, 56(sp)
+    ld s0, 48(sp)
+    addi sp, sp, 64
+    ret
+    
+    .globl fib
+    .type fib, @function
+  fib:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_0
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call fib
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 4
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_int
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    ld t0, -32(s0)
+    sd t0, -40(s0)
+    li a0, 0
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    li a0, 0
+    li a7, 93
+    ecall
+  $ riscv64-linux-gnu-as -march=rv64gc fib.s -o fib.o
+  $ riscv64-linux-gnu-gcc -static fib.o -L../../../runtime -l:libruntime.a -o fib.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./fib.elf
+  3
+
+=== partial application 11 ===
   $ cat >many_args.ml <<EOF
   > let f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 = a0+a1+a2+a3+a4+a5+a6+a7+a8+a9+a10
   > let main = print_int (f 0 1 2 3 4 5 6 7 8 9 10)
@@ -746,130 +2520,621 @@
   Generated: many_args.s
   $ cat many_args.s
     .text
-    .globl f
-    .type f, @function
-  f:
-    addi sp, sp, -152
-    sd ra, 144(sp)
-    sd s0, 136(sp)
-    addi s0, sp, 152
-    sd a0, -24(s0)
-    sd a1, -32(s0)
-    sd a2, -40(s0)
-    sd a3, -48(s0)
-    sd a4, -56(s0)
-    sd a5, -64(s0)
-    sd a6, -72(s0)
-    sd a7, -80(s0)
+    .globl llf_0
+    .type llf_0, @function
+  llf_0:
+    addi sp, sp, -176
+    sd ra, 168(sp)
+    sd s0, 160(sp)
+    addi s0, sp, 176
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    ld t0, 64(a1)
+    sd t0, -88(s0)
+    ld t0, 72(a1)
+    sd t0, -96(s0)
+    ld t0, 80(a1)
+    sd t0, -104(s0)
     ld t0, -24(s0)
     ld t1, -32(s0)
     add t0, t0, t1
-    sd t0, -88(s0)
-    ld t0, -88(s0)
-    ld t1, -40(s0)
-    add t0, t0, t1
-    sd t0, -96(s0)
-    ld t0, -96(s0)
-    ld t1, -48(s0)
-    add t0, t0, t1
-    sd t0, -104(s0)
-    ld t0, -104(s0)
-    ld t1, -56(s0)
-    add t0, t0, t1
     sd t0, -112(s0)
     ld t0, -112(s0)
-    ld t1, -64(s0)
+    ld t1, -40(s0)
     add t0, t0, t1
     sd t0, -120(s0)
     ld t0, -120(s0)
-    ld t1, -72(s0)
+    ld t1, -48(s0)
     add t0, t0, t1
     sd t0, -128(s0)
     ld t0, -128(s0)
-    ld t1, -80(s0)
+    ld t1, -56(s0)
     add t0, t0, t1
     sd t0, -136(s0)
     ld t0, -136(s0)
-    ld t1, 0(s0)
+    ld t1, -64(s0)
     add t0, t0, t1
     sd t0, -144(s0)
     ld t0, -144(s0)
-    ld t1, 8(s0)
+    ld t1, -72(s0)
     add t0, t0, t1
     sd t0, -152(s0)
     ld t0, -152(s0)
-    ld t1, 16(s0)
+    ld t1, -80(s0)
+    add t0, t0, t1
+    sd t0, -160(s0)
+    ld t0, -160(s0)
+    ld t1, -88(s0)
+    add t0, t0, t1
+    sd t0, -168(s0)
+    ld t0, -168(s0)
+    ld t1, -96(s0)
+    add t0, t0, t1
+    sd t0, -176(s0)
+    ld t0, -176(s0)
+    ld t1, -104(s0)
     add a0, t0, t1
-  f_end:
-    ld ra, 144(sp)
-    ld s0, 136(sp)
-    addi sp, sp, 152
+    ld ra, 168(sp)
+    ld s0, 160(sp)
+    addi sp, sp, 176
+    ret
+    
+    .globl llf_1
+    .type llf_1, @function
+  llf_1:
+    addi sp, sp, -112
+    sd ra, 104(sp)
+    sd s0, 96(sp)
+    addi s0, sp, 112
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    ld t0, 64(a1)
+    sd t0, -88(s0)
+    ld t0, 72(a1)
+    sd t0, -96(s0)
+    la a0, llf_0
+    li a1, 11
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -104(s0)
+    addi sp, sp, -80
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    ld t0, -48(s0)
+    sd t0, 24(sp)
+    ld t0, -56(s0)
+    sd t0, 32(sp)
+    ld t0, -64(s0)
+    sd t0, 40(sp)
+    ld t0, -72(s0)
+    sd t0, 48(sp)
+    ld t0, -80(s0)
+    sd t0, 56(sp)
+    ld t0, -88(s0)
+    sd t0, 64(sp)
+    ld t0, -96(s0)
+    sd t0, 72(sp)
+    addi a2, sp, 0
+    ld a0, -104(s0)
+    li a1, 10
+    call closure_apply
+    addi sp, sp, 80
+    ld ra, 104(sp)
+    ld s0, 96(sp)
+    addi sp, sp, 112
+    ret
+    
+    .globl llf_2
+    .type llf_2, @function
+  llf_2:
+    addi sp, sp, -96
+    sd ra, 88(sp)
+    sd s0, 80(sp)
+    addi s0, sp, 96
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    ld t0, 64(a1)
+    sd t0, -88(s0)
+    la a0, llf_1
+    li a1, 10
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -96(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -72
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    ld t0, -48(s0)
+    sd t0, 24(sp)
+    ld t0, -56(s0)
+    sd t0, 32(sp)
+    ld t0, -64(s0)
+    sd t0, 40(sp)
+    ld t0, -72(s0)
+    sd t0, 48(sp)
+    ld t0, -80(s0)
+    sd t0, 56(sp)
+    ld t0, -88(s0)
+    sd t0, 64(sp)
+    addi a2, sp, 0
+    ld a0, -96(s0)
+    li a1, 9
+    call closure_apply
+    addi sp, sp, 72
+    addi sp, sp, 8
+    ld ra, 88(sp)
+    ld s0, 80(sp)
+    addi sp, sp, 96
+    ret
+    
+    .globl llf_3
+    .type llf_3, @function
+  llf_3:
+    addi sp, sp, -96
+    sd ra, 88(sp)
+    sd s0, 80(sp)
+    addi s0, sp, 96
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    la a0, llf_2
+    li a1, 9
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -88(s0)
+    addi sp, sp, -64
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    ld t0, -48(s0)
+    sd t0, 24(sp)
+    ld t0, -56(s0)
+    sd t0, 32(sp)
+    ld t0, -64(s0)
+    sd t0, 40(sp)
+    ld t0, -72(s0)
+    sd t0, 48(sp)
+    ld t0, -80(s0)
+    sd t0, 56(sp)
+    addi a2, sp, 0
+    ld a0, -88(s0)
+    li a1, 8
+    call closure_apply
+    addi sp, sp, 64
+    ld ra, 88(sp)
+    ld s0, 80(sp)
+    addi sp, sp, 96
+    ret
+    
+    .globl llf_4
+    .type llf_4, @function
+  llf_4:
+    addi sp, sp, -80
+    sd ra, 72(sp)
+    sd s0, 64(sp)
+    addi s0, sp, 80
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    la a0, llf_3
+    li a1, 8
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -80(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -56
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    ld t0, -48(s0)
+    sd t0, 24(sp)
+    ld t0, -56(s0)
+    sd t0, 32(sp)
+    ld t0, -64(s0)
+    sd t0, 40(sp)
+    ld t0, -72(s0)
+    sd t0, 48(sp)
+    addi a2, sp, 0
+    ld a0, -80(s0)
+    li a1, 7
+    call closure_apply
+    addi sp, sp, 56
+    addi sp, sp, 8
+    ld ra, 72(sp)
+    ld s0, 64(sp)
+    addi sp, sp, 80
+    ret
+    
+    .globl llf_5
+    .type llf_5, @function
+  llf_5:
+    addi sp, sp, -80
+    sd ra, 72(sp)
+    sd s0, 64(sp)
+    addi s0, sp, 80
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    la a0, llf_4
+    li a1, 7
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -72(s0)
+    addi sp, sp, -48
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    ld t0, -48(s0)
+    sd t0, 24(sp)
+    ld t0, -56(s0)
+    sd t0, 32(sp)
+    ld t0, -64(s0)
+    sd t0, 40(sp)
+    addi a2, sp, 0
+    ld a0, -72(s0)
+    li a1, 6
+    call closure_apply
+    addi sp, sp, 48
+    ld ra, 72(sp)
+    ld s0, 64(sp)
+    addi sp, sp, 80
+    ret
+    
+    .globl llf_6
+    .type llf_6, @function
+  llf_6:
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    la a0, llf_5
+    li a1, 6
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -64(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -40
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    ld t0, -48(s0)
+    sd t0, 24(sp)
+    ld t0, -56(s0)
+    sd t0, 32(sp)
+    addi a2, sp, 0
+    ld a0, -64(s0)
+    li a1, 5
+    call closure_apply
+    addi sp, sp, 40
+    addi sp, sp, 8
+    ld ra, 56(sp)
+    ld s0, 48(sp)
+    addi sp, sp, 64
+    ret
+    
+    .globl llf_7
+    .type llf_7, @function
+  llf_7:
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    la a0, llf_6
+    li a1, 5
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -56(s0)
+    addi sp, sp, -32
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    ld t0, -48(s0)
+    sd t0, 24(sp)
+    addi a2, sp, 0
+    ld a0, -56(s0)
+    li a1, 4
+    call closure_apply
+    addi sp, sp, 32
+    ld ra, 56(sp)
+    ld s0, 48(sp)
+    addi sp, sp, 64
+    ret
+    
+    .globl llf_8
+    .type llf_8, @function
+  llf_8:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    la a0, llf_7
+    li a1, 4
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -48(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -24
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    ld t0, -40(s0)
+    sd t0, 16(sp)
+    addi a2, sp, 0
+    ld a0, -48(s0)
+    li a1, 3
+    call closure_apply
+    addi sp, sp, 24
+    addi sp, sp, 8
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl llf_9
+    .type llf_9, @function
+  llf_9:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    la a0, llf_8
+    li a1, 3
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    addi sp, sp, -16
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    ld t0, -32(s0)
+    sd t0, 8(sp)
+    addi a2, sp, 0
+    ld a0, -40(s0)
+    li a1, 2
+    call closure_apply
+    addi sp, sp, 16
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    ret
+    
+    .globl llf_10
+    .type llf_10, @function
+  llf_10:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    la a0, llf_9
+    li a1, 2
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl f
+    .type f, @function
+  f:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_10
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
     ret
     
     .globl main
     .type main, @function
   main:
-    addi sp, sp, -24
-    sd ra, 16(sp)
-    sd s0, 8(sp)
-    addi s0, sp, 24
-    addi sp, sp, -64
-    addi t3, sp, 0
-    li t0, 0
-    sd t0, 0(t3)
-    li t0, 1
-    sd t0, 8(t3)
-    li t0, 2
-    sd t0, 16(t3)
-    li t0, 3
-    sd t0, 24(t3)
-    li t0, 4
-    sd t0, 32(t3)
-    li t0, 5
-    sd t0, 40(t3)
-    li t0, 6
-    sd t0, 48(t3)
-    li t0, 7
-    sd t0, 56(t3)
-    li t0, 10
-    addi sp, sp, -8
-    sd t0, 0(sp)
-    li t0, 9
-    addi sp, sp, -8
-    sd t0, 0(sp)
-    li t0, 8
-    addi sp, sp, -8
-    sd t0, 0(sp)
-    ld a0, 0(t3)
-    ld a1, 8(t3)
-    ld a2, 16(t3)
-    ld a3, 24(t3)
-    ld a4, 32(t3)
-    ld a5, 40(t3)
-    ld a6, 48(t3)
-    ld a7, 56(t3)
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
     call f
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -88
+    li t0, 0
+    sd t0, 0(sp)
+    li t0, 1
+    sd t0, 8(sp)
+    li t0, 2
+    sd t0, 16(sp)
+    li t0, 3
+    sd t0, 24(sp)
+    li t0, 4
+    sd t0, 32(sp)
+    li t0, 5
+    sd t0, 40(sp)
+    li t0, 6
+    sd t0, 48(sp)
+    li t0, 7
+    sd t0, 56(sp)
+    li t0, 8
+    sd t0, 64(sp)
+    li t0, 9
+    sd t0, 72(sp)
+    li t0, 10
+    sd t0, 80(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 11
+    call closure_apply
+    addi sp, sp, 88
+    addi sp, sp, 8
     addi t0, a0, 0
-    addi sp, sp, 24
-    addi sp, sp, 64
     sd t0, -24(s0)
     addi sp, sp, -8
-    addi t3, sp, 0
+    sd x0, 0(sp)
+    addi sp, sp, -8
     ld t0, -24(s0)
-    sd t0, 0(t3)
-    ld a0, 0(t3)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
     call print_int
-    addi t0, a0, 0
-    addi a0, t0, 0
     addi sp, sp, 8
-  main_end:
-    ld ra, 16(sp)
-    ld s0, 8(sp)
-    addi sp, sp, 24
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
     li a0, 0
     li a7, 93
     ecall
-
   $ riscv64-linux-gnu-as -march=rv64gc many_args.s -o many_args.o
   $ riscv64-linux-gnu-gcc -static many_args.o -L../../../runtime -l:libruntime.a -o many_args.elf -Wl,--no-warnings
   $ qemu-riscv64 ./many_args.elf
