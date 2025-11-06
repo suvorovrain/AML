@@ -1,9 +1,9 @@
-.PHONY: all test coverate compile qemu
+.PHONY: build test coverage compile
 
-all:
+build:
 	dune build
 
-test:
+test: build
 	dune test
 
 TEST_COV_D = /tmp/cov
@@ -23,7 +23,7 @@ coverage:
 input ?=
 opts ?=
 
-compile:
+compile: 
 	@riscv64-linux-gnu-gcc -S -march=rv64gc lib/runtime/runtime.c -o runtime.s
 	@dune exec compiler -- $(if $(input),-fromfile=$(input)) $(opts) -o main.s
 
