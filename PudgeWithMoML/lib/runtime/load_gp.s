@@ -13,10 +13,3 @@ load_gp:
   .section .preinit_array,"aw"
   .align 8
   .dc.a load_gp
-
-/* Define a symbol for the first piece of initialized data.  */
-  .data
-  .globl __data_start
-__data_start:
-  .weak data_start
-  data_start = __data_start
