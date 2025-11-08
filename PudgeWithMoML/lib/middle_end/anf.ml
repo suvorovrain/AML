@@ -59,20 +59,27 @@ let rec anf (e : expr) (expr_with_hole : imm -> aexpr t) : aexpr t =
   | Variable n -> expr_with_hole (ImmVar n)
   | LetIn (rec_flag, (PVar name, value), body) ->
     let* body = anf body expr_with_hole in
-    anf value (fun immv -> mk_alet rec_flag name (CImm immv) body |> return)
+    anf_as_imm value (fun immv -> mk_alet rec_flag name (CImm immv) body |> return)
+  | LetIn (_, (PConst Unit_lt, value), body) ->
+    let* body = anf body expr_with_hole in
+    anf_as_imm value (fun _ -> body |> return)
   | LetIn (_, (Wild, value), body) ->
     let* body = anf body expr_with_hole in
-    anf value (fun _ -> body |> return)
+    anf_as_imm value (fun _ -> body |> return)
+  | Apply (Variable "not", arg) ->
+    anf_as_imm arg (fun i ->
+      let* temp = make_temp in
+      let* ehole = expr_with_hole (ImmVar temp) in
+      mk_alet Nonrec temp (CNot i) ehole |> return)
   | Apply (Apply (Variable f, arg1), arg2) when is_op f ->
-    anf arg1 (fun i1 ->
-      anf arg2 (fun i2 ->
+    anf_as_imm arg1 (fun i1 ->
+      anf_as_imm arg2 (fun i2 ->
         let* temp = make_temp in
         let* ehole = expr_with_hole (ImmVar temp) in
         mk_alet Nonrec temp (CBinop (f, i1, i2)) ehole |> return))
   | Lambda (PVar arg, body) ->
-    let+ body' = anf body expr_with_hole in
-    let lambda = CLambda (arg, body') in
-    ACExpr lambda
+    let+ body' = anf body (fun i -> ACExpr (CImm i) |> return) in
+    ACExpr (CLambda (arg, body'))
   | Apply ((Apply (_, _) as app), arg1) ->
     let f, args =
       let rec helper e =
@@ -86,10 +93,10 @@ let rec anf (e : expr) (expr_with_hole : imm -> aexpr t) : aexpr t =
     in
     let rec anf_list (l : expr list) (k : imm list -> aexpr t) =
       match l with
-      | hd :: tl -> anf hd (fun i -> anf_list tl (fun res -> k (i :: res)))
+      | hd :: tl -> anf_as_imm hd (fun i -> anf_list tl (fun res -> k (i :: res)))
       | [] -> k []
     in
-    anf f (fun i1 ->
+    anf_as_imm f (fun i1 ->
       anf_list args (fun l ->
         let* temp = make_temp in
         let* ehole = expr_with_hole (ImmVar temp) in
@@ -97,13 +104,13 @@ let rec anf (e : expr) (expr_with_hole : imm -> aexpr t) : aexpr t =
         | arg :: args -> mk_alet Nonrec temp (CApp (i1, arg, args)) ehole |> return
         | [] -> fail "Apply must contain at least one argument"))
   | Apply (f, arg) ->
-    anf f (fun i1 ->
-      anf arg (fun i2 ->
+    anf_as_imm f (fun i1 ->
+      anf_as_imm arg (fun i2 ->
         let* temp = make_temp in
         let* ehole = expr_with_hole (ImmVar temp) in
         mk_alet Nonrec temp (CApp (i1, i2, [])) ehole |> return))
   | If_then_else (i, t, e) ->
-    anf i (fun i' ->
+    anf_as_imm i (fun i' ->
       let* t' = anf t expr_with_hole in
       let* e' =
         match e with
@@ -112,6 +119,15 @@ let rec anf (e : expr) (expr_with_hole : imm -> aexpr t) : aexpr t =
       in
       ACExpr (CIte (i', t', e')) |> return)
   | other -> fail (Stdlib.Format.asprintf "Not implemented %a" pp_expr other)
+
+and anf_as_imm (e : expr) (k : imm -> aexpr t) : aexpr t =
+  match e with
+  | Lambda (PVar arg, body) ->
+    let* body' = anf body (fun i -> ACExpr (CImm i) |> return) in
+    let* temp = make_temp in
+    let* ehole = k (ImmVar temp) in
+    mk_alet Nonrec temp (CLambda (arg, body')) ehole |> return
+  | _ -> anf e k
 ;;
 
 let anf_str_item : structure_item -> astr_item t = function
@@ -119,7 +135,6 @@ let anf_str_item : structure_item -> astr_item t = function
     let+ v' = anf v (fun i -> ACExpr (CImm i) |> return) in
     rec_flag, (name, v'), []
   | rec_flag, (Wild, v), [] ->
-    (* TODO: alpha conversion must keep wildcard variable but exec code *)
     let+ v' = anf v (fun i -> ACExpr (CImm i) |> return) in
     rec_flag, ("_", v'), []
   | other -> fail (Stdlib.Format.asprintf "Not implemented %a" pp_structure_item other)
@@ -136,4 +151,74 @@ let anf_program program : (aprogram, error) Base.Result.t =
       program
   in
   run program' 0 |> snd
+;;
+
+let%expect_test "pp anf program" =
+  let example_program : aprogram =
+    [ Nonrec, ("homka", ACExpr (CImm (ImmConst (Int_lt 42)))), []
+    ; Nonrec, ("x", ACExpr (CBinop ("+", ImmConst (Int_lt 1), ImmConst (Int_lt 2)))), []
+    ; Nonrec, ("y", ACExpr (CNot (ImmVar "flag"))), []
+    ; Nonrec, ("f", ACExpr (CLambda ("arg", ACExpr (CImm (ImmConst (Bool_lt true)))))), []
+    ; ( Nonrec
+      , ("z", ACExpr (CApp (ImmVar "f", ImmVar "a", [ ImmVar "b"; ImmVar "c" ])))
+      , [] )
+    ; ( Nonrec
+      , ( "cond"
+        , ACExpr
+            (CIte
+               ( ImmVar "flag"
+               , ACExpr (CBinop ("*", ImmConst (Int_lt 2), ImmConst (Int_lt 3)))
+               , ACExpr (CNot (ImmVar "flag")) )) )
+      , [] )
+    ; ( Rec
+      , ( "fact"
+        , ALet
+            ( Nonrec
+            , "x"
+            , CBinop ("+", ImmConst (Int_lt 1), ImmConst (Int_lt 2))
+            , ACExpr
+                (CIte
+                   ( ImmVar "n"
+                   , ACExpr (CBinop ("*", ImmVar "n", ImmVar "x"))
+                   , ACExpr (CImm (ImmConst (Int_lt 1))) )) ) )
+      , [ "homka", ACExpr (CImm (ImmConst (Int_lt 42))) ] )
+    ]
+  in
+  let open Stdlib.Format in
+  printf "%a" pp_aprogram example_program;
+  [%expect
+    {|
+    [(Nonrec, ("homka", (ACExpr (CImm (ImmConst (Int_lt 42))))), []);
+      (Nonrec,
+       ("x",
+        (ACExpr (CBinop ("+", (ImmConst (Int_lt 1)), (ImmConst (Int_lt 2)))))),
+       []);
+      (Nonrec, ("y", (ACExpr (CNot (ImmVar "flag")))), []);
+      (Nonrec,
+       ("f",
+        (ACExpr (CLambda ("arg", (ACExpr (CImm (ImmConst (Bool_lt true)))))))),
+       []);
+      (Nonrec,
+       ("z",
+        (ACExpr (CApp ((ImmVar "f"), (ImmVar "a"), [(ImmVar "b"); (ImmVar "c")])))),
+       []);
+      (Nonrec,
+       ("cond",
+        (ACExpr
+           (CIte ((ImmVar "flag"),
+              (ACExpr
+                 (CBinop ("*", (ImmConst (Int_lt 2)), (ImmConst (Int_lt 3))))),
+              (ACExpr (CNot (ImmVar "flag"))))))),
+       []);
+      (Rec,
+       ("fact",
+        (ALet (Nonrec, "x",
+           (CBinop ("+", (ImmConst (Int_lt 1)), (ImmConst (Int_lt 2)))),
+           (ACExpr
+              (CIte ((ImmVar "n"),
+                 (ACExpr (CBinop ("*", (ImmVar "n"), (ImmVar "x")))),
+                 (ACExpr (CImm (ImmConst (Int_lt 1)))))))
+           ))),
+       [("homka", (ACExpr (CImm (ImmConst (Int_lt 42)))))])
+      ] |}]
 ;;
