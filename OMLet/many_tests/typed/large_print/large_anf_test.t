@@ -1,7 +1,7 @@
 Copyright 2025, Ksenia Kotelnikova, Sofya Kozyreva, Vyacheslav Kochergin
 SPDX-License-Identifier: LGPL-3.0-or-later
 
-  $ dune exec ../../../repl/repl.exe -- -dumpanf -fromfile large_print.ml
+  $ dune exec ../../../bin/omlet.exe -- -dumpanf -fromfile large_print.ml
   let large =
   fun x -> 
     let neq_2 = 0 <> x in
@@ -10,6 +10,7 @@ SPDX-License-Identifier: LGPL-3.0-or-later
                res_of_app_0
         else let res_of_app_1 = print_int 1 in
                res_of_app_1
+  
   let main =
   let eq_7 = 0 = 1 in
     if eq_7
@@ -51,3 +52,4 @@ SPDX-License-Identifier: LGPL-3.0-or-later
                             else let x = 1 in
                                    let res_of_app_3 = large x in
                                      res_of_app_3
+  

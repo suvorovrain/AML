@@ -7,14 +7,19 @@ open Format
 type reg =
   | Zero
   | Ra
+  | Fp
   | Sp
-  | Stack of int
+  | Stack of int * reg
   | Temp of int
   | Saved of int
   | Arg of int
 
+type variable_type =
+  | Argument
+  | Local
+
 type meta_info =
-  | Var of int
+  | Var of int * variable_type
   | Func of string * int
   | Value of reg
 

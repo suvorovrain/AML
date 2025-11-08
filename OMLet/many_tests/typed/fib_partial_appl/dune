@@ -1,7 +1,8 @@
 (cram
  (applies_to fib_partial_appl_test)
  (deps
-  ../../../repl/repl.exe
+  ../../../bin/omlet.exe
   ../../../lib/runtime.c
+  ../../../lib/callf.s
   ../build_and_run.sh
   ../../manytests/typed/010fibcps_ll.ml))

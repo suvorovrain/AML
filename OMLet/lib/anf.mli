@@ -45,7 +45,7 @@ open ResultCounter
 
 val gen_temp : string -> (ident, 'a) ResultCounterMonad.t
 
-val anf_constructions
+val anf_and_lift_program
   :  construction list
   -> (aconstruction list, anf_error) ResultCounterMonad.t
 

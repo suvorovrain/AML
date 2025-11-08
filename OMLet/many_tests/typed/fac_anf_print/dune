@@ -1,7 +1,8 @@
 (cram
  (applies_to fac_anf_print_test)
  (deps
-  ../../../repl/repl.exe
+  ../../../bin/omlet.exe
   fac_anf_print.ml
   ../../../lib/runtime.c
+  ../../../lib/callf.s
   ../build_and_run.sh))

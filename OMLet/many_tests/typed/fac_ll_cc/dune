@@ -1,8 +1,8 @@
 (cram
- (applies_to fac_partial_appl_test)
+ (applies_to fac_cc_ll_test)
  (deps
   ../../../bin/omlet.exe
   ../../../lib/runtime.c
   ../../../lib/callf.s
   ../build_and_run.sh
-  ../../manytests/typed/010faccps_ll.ml))
+  ../../manytests/typed/012faccps.ml))
