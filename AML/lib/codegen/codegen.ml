@@ -384,6 +384,11 @@ module Gen = struct
     >> emit sd fp (ROff (stack_size - 16, sp))
     >> emit addi fp sp stack_size
     >>
+    (* init runtime stuff if main *)
+    (if String.equal name "main"
+     then emit call "heap_init" >> emit la t0 "ML_STACK_BASE" >> emit sd fp (ROff (0, t0))
+     else return ())
+    >>
     (* create local env for this function *)
     let* global_state = get_state in
     let initial_cg_state =
@@ -439,7 +444,14 @@ let codegen ppf (s : aprogram) =
           Map.set acc ~key:name ~data:(List.length params)
         | _ -> acc)
   in
-  let initial_arity_map = Map.set initial_arity_map ~key:"print_int" ~data:1 in
+  let initial_arity_map =
+    initial_arity_map
+    |> Map.set ~key:"print_int" ~data:1
+    |> Map.set ~key:"collect" ~data:1
+    |> Map.set ~key:"get_heap_start" ~data:1
+    |> Map.set ~key:"get_heap_fin" ~data:1
+    |> Map.set ~key:"print_gc_status" ~data:1
+  in
   let initial_state = State.initial_state initial_arity_map in
   let computation = Gen.gen_program s in
   let result, final_state = Cg.run initial_state computation in
