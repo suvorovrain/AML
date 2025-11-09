@@ -1,3 +1,549 @@
+=== task 5 ===
+  $ cat >gc1.ml <<EOF
+  > let f x y = x + y 
+  > let g = f 3
+  > let main = let _ = print_gc_status () in let _ = print_int (g 2) in let _ = print_gc_status () in let _ = collect () in let _ = print_gc_status () in 0
+  > EOF
+  $ ../../../bin/AML.exe gc1.ml gc1.s
+  Generated: gc1.s
+  $ cat gc1.s
+    .text
+    .globl llf_0
+    .type llf_0, @function
+  llf_0:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, -24(s0)
+    ld t1, -32(s0)
+    add a0, t0, t1
+    addi a0, a0, -1
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_1
+    .type llf_1, @function
+  llf_1:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    la a0, llf_0
+    li a1, 2
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl f
+    .type f, @function
+  f:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_1
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl g
+    .type g, @function
+  g:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call f
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 7
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -112
+    sd ra, 104(sp)
+    sd s0, 96(sp)
+    addi s0, sp, 112
+    call heap_init
+    la t0, ML_STACK_BASE
+    sd s0, 0(t0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    ld t0, -24(s0)
+    sd t0, -32(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call g
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 5
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -40(s0)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_int
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -48(s0)
+    ld t0, -48(s0)
+    sd t0, -56(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -64(s0)
+    ld t0, -64(s0)
+    sd t0, -72(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call collect
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -80(s0)
+    ld t0, -80(s0)
+    sd t0, -88(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -96(s0)
+    ld t0, -96(s0)
+    sd t0, -104(s0)
+    li a0, 1
+    ld ra, 104(sp)
+    ld s0, 96(sp)
+    addi sp, sp, 112
+    li a0, 0
+    li a7, 93
+    ecall
+  $ riscv64-linux-gnu-as -march=rv64gc gc1.s -o gc1.o
+  $ riscv64-linux-gnu-gcc -static gc1.o -L../../../runtime -l:libruntime.a -o gc1.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./gc1.elf
+   
+  === GC STATUS ===
+  old space start:  0x19a320
+  old space end:    0x29a320
+  alloc pointer:    0x19a320
+  new space start:  0x29a320
+  heap size: 1048576 bytes
+  used (old space): 0 bytes
+  collects count: 0
+  allocations in total: 0 bytes
+  =================
+  5 
+  === GC STATUS ===
+  old space start:  0x19a320
+  old space end:    0x29a320
+  alloc pointer:    0x19a388
+  new space start:  0x29a320
+  heap size: 1048576 bytes
+  used (old space): 104 bytes
+  collects count: 0
+  allocations in total: 104 bytes
+  =================
+   
+  === GC STATUS ===
+  old space start:  0x29a320
+  old space end:    0x39a320
+  alloc pointer:    0x29a320
+  new space start:  0x19a320
+  heap size: 1048576 bytes
+  used (old space): 0 bytes
+  collects count: 1
+  allocations in total: 104 bytes
+  =================
+
+
+  $ cat >gc2.ml <<EOF
+  > let f x y = x + y 
+  > let g = f 3
+  > let main = 
+  >   let _ = print_gc_status () in 
+  > 
+  >   let g = f 3 in 
+  >   let _ = print_gc_status () in 
+  > 
+  >   let _ = collect () in
+  >   let _ = print_gc_status () in
+  > 
+  >   let _ = print_int (g 2) in
+  > 
+  >   let _ = print_gc_status () in
+  > 0
+  > EOF
+  $ ../../../bin/AML.exe gc2.ml gc2.s
+  Generated: gc2.s
+  $ cat gc2.s
+    .text
+    .globl llf_0
+    .type llf_0, @function
+  llf_0:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, -24(s0)
+    ld t1, -32(s0)
+    add a0, t0, t1
+    addi a0, a0, -1
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_1
+    .type llf_1, @function
+  llf_1:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    la a0, llf_0
+    li a1, 2
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl f
+    .type f, @function
+  f:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_1
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl g
+    .type g, @function
+  g:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call f
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 7
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -144
+    sd ra, 136(sp)
+    sd s0, 128(sp)
+    addi s0, sp, 144
+    call heap_init
+    la t0, ML_STACK_BASE
+    sd s0, 0(t0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    ld t0, -24(s0)
+    sd t0, -32(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call f
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 7
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    ld t0, -40(s0)
+    sd t0, -48(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -56(s0)
+    ld t0, -56(s0)
+    sd t0, -64(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call collect
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -72(s0)
+    ld t0, -72(s0)
+    sd t0, -80(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -88(s0)
+    ld t0, -88(s0)
+    sd t0, -96(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 5
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -48(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -104(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -104(s0)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_int
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -112(s0)
+    ld t0, -112(s0)
+    sd t0, -120(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -128(s0)
+    ld t0, -128(s0)
+    sd t0, -136(s0)
+    li a0, 1
+    ld ra, 136(sp)
+    ld s0, 128(sp)
+    addi sp, sp, 144
+    li a0, 0
+    li a7, 93
+    ecall
+  $ riscv64-linux-gnu-as -march=rv64gc gc2.s -o gc2.o
+  $ riscv64-linux-gnu-gcc -static gc2.o -L../../../runtime -l:libruntime.a -o gc2.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./gc2.elf
+   
+  === GC STATUS ===
+  old space start:  0x19a320
+  old space end:    0x29a320
+  alloc pointer:    0x19a320
+  new space start:  0x29a320
+  heap size: 1048576 bytes
+  used (old space): 0 bytes
+  collects count: 0
+  allocations in total: 0 bytes
+  =================
+   
+  === GC STATUS ===
+  old space start:  0x19a320
+  old space end:    0x29a320
+  alloc pointer:    0x19a388
+  new space start:  0x29a320
+  heap size: 1048576 bytes
+  used (old space): 104 bytes
+  collects count: 0
+  allocations in total: 104 bytes
+  =================
+   
+  === GC STATUS ===
+  old space start:  0x29a320
+  old space end:    0x39a320
+  alloc pointer:    0x29a348
+  new space start:  0x19a320
+  heap size: 1048576 bytes
+  used (old space): 40 bytes
+  collects count: 1
+  allocations in total: 104 bytes
+  =================
+  5 
+  === GC STATUS ===
+  old space start:  0x29a320
+  old space end:    0x39a320
+  alloc pointer:    0x29a348
+  new space start:  0x19a320
+  heap size: 1048576 bytes
+  used (old space): 40 bytes
+  collects count: 1
+  allocations in total: 104 bytes
+  =================
+
 === task 4 ===
   $ ../../../bin/AML.exe ./manytests/typed/012fibcps.ml fibcps.s
   Generated: fibcps.s
@@ -236,6 +782,9 @@
     sd ra, 24(sp)
     sd s0, 16(sp)
     addi s0, sp, 32
+    call heap_init
+    la t0, ML_STACK_BASE
+    sd s0, 0(t0)
     la a0, llf_4
     li a1, 1
     call closure_alloc
@@ -976,6 +1525,9 @@ $ cat faccps.s
     sd ra, 56(sp)
     sd s0, 48(sp)
     addi s0, sp, 64
+    call heap_init
+    la t0, ML_STACK_BASE
+    sd s0, 0(t0)
     addi sp, sp, 0
     addi a1, sp, 0
     li a0, 0
@@ -1411,6 +1963,9 @@ $ cat faccps.s
     sd ra, 40(sp)
     sd s0, 32(sp)
     addi s0, sp, 48
+    call heap_init
+    la t0, ML_STACK_BASE
+    sd s0, 0(t0)
     addi sp, sp, 0
     addi a1, sp, 0
     li a0, 0
@@ -1997,6 +2552,9 @@ $ cat faccps.s
     sd ra, 40(sp)
     sd s0, 32(sp)
     addi s0, sp, 48
+    call heap_init
+    la t0, ML_STACK_BASE
+    sd s0, 0(t0)
     addi sp, sp, 0
     addi a1, sp, 0
     li a0, 0
@@ -2128,6 +2686,9 @@ $ cat faccps.s
     sd ra, 56(sp)
     sd s0, 48(sp)
     addi s0, sp, 64
+    call heap_init
+    la t0, ML_STACK_BASE
+    sd s0, 0(t0)
     li t0, 1
     li t1, 3
     sub t2, t0, t1
@@ -2528,6 +3089,9 @@ $ cat faccps.s
     sd ra, 40(sp)
     sd s0, 32(sp)
     addi s0, sp, 48
+    call heap_init
+    la t0, ML_STACK_BASE
+    sd s0, 0(t0)
     addi sp, sp, 0
     addi a1, sp, 0
     li a0, 0
@@ -3152,6 +3716,9 @@ $ cat faccps.s
     sd ra, 24(sp)
     sd s0, 16(sp)
     addi s0, sp, 32
+    call heap_init
+    la t0, ML_STACK_BASE
+    sd s0, 0(t0)
     addi sp, sp, 0
     addi a1, sp, 0
     li a0, 0
