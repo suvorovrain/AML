@@ -140,6 +140,7 @@ module Helpers = struct
   ;;
 
   let gen_bin_op op dst r1 r2 =
+    let tag_bool_result = emit slli dst dst 1 >> emit addi dst dst 1 in
     match op with
     | Add -> emit add dst r1 r2 >> emit addi dst dst (-1)
     | Sub -> emit sub dst r1 r2 >> emit addi dst dst 1
@@ -149,16 +150,21 @@ module Helpers = struct
       >> emit mul dst t2 t3
       >> emit slli dst dst 1
       >> emit addi dst dst 1
-    | Le -> emit slt dst r2 r1 >> emit xori dst dst 1
-    | Lt -> emit slt dst r1 r2
+    | Le -> emit slt dst r2 r1 >> emit xori dst dst 1 >> tag_bool_result
+    | Lt -> emit slt dst r1 r2 >> tag_bool_result
     | Eq ->
       emit sub t2 r1 r2
       >> emit slt dst x0 t2
       >> emit slt t3 t2 x0
       >> emit add dst dst t3
       >> emit xori dst dst 1
+      >> tag_bool_result
     | Neq ->
-      emit sub t2 r1 r2 >> emit slt dst x0 t2 >> emit slt t3 t2 x0 >> emit add dst dst t3
+      emit sub t2 r1 r2
+      >> emit slt dst x0 t2
+      >> emit slt t3 t2 x0
+      >> emit add dst dst t3
+      >> tag_bool_result
   ;;
 end
 

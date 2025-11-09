@@ -19,6 +19,7 @@
     ld t0, -24(s0)
     ld t1, -40(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -48(s0)
     addi sp, sp, -8
     sd x0, 0(sp)
@@ -52,8 +53,9 @@
     ld t0, 24(a1)
     sd t0, -48(s0)
     ld t0, -40(s0)
-    li t1, 2
+    li t1, 5
     sub t0, t0, t1
+    addi t0, t0, 1
     sd t0, -56(s0)
     la a0, llf_0
     li a1, 3
@@ -101,11 +103,14 @@
     ld t0, 16(a1)
     sd t0, -40(s0)
     ld t0, -32(s0)
-    li t1, 2
+    li t1, 5
     slt t0, t0, t1
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -48(s0)
     ld t0, -48(s0)
-    beq t0, x0, .Lelse_0
+    li t1, 1
+    beq t0, t1, .Lelse_0
     addi sp, sp, -8
     sd x0, 0(sp)
     addi sp, sp, -8
@@ -120,8 +125,9 @@
     j .Lendif_1
   .Lelse_0:
     ld t0, -32(s0)
-    li t1, 1
+    li t1, 3
     sub t0, t0, t1
+    addi t0, t0, 1
     sd t0, -56(s0)
     la a0, llf_1
     li a1, 4
@@ -242,7 +248,7 @@
     addi sp, sp, 0
     addi t3, a0, 0
     addi sp, sp, -16
-    li t0, 6
+    li t0, 13
     sd t0, 0(sp)
     ld t0, -24(s0)
     sd t0, 8(sp)
@@ -295,16 +301,19 @@ $ cat faccps.s
     addi s0, sp, 32
     ld t0, 0(a1)
     sd t0, -24(s0)
-    li t0, 1
-    li t1, 1
+    li t0, 3
+    li t1, 3
     sub t2, t0, t1
     slt t0, x0, t2
     slt t3, t2, x0
     add t0, t0, t3
     xori t0, t0, 1
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -32(s0)
     ld t0, -32(s0)
-    beq t0, x0, .Lelse_0
+    li t1, 1
+    beq t0, t1, .Lelse_0
     ld a0, -24(s0)
     j .Lendif_1
   .Lelse_0:
@@ -370,7 +379,7 @@ $ cat faccps.s
     sd t0, -80(s0)
     ld t0, -80(s0)
     sd t0, -88(s0)
-    li a0, 0
+    li a0, 1
     ld ra, 88(sp)
     ld s0, 80(sp)
     addi sp, sp, 96
@@ -467,38 +476,47 @@ $ cat faccps.s
     ld t0, -24(s0)
     ld t1, -32(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -104(s0)
     ld t0, -104(s0)
     ld t1, -40(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -112(s0)
     ld t0, -112(s0)
     ld t1, -48(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -120(s0)
     ld t0, -120(s0)
     ld t1, -56(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -128(s0)
     ld t0, -128(s0)
     ld t1, -64(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -136(s0)
     ld t0, -136(s0)
     ld t1, -72(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -144(s0)
     ld t0, -144(s0)
     ld t1, -80(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -152(s0)
     ld t0, -152(s0)
     ld t1, -88(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -160(s0)
     ld t0, -160(s0)
     ld t1, -96(s0)
     add a0, t0, t1
+    addi a0, a0, -1
     ld ra, 152(sp)
     ld s0, 144(sp)
     addi sp, sp, 160
@@ -972,25 +990,25 @@ $ cat faccps.s
     call closure_alloc
     addi t0, a0, 0
     sd t0, 0(sp)
-    li t0, 1
+    li t0, 3
     sd t0, 8(sp)
-    li t0, 10
+    li t0, 21
     sd t0, 16(sp)
-    li t0, 100
+    li t0, 201
     sd t0, 24(sp)
-    li t0, 1000
+    li t0, 2001
     sd t0, 32(sp)
-    li t0, 10000
+    li t0, 20001
     sd t0, 40(sp)
-    li t0, 100000
+    li t0, 200001
     sd t0, 48(sp)
-    li t0, 1000000
+    li t0, 2000001
     sd t0, 56(sp)
-    li t0, 10000000
+    li t0, 20000001
     sd t0, 64(sp)
-    li t0, 100000000
+    li t0, 200000001
     sd t0, 72(sp)
-    li t0, 1000000000
+    li t0, 2000000001
     sd t0, 80(sp)
     addi a2, sp, 0
     addi a0, t3, 0
@@ -1028,11 +1046,11 @@ $ cat faccps.s
     call closure_alloc
     addi t0, a0, 0
     sd t0, 0(sp)
-    li t0, 1
+    li t0, 3
     sd t0, 8(sp)
-    li t0, 10
+    li t0, 21
     sd t0, 16(sp)
-    li t0, 100
+    li t0, 201
     sd t0, 24(sp)
     addi a2, sp, 0
     addi a0, t3, 0
@@ -1043,7 +1061,7 @@ $ cat faccps.s
     sd t0, -56(s0)
     ld t0, -56(s0)
     sd t0, -64(s0)
-    li a0, 0
+    li a0, 1
     ld ra, 56(sp)
     ld s0, 48(sp)
     addi sp, sp, 64
@@ -1090,7 +1108,11 @@ $ cat faccps.s
     sd t0, -40(s0)
     ld t0, -40(s0)
     ld t1, -32(s0)
-    mul t0, t0, t1
+    srai t2, t0, 1
+    srai t3, t1, 1
+    mul t0, t2, t3
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -48(s0)
     addi sp, sp, -8
     sd x0, 0(sp)
@@ -1185,19 +1207,22 @@ $ cat faccps.s
     ld t0, 24(a1)
     sd t0, -48(s0)
     ld t0, -40(s0)
-    li t1, 1
+    li t1, 3
     sub t2, t0, t1
     slt t0, x0, t2
     slt t3, t2, x0
     add t0, t0, t3
     xori t0, t0, 1
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -56(s0)
     ld t0, -56(s0)
-    beq t0, x0, .Lelse_0
+    li t1, 1
+    beq t0, t1, .Lelse_0
     addi sp, sp, -8
     sd x0, 0(sp)
     addi sp, sp, -8
-    li t0, 1
+    li t0, 3
     sd t0, 0(sp)
     addi a2, sp, 0
     ld a0, -48(s0)
@@ -1208,8 +1233,9 @@ $ cat faccps.s
     j .Lendif_1
   .Lelse_0:
     ld t0, -40(s0)
-    li t1, 1
+    li t1, 3
     sub t0, t0, t1
+    addi t0, t0, 1
     sd t0, -64(s0)
     addi sp, sp, -16
     ld t0, -40(s0)
@@ -1392,7 +1418,7 @@ $ cat faccps.s
     addi sp, sp, 0
     addi t3, a0, 0
     addi sp, sp, -16
-    li t0, 4
+    li t0, 9
     sd t0, 0(sp)
     la a0, id
     li a1, 0
@@ -1420,7 +1446,7 @@ $ cat faccps.s
     sd t0, -32(s0)
     ld t0, -32(s0)
     sd t0, -40(s0)
-    li a0, 0
+    li a0, 1
     ld ra, 40(sp)
     ld s0, 32(sp)
     addi sp, sp, 48
@@ -1467,6 +1493,7 @@ $ cat faccps.s
     ld t0, -32(s0)
     ld t1, -40(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -48(s0)
     addi sp, sp, -8
     sd x0, 0(sp)
@@ -1563,8 +1590,9 @@ $ cat faccps.s
     ld t0, 32(a1)
     sd t0, -56(s0)
     ld t0, -48(s0)
-    li t1, 2
+    li t1, 5
     sub t0, t0, t1
+    addi t0, t0, 1
     sd t0, -64(s0)
     addi sp, sp, -16
     ld t0, -56(s0)
@@ -1717,11 +1745,14 @@ $ cat faccps.s
     ld t0, 24(a1)
     sd t0, -48(s0)
     ld t0, -40(s0)
-    li t1, 2
+    li t1, 5
     slt t0, t0, t1
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -56(s0)
     ld t0, -56(s0)
-    beq t0, x0, .Lelse_0
+    li t1, 1
+    beq t0, t1, .Lelse_0
     addi sp, sp, -8
     sd x0, 0(sp)
     addi sp, sp, -8
@@ -1736,8 +1767,9 @@ $ cat faccps.s
     j .Lendif_1
   .Lelse_0:
     ld t0, -40(s0)
-    li t1, 1
+    li t1, 3
     sub t0, t0, t1
+    addi t0, t0, 1
     sd t0, -64(s0)
     addi sp, sp, -8
     sd x0, 0(sp)
@@ -1972,7 +2004,7 @@ $ cat faccps.s
     addi sp, sp, 0
     addi t3, a0, 0
     addi sp, sp, -16
-    li t0, 6
+    li t0, 13
     sd t0, 0(sp)
     la a0, id
     li a1, 0
@@ -2000,7 +2032,7 @@ $ cat faccps.s
     sd t0, -32(s0)
     ld t0, -32(s0)
     sd t0, -40(s0)
-    li a0, 0
+    li a0, 1
     ld ra, 40(sp)
     ld s0, 32(sp)
     addi sp, sp, 48
@@ -2034,19 +2066,22 @@ $ cat faccps.s
     addi s0, sp, 32
     ld t0, 0(a1)
     sd t0, -24(s0)
-    li t0, 0
+    li t0, 1
     ld t1, -24(s0)
     sub t2, t0, t1
     slt t0, x0, t2
     slt t3, t2, x0
     add t0, t0, t3
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -32(s0)
     ld t0, -32(s0)
-    beq t0, x0, .Lelse_0
+    li t1, 1
+    beq t0, t1, .Lelse_0
     addi sp, sp, -8
     sd x0, 0(sp)
     addi sp, sp, -8
-    li t0, 0
+    li t0, 1
     sd t0, 0(sp)
     addi a1, sp, 0
     li a0, 1
@@ -2058,7 +2093,7 @@ $ cat faccps.s
     addi sp, sp, -8
     sd x0, 0(sp)
     addi sp, sp, -8
-    li t0, 1
+    li t0, 3
     sd t0, 0(sp)
     addi a1, sp, 0
     li a0, 1
@@ -2093,37 +2128,46 @@ $ cat faccps.s
     sd ra, 56(sp)
     sd s0, 48(sp)
     addi s0, sp, 64
-    li t0, 0
-    li t1, 1
+    li t0, 1
+    li t1, 3
     sub t2, t0, t1
     slt t0, x0, t2
     slt t3, t2, x0
     add t0, t0, t3
     xori t0, t0, 1
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -24(s0)
     ld t0, -24(s0)
-    beq t0, x0, .Lelse_2
-    li t0, 0
     li t1, 1
+    beq t0, t1, .Lelse_2
+    li t0, 1
+    li t1, 3
     sub t2, t0, t1
     slt t0, x0, t2
     slt t3, t2, x0
     add t0, t0, t3
     xori t0, t0, 1
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -32(s0)
     ld t0, -32(s0)
-    beq t0, x0, .Lelse_4
-    li t0, 0
     li t1, 1
+    beq t0, t1, .Lelse_4
+    li t0, 1
+    li t1, 3
     sub t2, t0, t1
     slt t0, x0, t2
     slt t3, t2, x0
     add t0, t0, t3
     xori t0, t0, 1
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -40(s0)
     ld t0, -40(s0)
-    beq t0, x0, .Lelse_6
-    li t0, 0
+    li t1, 1
+    beq t0, t1, .Lelse_6
+    li t0, 1
     sd t0, -48(s0)
     addi sp, sp, 0
     addi a1, sp, 0
@@ -2144,7 +2188,7 @@ $ cat faccps.s
     addi sp, sp, 8
     j .Lendif_7
   .Lelse_6:
-    li t0, 1
+    li t0, 3
     sd t0, -56(s0)
     addi sp, sp, 0
     addi a1, sp, 0
@@ -2166,17 +2210,20 @@ $ cat faccps.s
   .Lendif_7:
     j .Lendif_5
   .Lelse_4:
-    li t0, 1
-    li t1, 1
+    li t0, 3
+    li t1, 3
     sub t2, t0, t1
     slt t0, x0, t2
     slt t3, t2, x0
     add t0, t0, t3
     xori t0, t0, 1
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -64(s0)
     ld t0, -64(s0)
-    beq t0, x0, .Lelse_8
-    li t0, 0
+    li t1, 1
+    beq t0, t1, .Lelse_8
+    li t0, 1
     sd t0, -72(s0)
     addi sp, sp, 0
     addi a1, sp, 0
@@ -2197,7 +2244,7 @@ $ cat faccps.s
     addi sp, sp, 8
     j .Lendif_9
   .Lelse_8:
-    li t0, 1
+    li t0, 3
     sd t0, -80(s0)
     addi sp, sp, 0
     addi a1, sp, 0
@@ -2223,7 +2270,7 @@ $ cat faccps.s
     addi sp, sp, -8
     sd x0, 0(sp)
     addi sp, sp, -8
-    li t0, 42
+    li t0, 85
     sd t0, 0(sp)
     addi a1, sp, 0
     li a0, 1
@@ -2234,27 +2281,33 @@ $ cat faccps.s
     sd t0, -88(s0)
     ld t0, -88(s0)
     sd t0, -96(s0)
-    li t0, 1
-    li t1, 1
+    li t0, 3
+    li t1, 3
     sub t2, t0, t1
     slt t0, x0, t2
     slt t3, t2, x0
     add t0, t0, t3
     xori t0, t0, 1
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -104(s0)
     ld t0, -104(s0)
-    beq t0, x0, .Lelse_10
-    li t0, 0
     li t1, 1
+    beq t0, t1, .Lelse_10
+    li t0, 1
+    li t1, 3
     sub t2, t0, t1
     slt t0, x0, t2
     slt t3, t2, x0
     add t0, t0, t3
     xori t0, t0, 1
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -112(s0)
     ld t0, -112(s0)
-    beq t0, x0, .Lelse_12
-    li t0, 0
+    li t1, 1
+    beq t0, t1, .Lelse_12
+    li t0, 1
     sd t0, -120(s0)
     addi sp, sp, 0
     addi a1, sp, 0
@@ -2275,7 +2328,7 @@ $ cat faccps.s
     addi sp, sp, 8
     j .Lendif_13
   .Lelse_12:
-    li t0, 1
+    li t0, 3
     sd t0, -128(s0)
     addi sp, sp, 0
     addi a1, sp, 0
@@ -2297,17 +2350,20 @@ $ cat faccps.s
   .Lendif_13:
     j .Lendif_11
   .Lelse_10:
-    li t0, 1
-    li t1, 1
+    li t0, 3
+    li t1, 3
     sub t2, t0, t1
     slt t0, x0, t2
     slt t3, t2, x0
     add t0, t0, t3
     xori t0, t0, 1
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -136(s0)
     ld t0, -136(s0)
-    beq t0, x0, .Lelse_14
-    li t0, 0
+    li t1, 1
+    beq t0, t1, .Lelse_14
+    li t0, 1
     sd t0, -144(s0)
     addi sp, sp, 0
     addi a1, sp, 0
@@ -2328,7 +2384,7 @@ $ cat faccps.s
     addi sp, sp, 8
     j .Lendif_15
   .Lelse_14:
-    li t0, 1
+    li t0, 3
     sd t0, -152(s0)
     addi sp, sp, 0
     addi a1, sp, 0
@@ -2381,17 +2437,21 @@ $ cat faccps.s
     ld t0, 0(a1)
     sd t0, -24(s0)
     ld t0, -24(s0)
-    li t1, 2
+    li t1, 5
     slt t0, t0, t1
+    slli t0, t0, 1
+    addi t0, t0, 1
     sd t0, -32(s0)
     ld t0, -32(s0)
-    beq t0, x0, .Lelse_0
+    li t1, 1
+    beq t0, t1, .Lelse_0
     ld a0, -24(s0)
     j .Lendif_1
   .Lelse_0:
     ld t0, -24(s0)
-    li t1, 1
+    li t1, 3
     sub t0, t0, t1
+    addi t0, t0, 1
     sd t0, -40(s0)
     addi sp, sp, 0
     addi a1, sp, 0
@@ -2413,8 +2473,9 @@ $ cat faccps.s
     addi t0, a0, 0
     sd t0, -48(s0)
     ld t0, -24(s0)
-    li t1, 2
+    li t1, 5
     sub t0, t0, t1
+    addi t0, t0, 1
     sd t0, -56(s0)
     addi sp, sp, 0
     addi a1, sp, 0
@@ -2438,6 +2499,7 @@ $ cat faccps.s
     ld t0, -48(s0)
     ld t1, -64(s0)
     add a0, t0, t1
+    addi a0, a0, -1
   .Lendif_1:
     ld ra, 56(sp)
     ld s0, 48(sp)
@@ -2475,7 +2537,7 @@ $ cat faccps.s
     addi sp, sp, -8
     sd x0, 0(sp)
     addi sp, sp, -8
-    li t0, 4
+    li t0, 9
     sd t0, 0(sp)
     addi a2, sp, 0
     addi a0, t3, 0
@@ -2499,7 +2561,7 @@ $ cat faccps.s
     sd t0, -32(s0)
     ld t0, -32(s0)
     sd t0, -40(s0)
-    li a0, 0
+    li a0, 1
     ld ra, 40(sp)
     ld s0, 32(sp)
     addi sp, sp, 48
@@ -2552,42 +2614,52 @@ $ cat faccps.s
     ld t0, -24(s0)
     ld t1, -32(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -112(s0)
     ld t0, -112(s0)
     ld t1, -40(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -120(s0)
     ld t0, -120(s0)
     ld t1, -48(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -128(s0)
     ld t0, -128(s0)
     ld t1, -56(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -136(s0)
     ld t0, -136(s0)
     ld t1, -64(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -144(s0)
     ld t0, -144(s0)
     ld t1, -72(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -152(s0)
     ld t0, -152(s0)
     ld t1, -80(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -160(s0)
     ld t0, -160(s0)
     ld t1, -88(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -168(s0)
     ld t0, -168(s0)
     ld t1, -96(s0)
     add t0, t0, t1
+    addi t0, t0, -1
     sd t0, -176(s0)
     ld t0, -176(s0)
     ld t1, -104(s0)
     add a0, t0, t1
+    addi a0, a0, -1
     ld ra, 168(sp)
     ld s0, 160(sp)
     addi sp, sp, 176
@@ -3089,27 +3161,27 @@ $ cat faccps.s
     addi sp, sp, -8
     sd x0, 0(sp)
     addi sp, sp, -88
-    li t0, 0
-    sd t0, 0(sp)
     li t0, 1
-    sd t0, 8(sp)
-    li t0, 2
-    sd t0, 16(sp)
+    sd t0, 0(sp)
     li t0, 3
-    sd t0, 24(sp)
-    li t0, 4
-    sd t0, 32(sp)
+    sd t0, 8(sp)
     li t0, 5
-    sd t0, 40(sp)
-    li t0, 6
-    sd t0, 48(sp)
+    sd t0, 16(sp)
     li t0, 7
-    sd t0, 56(sp)
-    li t0, 8
-    sd t0, 64(sp)
+    sd t0, 24(sp)
     li t0, 9
+    sd t0, 32(sp)
+    li t0, 11
+    sd t0, 40(sp)
+    li t0, 13
+    sd t0, 48(sp)
+    li t0, 15
+    sd t0, 56(sp)
+    li t0, 17
+    sd t0, 64(sp)
+    li t0, 19
     sd t0, 72(sp)
-    li t0, 10
+    li t0, 21
     sd t0, 80(sp)
     addi a2, sp, 0
     addi a0, t3, 0

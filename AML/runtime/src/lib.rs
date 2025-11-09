@@ -35,7 +35,7 @@ pub unsafe extern "C" fn print_int(argc: i64, argv: *const i64) -> i64 {
     let n = t_n >> 1;
     print!("{}", n);
     io::stdout().flush().unwrap();
-    n
+    t_n
 }
 
 #[no_mangle]
