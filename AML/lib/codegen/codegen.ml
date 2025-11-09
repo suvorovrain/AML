@@ -141,9 +141,14 @@ module Helpers = struct
 
   let gen_bin_op op dst r1 r2 =
     match op with
-    | Add -> emit add dst r1 r2
-    | Sub -> emit sub dst r1 r2
-    | Mul -> emit mul dst r1 r2
+    | Add -> emit add dst r1 r2 >> emit addi dst dst (-1)
+    | Sub -> emit sub dst r1 r2 >> emit addi dst dst 1
+    | Mul ->
+      emit srai t2 r1 1
+      >> emit srai t3 r2 1
+      >> emit mul dst t2 t3
+      >> emit slli dst dst 1
+      >> emit addi dst dst 1
     | Le -> emit slt dst r2 r1 >> emit xori dst dst 1
     | Lt -> emit slt dst r1 r2
     | Eq ->
@@ -200,7 +205,7 @@ module Gen = struct
   (* generate code to load immexpr into dst reg *)
   and gen_immexpr (dst : reg) (imm : immexpr) : unit Cg.t =
     match imm with
-    | ImmNum i -> emit li dst i
+    | ImmNum i -> emit li dst ((i lsl 1) + 1)
     | ImmId id ->
       let* st = get_state in
       (match Map.find st.env id with
@@ -300,7 +305,9 @@ module Gen = struct
       let* l_else = fresh_label "else" in
       let* l_end = fresh_label "endif" in
       gen_immexpr t0 cond_imm
-      >> emit beq t0 x0 l_else
+      (* >> emit beq t0 x0 l_else *)
+      >> emit li t1 1
+      >> emit beq t0 t1 l_else
       >> gen_expr dst then_aexpr
       >> emit j l_end
       >> emit label l_else

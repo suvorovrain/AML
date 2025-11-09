@@ -31,7 +31,8 @@ pub unsafe extern "C" fn print_int(argc: i64, argv: *const i64) -> i64 {
         eprintln!("fatal: print_int expects 1 arg, got {}", argc);
         abort();
     }
-    let n = unsafe { *argv.add(0) };
+    let t_n = unsafe { *argv.add(0) };
+    let n = t_n >> 1;
     print!("{}", n);
     io::stdout().flush().unwrap();
     n
