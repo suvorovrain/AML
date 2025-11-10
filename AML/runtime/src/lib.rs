@@ -25,18 +25,18 @@ pub static mut ML_STACK_BASE: *const i64 = std::ptr::null();
 
 // object layout
 // heap objects are blocks of i64
-// Word 0: header (size, tag)
-// Word 1..n: obj data
+// word 0: header (size, tag)
+// word 1..n: obj data
 // header format: (size << 10) | tag. tag is 8 bits, size is length in words
 const CLOSURE_TAG: i64 = 247;
 const FORWARDING_TAG: i64 = 255; // forwarding pointer to mark moved object
 
 // closure Layout (in words):
-// 0: header
-// 1: code pointer
-// 2: arity (untagged)
-// 3: applied (untagged)
-// 4..n: applied args (tagged)
+// word 0: header
+// word 1: code pointer
+// word 2: arity (untagged)
+// word 3: applied (untagged)
+// word 4..n: applied args (tagged)
 const CLOSURE_CODE_PTR_OFFSET: usize = 1;
 const CLOSURE_ARITY_OFFSET: usize = 2;
 const CLOSURE_APPLIED_OFFSET: usize = 3;
@@ -75,9 +75,15 @@ unsafe fn copy_object(obj_ptr: *mut i64, allocptr: &mut *mut i64) -> *mut i64 {
     *obj_ptr.add(0) = make_header(0, FORWARDING_TAG);
     *(obj_ptr.add(1)) = new_obj_ptr as i64;
 
-    return new_obj_ptr;
+    new_obj_ptr
 }
 
+/// Initializes the garbage collector's heap spaces.
+///
+/// # Safety
+///
+/// This function modifies global variables.
+/// - It must be called once at the beginning of the program and before any other heap operations.
 #[no_mangle]
 pub unsafe extern "C" fn heap_init() {
     OLD_SPACE_START = addr_of_mut!(HEAP_1[0]);
@@ -88,16 +94,33 @@ pub unsafe extern "C" fn heap_init() {
     NEW_SPACE_END = NEW_SPACE_START.add(HEAP_WORDS);
 }
 
+/// Gets the raw pointer to the start of the current heap space (old-space).
+///
+/// # Safety
+///
+/// - `heap_init` must be called before this function.
+/// - The returned pointer is only valid until the next garbage collection.
 #[no_mangle]
 pub unsafe extern "C" fn get_heap_start(_argc: i64, _argv: *const i64) -> i64 {
     OLD_SPACE_START as i64
 }
 
+/// Gets the raw pointer to the current top of the heap, where the next object will be allocated.
+///
+/// # Safety
+///
+/// - `heap_init` must be called before this function.
+/// - The returned pointer is only valid until the next allocation or garbage collection.
 #[no_mangle]
 pub unsafe extern "C" fn get_heap_fin(_argc: i64, _argv: *const i64) -> i64 {
     ALLOC_PTR as i64
 }
 
+/// Prints debug info of the current heap and GC state to stdout.
+///
+/// # Safety
+///
+/// - `heap_init` must be called before this function.
 #[no_mangle]
 pub unsafe extern "C" fn print_gc_status(_argc: i64, _argv: *const i64) -> i64 {
     let old_start = OLD_SPACE_START;
@@ -138,18 +161,26 @@ unsafe fn allocate(size_in_words: i64) -> *mut i64 {
         let result_ptr = ALLOC_PTR;
         ALLOC_PTR = new_alloc_ptr_after_gc;
         TOTAL_ALLOCATED += size_in_words * 8;
-        return result_ptr;
+        result_ptr
     } else {
         // update ALLOC_PTR if there is enough space
         let result_ptr = ALLOC_PTR;
         ALLOC_PTR = new_alloc_ptr;
         TOTAL_ALLOCATED += size_in_words * 8;
-        return result_ptr;
+        result_ptr
     }
 }
 
-// https://www.cs.cornell.edu/courses/cs312/2003fa/lectures/sec24.htm
-// https://en.wikipedia.org/wiki/Cheney%27s_algorithm
+/// Performs copying garbage collection algorithm.
+/// https://www.cs.cornell.edu/courses/cs312/2003fa/lectures/sec24.htm
+/// https://en.wikipedia.org/wiki/Cheney%27s_algorithm
+///
+/// # Safety
+///
+/// This function requires on environment set up by code generator.
+/// - `heap_init` must be called before this function.
+/// - The `ML_STACK_BASE` variable must be set to a pointer to the bottom of the stack frame before this function is called.
+/// - The stack region between the current `sp` and `ML_STACK_BASE` must only contain valid runtime values: tagged integers or valid 64-bit pointers into the `OLD_SPACE`. Any other bit pattern will cause undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn collect() {
     let mut allocptr = NEW_SPACE_START;
@@ -249,6 +280,14 @@ pub unsafe extern "C" fn print_int(argc: i64, argv: *const i64) -> i64 {
     t_n
 }
 
+/// Allocates a new closure object on the heap.
+///
+/// # Safety
+///
+/// The closure is initialized with 0 applied arguments. This function may trigger a garbage collection if the heap is full.
+/// - `heap_init` must be called before this function.
+/// - The `func` pointer must be a valid, non-null pointer to function code.
+/// - This function calls `allocate`, which may trigger `collect`. Therefore, all safety invariants required by `collect` must be handled before calling this function.
 #[no_mangle]
 pub unsafe extern "C" fn closure_alloc(func: *const (), arity: i64) -> i64 {
     let size_in_words: i64 = 4;
@@ -301,7 +340,7 @@ pub unsafe extern "C" fn closure_apply(clos_raw: i64, argc: i64, argv: *const i6
             argc as usize,
         );
 
-        return new_closure_ptr as i64;
+        new_closure_ptr as i64
     } else if new_applied_count == total_arity {
         let mut all_args: Vec<i64> = Vec::with_capacity(total_arity as usize);
         all_args.extend_from_slice(std::slice::from_raw_parts(
@@ -310,7 +349,7 @@ pub unsafe extern "C" fn closure_apply(clos_raw: i64, argc: i64, argv: *const i6
         ));
         all_args.extend_from_slice(std::slice::from_raw_parts(argv, argc as usize));
 
-        return call_with_i64_args(code_ptr, &all_args);
+        call_with_i64_args(code_ptr, &all_args)
     } else {
         let mut full_call_args: Vec<i64> = Vec::with_capacity(total_arity as usize);
         full_call_args.extend_from_slice(std::slice::from_raw_parts(
@@ -326,6 +365,6 @@ pub unsafe extern "C" fn closure_apply(clos_raw: i64, argc: i64, argv: *const i6
         let rest_argc = new_applied_count - total_arity;
         let rest_argv = argv.add(args_needed as usize);
 
-        return closure_apply(result_closure_raw, rest_argc, rest_argv);
+        closure_apply(result_closure_raw, rest_argc, rest_argv)
     }
 }

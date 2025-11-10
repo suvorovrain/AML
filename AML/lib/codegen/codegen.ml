@@ -311,7 +311,6 @@ module Gen = struct
       let* l_else = fresh_label "else" in
       let* l_end = fresh_label "endif" in
       gen_immexpr t0 cond_imm
-      (* >> emit beq t0 x0 l_else *)
       >> emit li t1 1
       >> emit beq t0 t1 l_else
       >> gen_expr dst then_aexpr
