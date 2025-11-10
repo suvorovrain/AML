@@ -1,12 +1,12 @@
 === task 5 ===
-  $ cat >gc1.ml <<EOF
+  $ cat >gc_dead.ml <<EOF
   > let f x y = x + y 
   > let g = f 3
   > let main = let _ = print_gc_status () in let _ = print_int (g 2) in let _ = print_gc_status () in let _ = collect () in let _ = print_gc_status () in 0
   > EOF
-  $ ../../../bin/AML.exe gc1.ml gc1.s
-  Generated: gc1.s
-  $ cat gc1.s
+  $ ../../../bin/AML.exe gc_dead.ml gc_dead.s
+  Generated: gc_dead.s
+  $ cat gc_dead.s
     .text
     .globl llf_0
     .type llf_0, @function
@@ -208,9 +208,9 @@
     li a0, 0
     li a7, 93
     ecall
-  $ riscv64-linux-gnu-as -march=rv64gc gc1.s -o gc1.o
-  $ riscv64-linux-gnu-gcc -static gc1.o -L../../../runtime -l:libruntime.a -o gc1.elf -Wl,--no-warnings
-  $ qemu-riscv64 ./gc1.elf
+  $ riscv64-linux-gnu-as -march=rv64gc gc_dead.s -o gc_dead.o
+  $ riscv64-linux-gnu-gcc -static gc_dead.o -L../../../runtime -l:libruntime.a -o gc_dead.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./gc_dead.elf
    
   === GC STATUS ===
   old space start:  0x19a320
@@ -245,10 +245,8 @@
   allocations in total: 104 bytes
   =================
 
-
-  $ cat >gc2.ml <<EOF
+  $ cat >gc_live.ml <<EOF
   > let f x y = x + y 
-  > let g = f 3
   > let main = 
   >   let _ = print_gc_status () in 
   > 
@@ -263,9 +261,9 @@
   >   let _ = print_gc_status () in
   > 0
   > EOF
-  $ ../../../bin/AML.exe gc2.ml gc2.s
-  Generated: gc2.s
-  $ cat gc2.s
+  $ ../../../bin/AML.exe gc_live.ml gc_live.s
+  Generated: gc_live.s
+  $ cat gc_live.s
     .text
     .globl llf_0
     .type llf_0, @function
@@ -327,35 +325,6 @@
     la a0, llf_1
     li a1, 1
     call closure_alloc
-    ld ra, 8(sp)
-    ld s0, 0(sp)
-    addi sp, sp, 16
-    ret
-    
-    .globl g
-    .type g, @function
-  g:
-    addi sp, sp, -16
-    sd ra, 8(sp)
-    sd s0, 0(sp)
-    addi s0, sp, 16
-    addi sp, sp, 0
-    addi a1, sp, 0
-    li a0, 0
-    call f
-    addi sp, sp, 0
-    addi t3, a0, 0
-    addi sp, sp, -8
-    sd x0, 0(sp)
-    addi sp, sp, -8
-    li t0, 7
-    sd t0, 0(sp)
-    addi a2, sp, 0
-    addi a0, t3, 0
-    li a1, 1
-    call closure_apply
-    addi sp, sp, 8
-    addi sp, sp, 8
     ld ra, 8(sp)
     ld s0, 0(sp)
     addi sp, sp, 16
@@ -496,9 +465,9 @@
     li a0, 0
     li a7, 93
     ecall
-  $ riscv64-linux-gnu-as -march=rv64gc gc2.s -o gc2.o
-  $ riscv64-linux-gnu-gcc -static gc2.o -L../../../runtime -l:libruntime.a -o gc2.elf -Wl,--no-warnings
-  $ qemu-riscv64 ./gc2.elf
+  $ riscv64-linux-gnu-as -march=rv64gc gc_live.s -o gc_live.o
+  $ riscv64-linux-gnu-gcc -static gc_live.o -L../../../runtime -l:libruntime.a -o gc_live.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./gc_live.elf
    
   === GC STATUS ===
   old space start:  0x19a320
@@ -543,6 +512,1231 @@
   collects count: 1
   allocations in total: 104 bytes
   =================
+
+  $ cat >gc_fill.ml <<EOF
+  > let f x y = x + y 
+  > 
+  > let rec fill n = 
+  >   if n = 0 then let _ = print_gc_status () in 0 
+  >   else 
+  >     let g = f n in 
+  >     let h = fill (n - 1) in 
+  >     let _ = g (h + n) in h
+  > 
+  > let main = let _ = print_gc_status () in let _ = fill 5000 in let _ = print_gc_status () in 0
+  > EOF
+  $ ../../../bin/AML.exe gc_fill.ml gc_fill.s
+  Generated: gc_fill.s
+  $ cat gc_fill.s
+    .text
+    .globl llf_0
+    .type llf_0, @function
+  llf_0:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, -24(s0)
+    ld t1, -32(s0)
+    add a0, t0, t1
+    addi a0, a0, -1
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_1
+    .type llf_1, @function
+  llf_1:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    la a0, llf_0
+    li a1, 2
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_2
+    .type llf_2, @function
+  llf_2:
+    addi sp, sp, -112
+    sd ra, 104(sp)
+    sd s0, 96(sp)
+    addi s0, sp, 112
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, -40(s0)
+    li t1, 1
+    sub t2, t0, t1
+    slt t0, x0, t2
+    slt t3, t2, x0
+    add t0, t0, t3
+    xori t0, t0, 1
+    slli t0, t0, 1
+    addi t0, t0, 1
+    sd t0, -48(s0)
+    ld t0, -48(s0)
+    li t1, 1
+    beq t0, t1, .Lelse_0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -56(s0)
+    ld t0, -56(s0)
+    sd t0, -64(s0)
+    li a0, 1
+    j .Lendif_1
+  .Lelse_0:
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -40(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -72(s0)
+    ld t0, -72(s0)
+    sd t0, -80(s0)
+    ld t0, -40(s0)
+    li t1, 3
+    sub t0, t0, t1
+    addi t0, t0, 1
+    sd t0, -88(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -88(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -24(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -96(s0)
+    ld t0, -96(s0)
+    sd t0, -104(s0)
+    ld t0, -104(s0)
+    ld t1, -40(s0)
+    add t0, t0, t1
+    addi t0, t0, -1
+    sd t0, -112(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -112(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -80(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -120(s0)
+    ld t0, -120(s0)
+    sd t0, -128(s0)
+    ld a0, -104(s0)
+  .Lendif_1:
+    ld ra, 104(sp)
+    ld s0, 96(sp)
+    addi sp, sp, 112
+    ret
+    
+    .globl llf_3
+    .type llf_3, @function
+  llf_3:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call fill_cc_1
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -24
+    la a0, fill
+    li a1, 0
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    la a0, f
+    li a1, 0
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 8(sp)
+    ld t0, -24(s0)
+    sd t0, 16(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 3
+    call closure_apply
+    addi sp, sp, 24
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl f
+    .type f, @function
+  f:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_1
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl fill_cc_1
+    .type fill_cc_1, @function
+  fill_cc_1:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_2
+    li a1, 3
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl fill
+    .type fill, @function
+  fill:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_3
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -64
+    sd ra, 56(sp)
+    sd s0, 48(sp)
+    addi s0, sp, 64
+    call heap_init
+    la t0, ML_STACK_BASE
+    sd s0, 0(t0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    ld t0, -24(s0)
+    sd t0, -32(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call fill
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 10001
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    ld t0, -40(s0)
+    sd t0, -48(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -56(s0)
+    ld t0, -56(s0)
+    sd t0, -64(s0)
+    li a0, 1
+    ld ra, 56(sp)
+    ld s0, 48(sp)
+    addi sp, sp, 64
+    li a0, 0
+    li a7, 93
+    ecall
+  $ riscv64-linux-gnu-as -march=rv64gc gc_fill.s -o gc_fill.o
+  $ riscv64-linux-gnu-gcc -static gc_fill.o -L../../../runtime -l:libruntime.a -o gc_fill.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./gc_fill.elf
+   
+  === GC STATUS ===
+  old space start:  0x19a320
+  old space end:    0x29a320
+  alloc pointer:    0x19a320
+  new space start:  0x29a320
+  heap size: 1048576 bytes
+  used (old space): 0 bytes
+  collects count: 0
+  allocations in total: 0 bytes
+  =================
+   
+  === GC STATUS ===
+  old space start:  0x29a320
+  old space end:    0x39a320
+  alloc pointer:    0x34b800
+  new space start:  0x19a320
+  heap size: 1048576 bytes
+  used (old space): 726240 bytes
+  collects count: 1
+  allocations in total: 1160128 bytes
+  =================
+   
+  === GC STATUS ===
+  old space start:  0x29a320
+  old space end:    0x39a320
+  alloc pointer:    0x34b800
+  new space start:  0x19a320
+  heap size: 1048576 bytes
+  used (old space): 726240 bytes
+  collects count: 1
+  allocations in total: 1160128 bytes
+  =================
+
+  $ cat >gc_graph.ml <<EOF
+  > let f x y = x + y 
+  > let h g x = g x 
+  > 
+  > let main =
+  >   let _ = print_gc_status () in 
+  >   let g = f 3 in 
+  >   let hg = h g in 
+  >   let _ = print_gc_status () in 
+  >   let _ = collect () in 
+  >   let _ = print_gc_status () in 
+  >   let _ = print_int (hg 2) in 0
+  > EOF
+  $ ../../../bin/AML.exe gc_graph.ml gc_graph.s
+  Generated: gc_graph.s
+  $ cat gc_graph.s
+    .text
+    .globl llf_0
+    .type llf_0, @function
+  llf_0:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, -24(s0)
+    ld t1, -32(s0)
+    add a0, t0, t1
+    addi a0, a0, -1
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_1
+    .type llf_1, @function
+  llf_1:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    la a0, llf_0
+    li a1, 2
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_2
+    .type llf_2, @function
+  llf_2:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -32(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -24(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_3
+    .type llf_3, @function
+  llf_3:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    la a0, llf_2
+    li a1, 2
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -24(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl f
+    .type f, @function
+  f:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_1
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl h
+    .type h, @function
+  h:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_3
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -144
+    sd ra, 136(sp)
+    sd s0, 128(sp)
+    addi s0, sp, 144
+    call heap_init
+    la t0, ML_STACK_BASE
+    sd s0, 0(t0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    ld t0, -24(s0)
+    sd t0, -32(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call f
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 7
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    ld t0, -40(s0)
+    sd t0, -48(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call h
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -48(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -56(s0)
+    ld t0, -56(s0)
+    sd t0, -64(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -72(s0)
+    ld t0, -72(s0)
+    sd t0, -80(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call collect
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -88(s0)
+    ld t0, -88(s0)
+    sd t0, -96(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -104(s0)
+    ld t0, -104(s0)
+    sd t0, -112(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 5
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -64(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -120(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -120(s0)
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_int
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -128(s0)
+    ld t0, -128(s0)
+    sd t0, -136(s0)
+    li a0, 1
+    ld ra, 136(sp)
+    ld s0, 128(sp)
+    addi sp, sp, 144
+    li a0, 0
+    li a7, 93
+    ecall
+  $ riscv64-linux-gnu-as -march=rv64gc gc_graph.s -o gc_graph.o
+  $ riscv64-linux-gnu-gcc -static gc_graph.o -L../../../runtime -l:libruntime.a -o gc_graph.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./gc_graph.elf
+   
+  === GC STATUS ===
+  old space start:  0x19a320
+  old space end:    0x29a320
+  alloc pointer:    0x19a320
+  new space start:  0x29a320
+  heap size: 1048576 bytes
+  used (old space): 0 bytes
+  collects count: 0
+  allocations in total: 0 bytes
+  =================
+   
+  === GC STATUS ===
+  old space start:  0x19a320
+  old space end:    0x29a320
+  alloc pointer:    0x19a3f0
+  new space start:  0x29a320
+  heap size: 1048576 bytes
+  used (old space): 208 bytes
+  collects count: 0
+  allocations in total: 208 bytes
+  =================
+   
+  === GC STATUS ===
+  old space start:  0x29a320
+  old space end:    0x39a320
+  alloc pointer:    0x29a370
+  new space start:  0x19a320
+  heap size: 1048576 bytes
+  used (old space): 80 bytes
+  collects count: 1
+  allocations in total: 208 bytes
+  =================
+  5
+
+  $ cat >gc_oom.ml <<EOF
+  > let c x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 = x11 
+  > let rec loop n =
+  >   if n <= 1 then 1
+  >   else
+  >     let c1 = fun x -> x in
+  >     let c2 = fun x -> x in
+  >     let c3 = fun x -> x in
+  >     let c4 = fun x -> x in
+  >     let c5 = fun x -> x in
+  >     let c6 = fun x -> x in
+  >     let c7 = fun x -> x in
+  >     let c8 = fun x -> x in
+  >     let c9 = fun x -> x in
+  >     let c10 = fun x -> x in
+  > 
+  >     let cfat = c c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 in
+  > 
+  >     if n = 999999 then cfat 1 else loop (n - 1)
+  > 
+  > let main = let _ = loop 2000 in let _ = print_gc_status () in 0
+  > EOF
+  $ ../../../bin/AML.exe gc_oom.ml gc_oom.s
+  Generated: gc_oom.s
+  $ cat gc_oom.s
+    .text
+    .globl llf_0
+    .type llf_0, @function
+  llf_0:
+    addi sp, sp, -112
+    sd ra, 104(sp)
+    sd s0, 96(sp)
+    addi s0, sp, 112
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, 24(a1)
+    sd t0, -48(s0)
+    ld t0, 32(a1)
+    sd t0, -56(s0)
+    ld t0, 40(a1)
+    sd t0, -64(s0)
+    ld t0, 48(a1)
+    sd t0, -72(s0)
+    ld t0, 56(a1)
+    sd t0, -80(s0)
+    ld t0, 64(a1)
+    sd t0, -88(s0)
+    ld t0, 72(a1)
+    sd t0, -96(s0)
+    ld t0, 80(a1)
+    sd t0, -104(s0)
+    ld a0, -104(s0)
+    ld ra, 104(sp)
+    ld s0, 96(sp)
+    addi sp, sp, 112
+    ret
+    
+    .globl llf_1
+    .type llf_1, @function
+  llf_1:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_2
+    .type llf_2, @function
+  llf_2:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_3
+    .type llf_3, @function
+  llf_3:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_4
+    .type llf_4, @function
+  llf_4:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_5
+    .type llf_5, @function
+  llf_5:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_6
+    .type llf_6, @function
+  llf_6:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_7
+    .type llf_7, @function
+  llf_7:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_8
+    .type llf_8, @function
+  llf_8:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_9
+    .type llf_9, @function
+  llf_9:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_10
+    .type llf_10, @function
+  llf_10:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld a0, -24(s0)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl llf_11
+    .type llf_11, @function
+  llf_11:
+    addi sp, sp, -240
+    sd ra, 232(sp)
+    sd s0, 224(sp)
+    addi s0, sp, 240
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    ld t0, 8(a1)
+    sd t0, -32(s0)
+    ld t0, 16(a1)
+    sd t0, -40(s0)
+    ld t0, -40(s0)
+    li t1, 3
+    slt t0, t1, t0
+    xori t0, t0, 1
+    slli t0, t0, 1
+    addi t0, t0, 1
+    sd t0, -48(s0)
+    ld t0, -48(s0)
+    li t1, 1
+    beq t0, t1, .Lelse_0
+    li a0, 3
+    j .Lendif_1
+  .Lelse_0:
+    la a0, llf_1
+    li a1, 1
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -56(s0)
+    ld t0, -56(s0)
+    sd t0, -64(s0)
+    la a0, llf_2
+    li a1, 1
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -72(s0)
+    ld t0, -72(s0)
+    sd t0, -80(s0)
+    la a0, llf_3
+    li a1, 1
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -88(s0)
+    ld t0, -88(s0)
+    sd t0, -96(s0)
+    la a0, llf_4
+    li a1, 1
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -104(s0)
+    ld t0, -104(s0)
+    sd t0, -112(s0)
+    la a0, llf_5
+    li a1, 1
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -120(s0)
+    ld t0, -120(s0)
+    sd t0, -128(s0)
+    la a0, llf_6
+    li a1, 1
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -136(s0)
+    ld t0, -136(s0)
+    sd t0, -144(s0)
+    la a0, llf_7
+    li a1, 1
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -152(s0)
+    ld t0, -152(s0)
+    sd t0, -160(s0)
+    la a0, llf_8
+    li a1, 1
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -168(s0)
+    ld t0, -168(s0)
+    sd t0, -176(s0)
+    la a0, llf_9
+    li a1, 1
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -184(s0)
+    ld t0, -184(s0)
+    sd t0, -192(s0)
+    la a0, llf_10
+    li a1, 1
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, -200(s0)
+    ld t0, -200(s0)
+    sd t0, -208(s0)
+    addi sp, sp, -80
+    ld t0, -64(s0)
+    sd t0, 0(sp)
+    ld t0, -80(s0)
+    sd t0, 8(sp)
+    ld t0, -96(s0)
+    sd t0, 16(sp)
+    ld t0, -112(s0)
+    sd t0, 24(sp)
+    ld t0, -128(s0)
+    sd t0, 32(sp)
+    ld t0, -144(s0)
+    sd t0, 40(sp)
+    ld t0, -160(s0)
+    sd t0, 48(sp)
+    ld t0, -176(s0)
+    sd t0, 56(sp)
+    ld t0, -192(s0)
+    sd t0, 64(sp)
+    ld t0, -208(s0)
+    sd t0, 72(sp)
+    addi a2, sp, 0
+    ld a0, -32(s0)
+    li a1, 10
+    call closure_apply
+    addi sp, sp, 80
+    addi t0, a0, 0
+    sd t0, -216(s0)
+    ld t0, -216(s0)
+    sd t0, -224(s0)
+    ld t0, -40(s0)
+    li t1, 1999999
+    sub t2, t0, t1
+    slt t0, x0, t2
+    slt t3, t2, x0
+    add t0, t0, t3
+    xori t0, t0, 1
+    slli t0, t0, 1
+    addi t0, t0, 1
+    sd t0, -232(s0)
+    ld t0, -232(s0)
+    li t1, 1
+    beq t0, t1, .Lelse_2
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 3
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -224(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    j .Lendif_3
+  .Lelse_2:
+    ld t0, -40(s0)
+    li t1, 3
+    sub t0, t0, t1
+    addi t0, t0, 1
+    sd t0, -240(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    ld t0, -240(s0)
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    ld a0, -24(s0)
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+  .Lendif_3:
+  .Lendif_1:
+    ld ra, 232(sp)
+    ld s0, 224(sp)
+    addi sp, sp, 240
+    ret
+    
+    .globl llf_12
+    .type llf_12, @function
+  llf_12:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    ld t0, 0(a1)
+    sd t0, -24(s0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call loop_cc_0
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -24
+    la a0, loop
+    li a1, 0
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 0(sp)
+    la a0, c
+    li a1, 0
+    call closure_alloc
+    addi t0, a0, 0
+    sd t0, 8(sp)
+    ld t0, -24(s0)
+    sd t0, 16(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 3
+    call closure_apply
+    addi sp, sp, 24
+    addi sp, sp, 8
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+    ret
+    
+    .globl c
+    .type c, @function
+  c:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_0
+    li a1, 11
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl loop_cc_0
+    .type loop_cc_0, @function
+  loop_cc_0:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_11
+    li a1, 3
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl loop
+    .type loop, @function
+  loop:
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    addi s0, sp, 16
+    la a0, llf_12
+    li a1, 1
+    call closure_alloc
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+    
+    .globl main
+    .type main, @function
+  main:
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    call heap_init
+    la t0, ML_STACK_BASE
+    sd s0, 0(t0)
+    addi sp, sp, 0
+    addi a1, sp, 0
+    li a0, 0
+    call loop
+    addi sp, sp, 0
+    addi t3, a0, 0
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 4001
+    sd t0, 0(sp)
+    addi a2, sp, 0
+    addi a0, t3, 0
+    li a1, 1
+    call closure_apply
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -24(s0)
+    ld t0, -24(s0)
+    sd t0, -32(s0)
+    addi sp, sp, -8
+    sd x0, 0(sp)
+    addi sp, sp, -8
+    li t0, 1
+    sd t0, 0(sp)
+    addi a1, sp, 0
+    li a0, 1
+    call print_gc_status
+    addi sp, sp, 8
+    addi sp, sp, 8
+    addi t0, a0, 0
+    sd t0, -40(s0)
+    ld t0, -40(s0)
+    sd t0, -48(s0)
+    li a0, 1
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+    li a0, 0
+    li a7, 93
+    ecall
+  $ riscv64-linux-gnu-as -march=rv64gc gc_oom.s -o gc_oom.o
+  $ riscv64-linux-gnu-gcc -static gc_oom.o -L../../../runtime -l:libruntime.a -o gc_oom.elf -Wl,--no-warnings
+  $ qemu-riscv64 ./gc_oom.elf
+  fatal: out of memory after GC
+  Aborted (core dumped)
+  [134]
 
 === task 4 ===
   $ ../../../bin/AML.exe ./manytests/typed/012fibcps.ml fibcps.s
