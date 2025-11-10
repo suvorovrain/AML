@@ -31,7 +31,7 @@ pub static mut ML_STACK_BASE: *const i64 = std::ptr::null();
 const CLOSURE_TAG: i64 = 247;
 const FORWARDING_TAG: i64 = 255; // forwarding pointer to mark moved object
 
-// closure Layout (in words):
+// closure layout:
 // word 0: header
 // word 1: code pointer
 // word 2: arity (untagged)
