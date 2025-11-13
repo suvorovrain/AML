@@ -213,10 +213,11 @@
   $ qemu-riscv64 ./gc_dead.elf
    
   === GC STATUS ===
-  old space start:  0x19a320
-  old space end:    0x29a320
-  alloc pointer:    0x19a320
-  new space start:  0x29a320
+  old space start:  0x0
+  old space end:    0x100000
+  alloc pointer:    0x0
+  new space start:  0x100000
+  new space end:    0x200000
   heap size: 1048576 bytes
   used (old space): 0 bytes
   collects count: 0
@@ -224,10 +225,11 @@
   =================
   5 
   === GC STATUS ===
-  old space start:  0x19a320
-  old space end:    0x29a320
-  alloc pointer:    0x19a388
-  new space start:  0x29a320
+  old space start:  0x0
+  old space end:    0x100000
+  alloc pointer:    0x68
+  new space start:  0x100000
+  new space end:    0x200000
   heap size: 1048576 bytes
   used (old space): 104 bytes
   collects count: 0
@@ -235,10 +237,11 @@
   =================
    
   === GC STATUS ===
-  old space start:  0x29a320
-  old space end:    0x39a320
-  alloc pointer:    0x29a320
-  new space start:  0x19a320
+  old space start:  0x100000
+  old space end:    0x200000
+  alloc pointer:    0x100000
+  new space start:  0x0
+  new space end:    0x100000
   heap size: 1048576 bytes
   used (old space): 0 bytes
   collects count: 1
@@ -470,10 +473,11 @@
   $ qemu-riscv64 ./gc_live.elf
    
   === GC STATUS ===
-  old space start:  0x19a320
-  old space end:    0x29a320
-  alloc pointer:    0x19a320
-  new space start:  0x29a320
+  old space start:  0x0
+  old space end:    0x100000
+  alloc pointer:    0x0
+  new space start:  0x100000
+  new space end:    0x200000
   heap size: 1048576 bytes
   used (old space): 0 bytes
   collects count: 0
@@ -481,10 +485,11 @@
   =================
    
   === GC STATUS ===
-  old space start:  0x19a320
-  old space end:    0x29a320
-  alloc pointer:    0x19a388
-  new space start:  0x29a320
+  old space start:  0x0
+  old space end:    0x100000
+  alloc pointer:    0x68
+  new space start:  0x100000
+  new space end:    0x200000
   heap size: 1048576 bytes
   used (old space): 104 bytes
   collects count: 0
@@ -492,10 +497,11 @@
   =================
    
   === GC STATUS ===
-  old space start:  0x29a320
-  old space end:    0x39a320
-  alloc pointer:    0x29a348
-  new space start:  0x19a320
+  old space start:  0x100000
+  old space end:    0x200000
+  alloc pointer:    0x100028
+  new space start:  0x0
+  new space end:    0x100000
   heap size: 1048576 bytes
   used (old space): 40 bytes
   collects count: 1
@@ -503,10 +509,11 @@
   =================
   5 
   === GC STATUS ===
-  old space start:  0x29a320
-  old space end:    0x39a320
-  alloc pointer:    0x29a348
-  new space start:  0x19a320
+  old space start:  0x100000
+  old space end:    0x200000
+  alloc pointer:    0x100028
+  new space start:  0x0
+  new space end:    0x100000
   heap size: 1048576 bytes
   used (old space): 40 bytes
   collects count: 1
@@ -841,10 +848,11 @@
   $ qemu-riscv64 ./gc_fill.elf
    
   === GC STATUS ===
-  old space start:  0x19a320
-  old space end:    0x29a320
-  alloc pointer:    0x19a320
-  new space start:  0x29a320
+  old space start:  0x0
+  old space end:    0x100000
+  alloc pointer:    0x0
+  new space start:  0x100000
+  new space end:    0x200000
   heap size: 1048576 bytes
   used (old space): 0 bytes
   collects count: 0
@@ -852,10 +860,11 @@
   =================
    
   === GC STATUS ===
-  old space start:  0x29a320
-  old space end:    0x39a320
-  alloc pointer:    0x34b800
-  new space start:  0x19a320
+  old space start:  0x100000
+  old space end:    0x200000
+  alloc pointer:    0x1b14e0
+  new space start:  0x0
+  new space end:    0x100000
   heap size: 1048576 bytes
   used (old space): 726240 bytes
   collects count: 1
@@ -863,10 +872,11 @@
   =================
    
   === GC STATUS ===
-  old space start:  0x29a320
-  old space end:    0x39a320
-  alloc pointer:    0x34b800
-  new space start:  0x19a320
+  old space start:  0x100000
+  old space end:    0x200000
+  alloc pointer:    0x1b14e0
+  new space start:  0x0
+  new space end:    0x100000
   heap size: 1048576 bytes
   used (old space): 726240 bytes
   collects count: 1
@@ -1174,10 +1184,11 @@
   $ qemu-riscv64 ./gc_graph.elf
    
   === GC STATUS ===
-  old space start:  0x19a320
-  old space end:    0x29a320
-  alloc pointer:    0x19a320
-  new space start:  0x29a320
+  old space start:  0x0
+  old space end:    0x100000
+  alloc pointer:    0x0
+  new space start:  0x100000
+  new space end:    0x200000
   heap size: 1048576 bytes
   used (old space): 0 bytes
   collects count: 0
@@ -1185,10 +1196,11 @@
   =================
    
   === GC STATUS ===
-  old space start:  0x19a320
-  old space end:    0x29a320
-  alloc pointer:    0x19a3f0
-  new space start:  0x29a320
+  old space start:  0x0
+  old space end:    0x100000
+  alloc pointer:    0xd0
+  new space start:  0x100000
+  new space end:    0x200000
   heap size: 1048576 bytes
   used (old space): 208 bytes
   collects count: 0
@@ -1196,10 +1208,11 @@
   =================
    
   === GC STATUS ===
-  old space start:  0x29a320
-  old space end:    0x39a320
-  alloc pointer:    0x29a370
-  new space start:  0x19a320
+  old space start:  0x100000
+  old space end:    0x200000
+  alloc pointer:    0x100050
+  new space start:  0x0
+  new space end:    0x100000
   heap size: 1048576 bytes
   used (old space): 80 bytes
   collects count: 1

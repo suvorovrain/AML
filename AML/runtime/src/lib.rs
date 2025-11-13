@@ -3,11 +3,14 @@ use std::process::abort;
 use std::ptr::addr_of_mut;
 
 const HEAP_WORDS: usize = 128 * 1024;
+const HEAP_SIZE_BYTES: usize = HEAP_WORDS * 8;
 
 // old space
 static mut HEAP_1: [i64; HEAP_WORDS] = [0; HEAP_WORDS];
 // new space
 static mut HEAP_2: [i64; HEAP_WORDS] = [0; HEAP_WORDS];
+
+static mut FIRST_HEAP_START: *mut i64 = std::ptr::null_mut();
 
 static mut OLD_SPACE_START: *mut i64 = std::ptr::null_mut();
 static mut OLD_SPACE_END: *mut i64 = std::ptr::null_mut();
@@ -92,6 +95,8 @@ pub unsafe extern "C" fn heap_init() {
 
     NEW_SPACE_START = addr_of_mut!(HEAP_2[0]);
     NEW_SPACE_END = NEW_SPACE_START.add(HEAP_WORDS);
+
+    FIRST_HEAP_START = OLD_SPACE_START;
 }
 
 /// Gets the raw pointer to the start of the current heap space (old-space).
@@ -127,17 +132,41 @@ pub unsafe extern "C" fn print_gc_status(_argc: i64, _argv: *const i64) -> i64 {
     let old_end = OLD_SPACE_END;
     let alloc_ptr = ALLOC_PTR;
     let new_start = NEW_SPACE_START;
+    let new_end = NEW_SPACE_END;
     let gc_count = GC_COUNT;
     let total_allocated = TOTAL_ALLOCATED;
 
-    let heap_size = old_end as usize - old_start as usize;
-    let used = alloc_ptr as usize - old_start as usize;
+    let is_in_first_bank = old_start == FIRST_HEAP_START;
+
+    const VIRTUAL_BASE: usize = 0x0;
+
+    let virtual_bank_base = if is_in_first_bank {
+        VIRTUAL_BASE
+    } else {
+        VIRTUAL_BASE + HEAP_SIZE_BYTES
+    };
+
+    let physical_alloc_offset = alloc_ptr as usize - old_start as usize;
+    let physical_old_end_offset = old_end as usize - old_start as usize;
+
+    let physical_new_start_offset = new_start as isize - old_start as isize;
+    let physical_new_end_offset = new_end as isize - old_start as isize;
+
+    let virt_old_start = virtual_bank_base;
+    let virt_alloc_ptr = virtual_bank_base + physical_alloc_offset;
+    let virt_old_end = virtual_bank_base + physical_old_end_offset;
+    let virt_new_start = (virtual_bank_base as isize + physical_new_start_offset) as usize;
+    let virt_new_end = (virtual_bank_base as isize + physical_new_end_offset) as usize;
+
+    let heap_size = physical_old_end_offset;
+    let used = physical_alloc_offset;
 
     println!(" \n=== GC STATUS ===");
-    println!("old space start:  {:p}", old_start);
-    println!("old space end:    {:p}", old_end);
-    println!("alloc pointer:    {:p}", alloc_ptr);
-    println!("new space start:  {:p}", new_start);
+    println!("old space start:  {:#x}", virt_old_start);
+    println!("old space end:    {:#x}", virt_old_end);
+    println!("alloc pointer:    {:#x}", virt_alloc_ptr);
+    println!("new space start:  {:#x}", virt_new_start);
+    println!("new space end:    {:#x}", virt_new_end);
     println!("heap size: {} bytes", heap_size);
     println!("used (old space): {} bytes", used);
     println!("collects count: {}", gc_count);
